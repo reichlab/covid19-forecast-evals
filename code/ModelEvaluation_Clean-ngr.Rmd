@@ -1,0 +1,692 @@
+---
+title: "Assessing predictive performance of models in the COVID-19 Forcast Hub"
+author: "Estee Y Cramer, Nicholas G Reich, "
+date: "`r Sys.Date()`"
+output:
+  rmdformats::html_clean:
+    highlight: kate
+    number_sections: no
+    fig_width: 18
+    fig_height: 10
+---
+
+#Prelims
+```{r setup, include=FALSE}
+# hub_root_dir<- "~/Desktop/Reich Lab/eycramer/covid19-forecast-hub" ## ESTEE
+hub_root_dir <- "../../covid19-forecast-hub" ## NICK
+knitr::opts_chunk$set(message = FALSE, warning = FALSE, echo = FALSE)
+source(file.path(hub_root_dir,"/code/processing-fxns/get_next_saturday.R"))
+library(zoltr)  ##devtools::install_github("reichlab/zoltr")
+library(lme4)
+library(lubridate)
+library(forecast)
+library(kableExtra)
+library(tidyverse)
+theme_set(theme_bw())
+```
+
+```{r read in other files to be used later}
+## locations file
+locs <- read_csv(file.path(hub_root_dir,"data-locations/locations.csv"))
+
+## dates with issues file
+dates_with_issues <- read_csv(file.path(hub_root_dir,"data-truth/Dates_edit_evaluation.csv"))
+
+## stan model files
+stan_model_ae <- readRDS("../data-inputs/20200927-stan-fit-scores-negbin.rds")
+
+```
+
+
+
+```{r not in function,  include=FALSE}
+'%!in%' <- function(x,y)!('%in%'(x,y))
+```
+
+```{r, echo = FALSE}
+## Tuesday the first timezero for which we will be evaluating forecasts
+## 1 wk ahead forecasts are for the following Saturday
+incl_start_date <- as.Date("2020-04-28")
+## Monday the last timezero for the first week in which we will evaluate
+incl_end_date <- incl_start_date + 6
+## Target end date of the first set of forecasts
+wk_ahead_forecast_date <- incl_start_date + 11
+
+## Paste of forecast week
+forecast_date_epiweek <- paste0("EW", MMWRweek::MMWRweek(wk_ahead_forecast_date)$MMWRweek)
+
+#max_sat <- as.Date(Upcoming_sat - 21)  #Latest week evaluated
+min_sat <- as.Date(get_next_saturday("2020-05-05")) #Earliest week evaluated
+
+#cutoff date for final paper: 2020-08-08
+max_sat <- as.Date("2020-08-08")
+
+number_weeks <- as.integer(difftime(max_sat, min_sat, units = "weeks") + 1) #Number of weeks evaluated
+```
+
+```{r}
+# read in csv with dates to filter out due to errors in reporting
+dates_to_filter <- dates_with_issues %>%
+  mutate(target_date_sat = lubridate::ymd(date_of_error)) 
+## TODO: target_data_sat is not necessarily a saturday?
+
+#scored locations
+fips <- locs %>%
+    mutate(for_scoring = abbreviation %in% c("US", datasets::state.abb))
+
+# keep only locations that get scored 
+fips_scoring <- fips %>% filter(for_scoring)  %>%
+  select(-for_scoring)
+```
+
+```{r zoltar-connection-and-data, cache=FALSE, echo=FALSE, include=FALSE, message=FALSE,results="hide"}
+zoltar_connection <- new_connection()
+zoltar_authenticate(zoltar_connection, Sys.getenv("Z_USERNAME"), Sys.getenv("Z_PASSWORD"))
+
+the_projects <- projects(zoltar_connection)
+project_url <- the_projects[the_projects$name == "COVID-19 Forecasts", "url"]
+
+the_scores <- c("abs_error", "interval_2","interval_5","interval_10","interval_20","interval_30","interval_40",
+"interval_50","interval_60", "interval_70","interval_80","interval_90","interval_100")
+
+the_models <- c("CovidAnalytics-DELPHI" ,"COVIDhub-ensemble" , "CU-select", "COVIDhub-baseline",  
+                "LANL-GrowthRate" ,  "MOBS-GLEAM_COVID", "UCLA-SuEIR",  "YYG-ParamSearch",
+                "JHU_IDD-CovidSP", "UMass-MechBayes", "UT-Mobility", "IHME-CurveFit", 
+                "IowaStateLW-STEM", "PSI-DRAFT", "USC-SI_kJalpha",  "USACE-ERDC_SEIR", 
+                "GT-DeepCOVID",  "UA-EpiCovDA") 
+  
+the_locations <- zoltar_units(zoltar_connection, project_url = "https://zoltardata.com/api/project/44/")$name %>% 
+  magrittr::extract(. %in% fips_scoring$location)
+
+the_targets_cum <- paste(1:20, "wk ahead cum death")
+
+the_targets_inc <- paste(1:4, "wk ahead inc death")
+
+#Dates to extract from Zoltar
+the_timezeros_cum <- seq(from = as.Date("2020-04-28"), to = as.Date("2020-08-03"), by="days")
+the_timezeros_inc <- seq(as.Date("2020-05-13"), to = as.Date("2020-08-03"), by="days")
+
+#Cumulative dataset 
+cum_tmp <- do_zoltar_query(zoltar_connection, 
+                           project_url =  "https://zoltardata.com/api/project/44/",
+                           is_forecast_query = FALSE,
+                           models = the_models, 
+                           units = the_locations, 
+                           targets = the_targets_cum,
+                           timezeros = the_timezeros_cum, 
+                           scores = the_scores) %>%
+   left_join(fips, by=c("unit" = "location")) %>%
+  mutate(wis = (.01*interval_2+.025*interval_5+.05*interval_10+.1*interval_20+.15*interval_30+.2*interval_40+.25*interval_50+
+                  .3*interval_60+.35*interval_70+.40*interval_80+.45*interval_90+.5*interval_100)/12, na.rm  = TRUE)  %>% 
+  mutate(first_fcast_sat = get_next_saturday(timezero) + ifelse(wday(timezero)<=2,0,7)) %>%
+  mutate(model_code = recode(factor(model),  "CovidAnalytics-DELPHI" = "Purple",  "COVIDhub-ensemble" = "Aqua", 
+    "COVIDhub-baseline" = "COVIDhub-baseline","CU-select" = "Green", "LANL-GrowthRate" = "Gray",  
+    "MOBS-GLEAM_COVID" = "Red", "UCLA-SuEIR" = "Gold", "YYG-ParamSearch" ="Pink",
+    "JHU_IDD-CovidSP" = "Goldenrod", "UMass-MechBayes" = "Maroon",  "UT-Mobility" = "Indigo", "IHME-CurveFit" = "Orange",
+    "IowaStateLW-STEM" = "Teal", "PSI-DRAFT" = "Emerald",  "USC-SI_kJalpha" = "Lilac", 
+    "USACE-ERDC_SEIR" = "Tan", "GT-DeepCOVID" = "Scarlet", "UA-EpiCovDA" = "Ruby")) %>%
+  filter(!is.na(interval_90))
+```
+
+```{r}
+unique_cum <- cum_tmp %>%
+  group_by(model, target, unit, first_fcast_sat) %>%     
+  arrange(timezero) %>%    #include arrange so last timezero is selected 
+  mutate(forecast_in_wk = row_number(), 
+         last_forecast_in_wk = forecast_in_wk == max(forecast_in_wk)) %>%    #number weekly submission
+  filter(last_forecast_in_wk) %>%   #keep latest weekly submission
+  mutate(target_date_sat = case_when(target == "1 wk ahead cum death" ~ first_fcast_sat,
+                                     target == "2 wk ahead cum death" ~ first_fcast_sat + 7,
+                                     target == "3 wk ahead cum death" ~ first_fcast_sat + 14, 
+                                     target == "4 wk ahead cum death" ~ first_fcast_sat + 21)) %>% 
+  ungroup()
+```
+
+
+#Fix IHME
+```{r}
+unique_cum_IHMEadjust <- unique_cum  %>%
+  filter(model == "IHME-CurveFit") %>% 
+  filter(first_fcast_sat == as.Date("2020-05-23") | first_fcast_sat == as.Date("2020-07-11")) %>% 
+  filter(target %in% c("2 wk ahead cum death", "3 wk ahead cum death", "4 wk ahead cum death", "5 wk ahead cum death")) %>%
+  mutate(target = case_when(target == "2 wk ahead cum death" ~ "1 wk ahead cum death",
+                            target == "3 wk ahead cum death" ~ "2 wk ahead cum death",
+                            target == "4 wk ahead cum death" ~ "3 wk ahead cum death",
+                            target == "5 wk ahead cum death" ~ "4 wk ahead cum death"),
+         first_fcast_sat = first_fcast_sat + 7)
+```
+
+```{r}
+unique_cum <- rbind(unique_cum, unique_cum_IHMEadjust)
+```
+
+```{r code for calc and pred DF}
+## Keep only unique forecasts for each week
+
+#Keep only 4 target weeks
+unique_cum_4targets <- unique_cum %>%
+    filter(target %in% c("1 wk ahead cum death", "2 wk ahead cum death", "3 wk ahead cum death", "4 wk ahead cum death")) 
+
+#Count Locations
+locations_4targets <- unique_cum_4targets %>% 
+  group_by(model_code, target, first_fcast_sat) %>%
+  summarise(n_location = n()) %>% 
+  ungroup() 
+
+#Count Horizons
+horizons_4targets <- unique_cum_4targets %>%
+  group_by(model_code, location_name, first_fcast_sat) %>%
+  summarize(n_horizons = n())
+
+#Count Submission Weeks with 4 targets 
+weeks_4targets_horizon <- unique_cum_4targets %>%
+  left_join(horizons_4targets) %>%
+  filter(n_horizons == 4) %>%
+  group_by(model_code, location_name, target) %>%
+  summarise(n_weeks_all_horizon = n())
+
+#Count Submission weeks with 51 locations
+weeks_4targets_location <- unique_cum_4targets %>%
+  left_join(locations_4targets) %>%
+  filter(n_location == 51) %>%
+  group_by(model_code, location_name, target) %>%
+  summarise(n_weeks_all_loc = n())
+
+cum_tmp %>%
+  filter(model_code == "Orange") %>%
+  group_by(first_fcast_sat) %>%
+  summarise(n = n())
+```
+
+```{r}
+empirical_df <- unique_cum_4targets %>%
+  left_join(locations_4targets) %>%
+  left_join(horizons_4targets) %>%
+  left_join(weeks_4targets_horizon) %>%
+  left_join(weeks_4targets_location) #%>%
+## below lines not needed, this is done above
+  # mutate(target_date_sat = case_when(target == "1 wk ahead cum death" ~ first_fcast_sat,
+  #                                    target == "2 wk ahead cum death" ~ first_fcast_sat + 7,
+  #                                    target == "3 wk ahead cum death" ~ first_fcast_sat + 14, 
+  #                                    target == "4 wk ahead cum death" ~ first_fcast_sat + 21)) 
+```
+
+
+#Models with all qualifying criteria for cumulative deaths 
+```{r}
+scored_models_df_calc <- empirical_df %>%
+  filter(n_weeks_all_horizon == 14) %>%
+  filter(n_weeks_all_loc == 14) %>%
+  anti_join(dates_to_filter) %>%  ungroup() 
+```
+
+
+#Models with enough qualifying forecasts for mixed effects model
+```{r}
+scored_models_df_pred <- empirical_df %>%
+  filter(n_location >= 25) %>%
+  filter(n_weeks_all_horizon >= 11) %>%
+  anti_join(dates_to_filter) %>%  ungroup()  
+```
+
+#Mixed Effects model creation
+
+###Models to predict MAE
+```{r baseline as ref}
+#absolute error model
+scored_models_df_pred$model_code <- relevel(scored_models_df_pred$model_code, ref = "COVIDhub-baseline")
+```
+
+
+```{r LMER for AE model-target FE interaction and location and week REs}
+cum_fit_abs_errorM1 <- lmer(log(abs_error+0.01) ~ model_code*target + (1|first_fcast_sat) + (1|location_name), data = scored_models_df_pred)
+#summary(cum_fit_abs_errorM2)
+```
+
+```{r LMER for AE model-target FE interaction and week-location RE interaction}
+cum_fit_abs_errorM2 <- lmer(log(abs_error+0.01) ~ model_code*target + (1|first_fcast_sat:location_name), data = scored_models_df_pred)
+#summary(cum_fit_abs_errorM2)
+```
+
+```{r LMER for AE model-target FE interaction and week*location + week*model RE interactions}
+cum_fit_abs_errorM3 <- lmer(log(abs_error+0.01) ~  model_code*target + (1|first_fcast_sat:location_name) + (1|first_fcast_sat:model_code), data = scored_models_df_pred)
+#summary(cum_fit_abs_errorM3)
+```
+
+```{r LMER for AE model-target FE interaction and week*model*location RE interaction}
+cum_fit_abs_errorM4 <- lmer(log(abs_error+0.01) ~  model_code*target + (1|first_fcast_sat:model_code:location_name), data = scored_models_df_pred)
+#summary(cum_fit_abs_errorM1)
+```
+
+```{r stan model sandbox}
+
+cum_fit_abs_errorM5 <- glmer.nb(round(abs_error) ~  model_code*target + (1|first_fcast_sat:location_name) + (1|first_fcast_sat:model_code), data = scored_models_df_pred)
+
+library(rstanarm)
+stan_fit <- stan_glmer(round(abs_error) ~  model_code*target + (1|first_fcast_sat:location_name), 
+  chains=1,
+  family=neg_binomial_2(),
+  data = scored_models_df_pred)
+  #data = scored_models_df_pred[sample(nrow(scored_models_df_pred), 1000),])
+#summary(cum_fit_abs_errorM1)
+```
+
+### Models to predict WIS 
+```{r LMER for WIS model-target interaction}
+cum_fit_wisM1 <- lmer(log(wis + .01) ~  model_code*target + (1|first_fcast_sat:model_code:location_name), data = scored_models_df_pred)
+#summary(cum_fit_wisM1)
+```
+
+```{r LMER for WIS model-target and model-location interaction}
+cum_fit_wisM2 <- lmer(log(wis + .01) ~ model_code*target + (1|first_fcast_sat:location_name), data = scored_models_df_pred)
+
+#summary(cum_fit_wisM2)
+```
+
+```{r LMER for WIS model-target and model-week interaction}
+cum_fit_wisM3 <- lmer(log(wis + .01) ~ model_code*target +  (1|first_fcast_sat:location_name) + (1|first_fcast_sat:model_code), data = scored_models_df_pred)
+
+#summary(cum_fit_wisM3)
+```
+
+Dataframe for model fitting
+```{r Create DF for MAE and WIS predictions}
+model_count_cum <- nrow(unique(scored_models_df_pred %>% group_by(model_code) %>% filter(model_code != "Tan" | model_code != "Orange") %>% summarise(n = n())))
+
+#To create a dataframe of predictions based on the model, I've create a dataframe that includes the names of all teams as well as the targets, locations, and submission weeks. This is an emplty datafram that gets filled in using the predict function. 
+
+total_forecast_count <- number_weeks * 4 * 51          #Count number of forecasts for each team
+total_location_count <- number_weeks * 4               #Total number of locations submitted for each team
+
+first_fcast_sat_unique <- unique(scored_models_df_pred$first_fcast_sat)
+weeks_repeat4times <- first_fcast_sat_unique %>% magrittr::extract(. <= as.Date(max_sat)) 
+
+target_unique <- unique(scored_models_df_pred$target)
+
+model_code <- c("Ruby", "Teal", "Goldenrod", "Emerald", "Scarlet", "Purple", "COVIDhub-baseline", "Aqua", "Green", "Red", "Gold", "Maroon", "Indigo", "Pink")
+
+#Create DF for MAE and WIS predictions (step 2) 
+model_code <- rep(model_code, each = total_forecast_count)   #repeat model names number of times of forecast 
+location_name <- rep(rep(fips_scoring$location_name, each = total_location_count), 14) #Repeat locations 
+
+#Repeat number of first forecast dates 
+first_fcast_sat <- rep(rep(weeks_repeat4times, each = 4), 714)
+
+#Repat number of targets taking into account weeks with 3 - 1 targets 
+target <-  rep(target_unique, 9996)
+
+length(model_code)
+length(location_name)
+length(first_fcast_sat)
+length(target)
+
+prediction_df = data.frame(model_code, location_name, first_fcast_sat, target) #merge all vectors into a dataframe
+```
+
+```{r}
+#predict MAE
+log_abs_errorM1 <- predict(cum_fit_abs_errorM1, prediction_df, allow.new.levels = TRUE)    #predict abs error based on mixed effects model
+prediction_df$abs_errorM1 <- exp(log_abs_errorM1) - .01           #exponentiate log
+
+log_abs_errorM2 <- predict(cum_fit_abs_errorM2, prediction_df)    
+prediction_df$abs_errorM2 <- exp(log_abs_errorM2) - .01           
+
+log_abs_errorM3 <- predict(cum_fit_abs_errorM3, prediction_df, allow.new.levels = TRUE)    
+prediction_df$abs_errorM3 <- exp(log_abs_errorM3) - .01        
+
+#Predict WIS
+log_wisM1 <- predict(cum_fit_wisM1, prediction_df,allow.new.levels = TRUE)
+prediction_df$wisM1 <- exp(log_wisM1) - .01
+
+log_wisM2 <- predict(cum_fit_wisM2, prediction_df, allow.new.levels = TRUE)
+prediction_df$wisM2 <- exp(log_wisM2) - .01
+
+log_wisM3 <- predict(cum_fit_wisM3, prediction_df, allow.new.levels = TRUE)
+prediction_df$wisM3 <- exp(log_wisM3) - .01
+```
+
+```{r}
+predict_df_MAE <- prediction_df %>%
+  pivot_longer(cols = starts_with("abs_error"), values_to = "MAE_value", names_to = "mae_modelnum") %>%
+  mutate(mae_modelnum = as.factor(mae_modelnum))
+
+
+predict_df_WIS <- prediction_df %>%
+  pivot_longer(cols = starts_with("wisM"), values_to = "wis_value", names_to = "wis_modelnum") %>%
+mutate(wis_modelnum = as.factor(wis_modelnum))
+```
+
+
+# Table 2: prediction interval empirical coverage for cumulative deaths by horizon 
+```{r}
+#only query specific models and timezeros that are needed. Require table to say which are needed for each model. Use unique_cum to specify which timezeros are needed for eval. (maybe)
+calculated_models1 <- c("UCLA-SuEIR", "CU-select", "LANL-GrowthRate", "MOBS-GLEAM_COVID")
+calculated_models2<- c( "COVIDhub-ensemble", "CovidAnalytics-DELPHI", "YYG-ParamSearch", "COVIDhub-baseline")
+
+cum_calibration <- do_zoltar_query(zoltar_connection, 
+                                   project_url =  "https://zoltardata.com/api/project/44/",
+                                   is_forecast_query = TRUE,
+                                   models = calculated_models1, 
+                                   units = the_locations, 
+                                   targets = the_targets_cum,
+                                   timezeros = the_timezeros_cum, 
+                                   scores = the_intervals, 
+                                   types = c("quantile")) %>%
+  filter(quantile == .025 | quantile == .25 | quantile == .75 | quantile == .975) %>%
+  filter(timezero <= as.Date("2020-08-08"))
+
+cum_calibration2 <- do_zoltar_query(zoltar_connection, 
+                                   project_url =  "https://zoltardata.com/api/project/44/",
+                                   is_forecast_query = TRUE,
+                                   models = calculated_models2, 
+                                   units = the_locations, 
+                                   targets = the_targets_cum,
+                                   timezeros = the_timezeros_cum, 
+                                   scores = the_intervals, 
+                                   types = c("quantile")) %>%
+  filter(quantile == .025 | quantile == .25 | quantile == .75 | quantile == .975) %>%
+  filter(timezero <= as.Date("2020-08-08"))
+
+cum_calibration <- rbind(cum_calibration, cum_calibration2)
+```
+
+
+```{r}
+cum_truth <- unique_cum  %>% 
+  filter(model_code %in% c("Purple", "COVIDhub-baseline", "Aqua", "Green",  "Gray", "Red", "Gold", "Pink", "Orange")) %>%
+  select(model_code, model, timezero, unit, target, truth, first_fcast_sat) %>% anti_join(dates_to_filter)
+```
+
+```{r}
+cum_calibration_wide <- cum_calibration %>%
+  select(model, timezero, unit, target, value, quantile) %>%
+  pivot_wider(names_from = quantile, values_from = value) %>% 
+  right_join(cum_truth) %>% ungroup()
+
+colnames(cum_calibration_wide) <- c("model", "timezero", "unit", "target", "interval_025", "interval_25",  "interval_75","interval_975", "model_code", "truth", "first_fcast_sat")
+
+calibration_scores <- cum_calibration_wide %>%
+  mutate(calib_95 = ifelse(truth >= interval_025 & truth <= interval_975, 1, 0)) %>%
+  mutate(calib_50 = ifelse(truth >= interval_25 & truth <= interval_75, 1, 0)) %>%
+  group_by(model, target) %>%
+  summarise(percent_calib50 = round(sum(calib_50)/ n(),3),
+            percent_calib95 = round(sum(calib_95) / n(),3))
+
+calibration_table <- calibration_scores %>%
+  pivot_wider(names_from = target, values_from = c(percent_calib50, percent_calib95)) %>%
+  select("model", "percent_calib50_1 wk ahead cum death", 
+       "percent_calib50_2 wk ahead cum death",  "percent_calib50_3 wk ahead cum death", "percent_calib50_4 wk ahead cum death",  "percent_calib50_5 wk ahead cum death", 
+       "percent_calib50_6 wk ahead cum death", "percent_calib50_7 wk ahead cum death",   "percent_calib50_8 wk ahead cum death",  "percent_calib50_9 wk ahead cum death", 
+       "percent_calib50_10 wk ahead cum death", "percent_calib50_11 wk ahead cum death",  "percent_calib50_12 wk ahead cum death", "percent_calib50_13 wk ahead cum death", "percent_calib50_14 wk ahead cum death","percent_calib95_1 wk ahead cum death", "percent_calib95_2 wk ahead cum death", "percent_calib95_3 wk ahead cum death", "percent_calib95_4 wk ahead cum death","percent_calib95_5 wk ahead cum death", "percent_calib95_6 wk ahead cum death",  "percent_calib95_7 wk ahead cum death", "percent_calib95_8 wk ahead cum death",  "percent_calib95_9 wk ahead cum death", "percent_calib95_10 wk ahead cum death",  "percent_calib95_11 wk ahead cum death",  "percent_calib95_12 wk ahead cum death","percent_calib95_13 wk ahead cum death", "percent_calib95_14 wk ahead cum death")
+```
+
+
+#Figure 1: Schematic of a forecast: timeline, targets, quantiles, etc…
+
+
+
+
+
+
+
+#Figure 2: overall average performance of each model, by target. 
+```{r dataframes for targets}
+##Average score across all locations calculated MAE and WIS
+average_byweek_calc <- scored_models_df_calc %>%  #scored_models_df_pred includes forecasts from models that have been selected for scoring
+  group_by(model_code, target) %>%
+  summarise(MAE  = round(mean(abs_error, na.rm = T),1),  #calc MAE
+            mae_rank = rank(MAE),                       #rank(MAE). (previously used for color scheme but no longer used)
+        n_obs_ae=sum(!is.na(abs_error)),
+         avg_wis = round(mean(wis, na.rm = T),1),       #calc wis
+        n_obs_int=sum(!is.na(wis))) %>%                 #sanity check count
+  ungroup() %>%
+  group_by(target) %>%                                   
+  mutate(mae_rank = rank(MAE,ties.method = "min")) %>%
+  mutate(wis_rank = rank(avg_wis)) %>% 
+  mutate_at(vars(matches("MAE")), funs(diff_baseline = (((.- .[model_code=="COVIDhub-baseline"]) / .[model_code=="COVIDhub-baseline"])*100))) %>%
+ mutate_at(vars(matches("avg_wis")), funs(diff_baseline = (((.- .[model_code=="COVIDhub-baseline"]) / .[model_code=="COVIDhub-baseline"])*100))) %>%
+  ungroup() 
+
+##Average score across all locations based on predicted MAE 
+average_byweek_pred_MAE <- predict_df_MAE %>%  #scored_models_df_pred includes forecasts from models that have been selected for scoring
+  group_by(model_code, target, mae_modelnum) %>%
+  summarise(MAE  = round(mean(MAE_value, na.rm = T),1),  #calc MAE
+        n_obs_ae=sum(!is.na(MAE_value))) %>%
+  ungroup() %>%
+  group_by(mae_modelnum, target) %>%                                   
+  mutate_at(vars(ends_with("MAE")), funs(MAE_diff_baseline = (((.- .[model_code=="COVIDhub-baseline"]) / .[model_code=="COVIDhub-baseline"])*100))) %>% ungroup()
+
+#Predicted WIS
+average_byweek_pred_wis <- predict_df_WIS  %>%  #scored_models_df_pred includes forecasts from models that have been selected for scoring
+  group_by(model_code, target, wis_modelnum) %>%
+  summarise(wis  = round(mean(wis_value, na.rm = T),1),  #calc MAE
+        n_obs_ae=sum(!is.na(wis_value))) %>%
+  ungroup() %>%
+  group_by(wis_modelnum, target) %>%                                   
+  mutate_at(vars(ends_with("wis")), funs(wis_diff_baseline = (((.- .[model_code=="COVIDhub-baseline"]) / .[model_code=="COVIDhub-baseline"])*100))) %>% ungroup()
+```
+
+```{r Panel 1A: Calculated MAE}
+average_byweek_calc$model_code <- reorder(average_byweek_calc$model_code, average_byweek_calc$MAE)
+
+Strat_target_MAE_calc <- ggplot(average_byweek_calc, aes(x=model_code, y=target, fill= MAE_diff_baseline)) + 
+  geom_tile() +
+  geom_text(aes(label=round(MAE)), size = 6) +
+  scale_fill_gradient2(low = "blue2",
+  high = "red", midpoint = 0,  name = "% change from baseline") + 
+  xlab("Scored Models") + ylab("Forecast Target") +
+  theme(axis.text.x =  element_text(angle = 45, hjust = 1, size = 16),
+        axis.title.x=element_blank(),
+        axis.text.y = element_text(size = 16)) +
+  guides(fill = FALSE) + 
+  ggtitle("Calculated MAE")
+```
+
+```{r Panel 1B-D: Pred MAE}
+average_byweek_pred_MAE$model_code <- reorder(average_byweek_pred_MAE$model_code, average_byweek_pred_MAE$MAE)
+
+Strat_target_MAE_pred <- ggplot(average_byweek_pred_MAE, aes(x=model_code, y=target, fill= round(MAE_diff_baseline,2))) + 
+  geom_tile() +
+  geom_text(aes(label=round(MAE)), size = 6) +
+  scale_fill_gradient2(low = "blue2",
+  high = "red", midpoint = 0,  name = "% change from baseline") + 
+  xlab("Scored Models") + ylab("Forecast Target") +
+  theme(axis.text.x =  element_text(angle = 45, hjust = 1, size = 16), 
+        axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.title.x=element_blank()) + 
+  facet_wrap( ~ mae_modelnum, ncol = 1) +
+  guides(fill = FALSE) + 
+  ggtitle("Predicted MAE")
+```
+
+```{r Panel 2A: Calc WIS}
+average_byweek_calc$model_code <- reorder(average_byweek_calc$model_code, average_byweek_calc$avg_wis)
+
+Strat_target_WIS_calc <- ggplot(average_byweek_calc, aes(x=model_code, y=target, fill= diff_baseline)) + 
+  geom_tile() +
+  geom_text(aes(label=round(avg_wis,0)), size = 6) +
+  scale_fill_gradient2(low = "blue", high = "red", midpoint = 0, name = "% Change from baseline")+ 
+  xlab("Scored model_codes") + 
+  theme(axis.text.x =  element_text(angle = 45, hjust = 1, size = 16),
+        axis.title.x=element_blank(),
+        axis.text.y = element_text(size = 16)) +
+  ggtitle("Calculated WIS")
+```
+
+```{r Panel 2B-D: pred WIS}
+average_byweek_pred_wis$model_code <- reorder(average_byweek_pred_wis$model_code, average_byweek_pred_wis$wis)
+
+Strat_target_wis_pred <- ggplot(average_byweek_pred_wis, aes(x=model_code, y=target, fill= round(wis_diff_baseline,2))) + 
+  geom_tile() +
+  geom_text(aes(label=round(wis)), size = 6) +
+  scale_fill_gradient2(low = "blue2",
+  high = "red", midpoint = 0,  name = "% change from baseline") + 
+  xlab("Scored Models") + ylab("Forecast Target") +
+  theme(axis.text.x =  element_text(angle = 45, hjust = 1, size = 16), 
+        axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.title.x=element_blank()) + 
+  facet_wrap( ~ wis_modelnum, ncol = 1) +
+  ggtitle("Predicted WIS")
+```
+
+```{r, fig.width= 15, fig.height= 20}
+gridExtra::grid.arrange(Strat_target_MAE_calc, Strat_target_WIS_calc,  Strat_target_MAE_pred, Strat_target_wis_pred)
+```
+
+
+#Figure 3: average performance of each model by location (emperical estimates)
+```{r df for figure 3 }
+location_fig3 <- empirical_df %>%
+  filter(n_weeks_all_horizon == 14) %>%
+  filter(n_location >= 25) %>%
+  anti_join(dates_to_filter) %>%  ungroup() 
+
+average_by_loc_calc <- location_fig3 %>%
+  group_by(model_code, location_name) %>% 
+  summarise(MAE  = round(mean(abs_error),1),        #calc MAE
+        n_obs_ae = sum(abs_error),          #sanity check (not used in graph)
+        avg_wis = round(mean(wis),1),    #calc WIS       
+        n_obs_int=sum(wis)) %>% 
+  group_by(location_name) %>%     
+mutate_at(vars(matches("MAE")), funs(diff_baseline_MAE = (((.- .[model_code=="COVIDhub-baseline"]) / .[model_code=="COVIDhub-baseline"])*100))) %>%   #calculate MAE % change from baseline
+mutate_at(vars(matches("avg_wis")), funs(diff_baseline_wis = (((.- .[model_code=="COVIDhub-baseline"]) / .[model_code=="COVIDhub-baseline"])*100))) %>% 
+mutate_at(vars(matches("MAE")), funs(relative_basemae = (. / .[model_code=="COVIDhub-baseline"]))) %>%
+mutate_at(vars(matches("avg_wis")), funs(relative_basewis = (./ .[model_code=="COVIDhub-baseline"]))) %>%
+  ungroup()
+```
+
+```{r plot figure 3a MAE, fig.width=18, fig.height=10}
+average_by_loc_calc$model_code <- reorder(average_by_loc_calc$model_code, average_by_loc_calc$MAE) #sort models by MAE for plot
+average_by_loc_calc$location_name <- reorder(average_by_loc_calc$location_name, average_by_loc_calc$MAE)
+
+ggplot(average_by_loc_calc, aes(x=model_code, y=location_name, fill= diff_baseline_MAE)) +
+  geom_tile() +
+  geom_text(aes(label=round(MAE))) +
+  scale_fill_gradient2(low = "navy", high = "red", name = "% Change from baseline")+ 
+  xlab("Scored Models") + ylab("Location") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r plot figure 3b WIS, fig.width=18, fig.height=10}
+
+average_by_loc_calc$model_code <- reorder(average_by_loc_calc$model_code, average_by_loc_calc$avg_wis) #sort models by MAE for plot
+average_by_loc_calc$location_name <- reorder(average_by_loc_calc$location_name, average_by_loc_calc$avg_wis)
+
+
+ggplot(average_by_loc_calc, aes(x=model_code, y=location_name, fill= diff_baseline_wis)) +
+  geom_tile() +
+  geom_text(aes(label=round(avg_wis))) +
+  scale_fill_gradient2(low = "navy", high = "red", name = "% Change from baseline")+ 
+  xlab("Scored Models") + ylab("Location") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
+
+#Figure 4: average performance of each model by week (averaged across locations, not imputed for weeks that are missing)
+
+```{r}
+myColors_cum <- c("black", "cyan2", "firebrick3",
+                  "goldenrod4", "darkgreen", "brown2", 
+                  "blue4", "darkorchid", "cadetblue2", 
+                  "seagreen3", "red",  "darkgoldenrod1", 
+                  "brown", "deeppink1", "darkorange")
+
+names(myColors_cum) <- c("COVIDhub-baseline", "Teal", "Ruby",
+                         "Goldenrod", "Emerald", "Scarlet", 
+                         "Indigo", "Purple", "Aqua",
+                         "Green",  "Red",  "Gold",  
+                         "Maroon", "Pink", "Orange")
+
+colScale_cum <- scale_colour_manual(name = "model_code", values = myColors_cum)
+```
+
+```{r}
+average_byweek_calc <- empirical_df %>%
+  filter(n_location == 51) %>%
+  filter(n_horizons == 4) %>%
+  group_by(model_code, first_fcast_sat) %>%
+  summarise(mae = round(mean(abs_error, na.rm = T), 1),
+        n_obs_ae = sum(!is.na(abs_error)), 
+        avg_wis = round(mean(wis, na.rm=TRUE),1), 
+        n_obs_int=sum(!is.na(wis))) %>% 
+   group_by(first_fcast_sat) %>%
+  mutate_at(vars(ends_with("MAE")), funs(relative_basewis = ((. - .[model_code=="COVIDhub-baseline"]) / .[model_code=="COVIDhub-baseline"])*100)) %>%
+  mutate_at(vars(ends_with("avg_wis")), funs(relative_basemae = ((. - .[model_code=="COVIDhub-baseline"]) / .[model_code=="COVIDhub-baseline"])*100)) %>%
+  ungroup() %>% arrange(first_fcast_sat, model_code)
+```
+
+
+```{r Figure 4 Panel 1A}
+#Plot of MAE stratified by submission week
+week_MAE <- ggplot(average_byweek_calc, aes(x= lubridate::ymd(first_fcast_sat), y=mae, color = model_code, fill = model_code)) +
+  scale_x_date(date_labels = "%Y-%m-%d", breaks = c(first_fcast_sat)) + 
+  geom_line() + 
+  colScale_cum +
+  geom_point(size = 2) + 
+  xlab("1 Week Ahead Target Date") + ylab(NULL) + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 15)) +
+  ggtitle("MAE")
+```
+
+
+```{r Figure 4 Panel 2A}
+week_mae_relative <- ggplot(average_byweek_calc, aes(x= lubridate::ymd(first_fcast_sat), y=relative_basemae, color = model_code, fill = model_code)) +
+  scale_x_date(date_labels = "%Y-%m-%d", breaks = c(first_fcast_sat)) +
+  #scale_color_manual(values = colors2) +
+   geom_line() + 
+  colScale_cum +
+  geom_point(size = 2, value = colors) + 
+  xlab("1 week ahead target date") + ylab(NULL) + ggtitle("MAE relative to baseline") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 15))
+```
+
+```{r Panel 1B}
+#Plot of MAE stratified by submission week
+week_wis <- ggplot(average_byweek_calc, aes(x= lubridate::ymd(first_fcast_sat), y=avg_wis, color = model_code, fill = model_code)) +
+  scale_x_date(date_labels = "%Y-%m-%d", breaks = c(first_fcast_sat)) + 
+  geom_line() + 
+  colScale_cum +
+  geom_point(size = 2) + 
+  xlab("1 Week Ahead Target Date") + ylab(NULL) + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 15)) +
+  ggtitle("WIS")
+```
+
+```{r Figure 4 Panel 2B}
+week_wis_relative <- ggplot(average_byweek_calc, aes(x= lubridate::ymd(first_fcast_sat), y=relative_basewis, color = model_code, fill = model_code)) +
+  scale_x_date(date_labels = "%Y-%m-%d", breaks = c(first_fcast_sat)) +
+  #scale_color_manual(values = colors2) +
+   geom_line() + 
+  colScale_cum +
+  geom_point(size = 2, value = colors) + 
+ # xlab("1 week ahead target date") + ylab(NULL) + ggtitle("WIS relative to baseline") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 15))
+```
+
+```{r, fig.width= 10, fig.height= 15}
+#gridExtra::grid.arrange(week_MAE, week_mae_relative, week_wis, week_wis_relative)
+```
+
+
+```{r}
+#Incidence dataset
+# inc_tmp <- do_zoltar_query(zoltar_connection, 
+#                            project_url =  "https://zoltardata.com/api/project/44/",
+#                            is_forecast_query = FALSE,
+#                            models = the_models,
+#                            units = the_locations,
+#                            targets = the_targets_inc,
+#                            timezeros = the_timezeros_inc, 
+#                            scores = the_scores) %>%
+#    left_join(fips, by=c("unit" = "location")) %>%
+#   mutate(wis = (.01*interval_2+.025*interval_5+.05*interval_10+.1*interval_20+.15*interval_30+.2*interval_40+.25*interval_50+
+#                   .3*interval_60+.35*interval_70+.40*interval_80+.45*interval_90+.5*interval_100)/12, na.rm = TRUE)  %>%
+#   mutate(first_fcast_sat = get_next_saturday(timezero) + ifelse(wday(timezero)<=2,0,7))
+```
+
+
+
+
