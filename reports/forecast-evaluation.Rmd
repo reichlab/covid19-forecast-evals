@@ -35,6 +35,20 @@ dates_with_issues <- read_csv(file.path(hub_root_dir,"data-truth/Dates_edit_eval
 ## stan model files
 stan_model_ae <- readRDS("../data-inputs/20200927-stan-fit-scores-negbin.rds")
 
+## read score files
+cum_scores <- read_csv("../paper-inputs/20200929-cum-scores.csv") %>%
+  mutate(wis = (.01*interval_2+.025*interval_5+.05*interval_10+.1*interval_20+.15*interval_30+.2*interval_40+.25*interval_50+
+                  .3*interval_60+.35*interval_70+.40*interval_80+.45*interval_90+.5*interval_100)/12, na.rm  = TRUE)  %>% 
+  mutate(first_fcast_sat = get_next_saturday(timezero) + ifelse(wday(timezero)<=2,0,7)) %>%
+  mutate(model_code = recode(factor(model),  "CovidAnalytics-DELPHI" = "Purple",  "COVIDhub-ensemble" = "Aqua", 
+    "COVIDhub-baseline" = "COVIDhub-baseline","CU-select" = "Green", "LANL-GrowthRate" = "Gray",  
+    "MOBS-GLEAM_COVID" = "Red", "UCLA-SuEIR" = "Gold", "YYG-ParamSearch" ="Pink",
+    "JHU_IDD-CovidSP" = "Goldenrod", "UMass-MechBayes" = "Maroon",  "UT-Mobility" = "Indigo", "IHME-CurveFit" = "Orange",
+    "IowaStateLW-STEM" = "Teal", "PSI-DRAFT" = "Emerald",  "USC-SI_kJalpha" = "Lilac", 
+    "USACE-ERDC_SEIR" = "Tan", "GT-DeepCOVID" = "Scarlet", "UA-EpiCovDA" = "Ruby")) %>%
+  filter(!is.na(interval_90))
+
+
 ```
 
 
@@ -79,54 +93,7 @@ fips_scoring <- fips %>% filter(for_scoring)  %>%
   select(-for_scoring)
 ```
 
-```{r zoltar-connection-and-data, cache=FALSE, echo=FALSE, include=FALSE, message=FALSE,results="hide"}
-zoltar_connection <- new_connection()
-zoltar_authenticate(zoltar_connection, Sys.getenv("Z_USERNAME"), Sys.getenv("Z_PASSWORD"))
 
-the_projects <- projects(zoltar_connection)
-project_url <- the_projects[the_projects$name == "COVID-19 Forecasts", "url"]
-
-the_scores <- c("abs_error", "interval_2","interval_5","interval_10","interval_20","interval_30","interval_40",
-"interval_50","interval_60", "interval_70","interval_80","interval_90","interval_100")
-
-the_models <- c("CovidAnalytics-DELPHI" ,"COVIDhub-ensemble" , "CU-select", "COVIDhub-baseline",  
-                "LANL-GrowthRate" ,  "MOBS-GLEAM_COVID", "UCLA-SuEIR",  "YYG-ParamSearch",
-                "JHU_IDD-CovidSP", "UMass-MechBayes", "UT-Mobility", "IHME-CurveFit", 
-                "IowaStateLW-STEM", "PSI-DRAFT", "USC-SI_kJalpha",  "USACE-ERDC_SEIR", 
-                "GT-DeepCOVID",  "UA-EpiCovDA") 
-  
-the_locations <- zoltar_units(zoltar_connection, project_url = "https://zoltardata.com/api/project/44/")$name %>% 
-  magrittr::extract(. %in% fips_scoring$location)
-
-the_targets_cum <- paste(1:20, "wk ahead cum death")
-
-the_targets_inc <- paste(1:4, "wk ahead inc death")
-
-#Dates to extract from Zoltar
-the_timezeros_cum <- seq(from = as.Date("2020-04-28"), to = as.Date("2020-08-03"), by="days")
-the_timezeros_inc <- seq(as.Date("2020-05-13"), to = as.Date("2020-08-03"), by="days")
-
-#Cumulative dataset 
-cum_tmp <- do_zoltar_query(zoltar_connection, 
-                           project_url =  "https://zoltardata.com/api/project/44/",
-                           is_forecast_query = FALSE,
-                           models = the_models, 
-                           units = the_locations, 
-                           targets = the_targets_cum,
-                           timezeros = the_timezeros_cum, 
-                           scores = the_scores) %>%
-   left_join(fips, by=c("unit" = "location")) %>%
-  mutate(wis = (.01*interval_2+.025*interval_5+.05*interval_10+.1*interval_20+.15*interval_30+.2*interval_40+.25*interval_50+
-                  .3*interval_60+.35*interval_70+.40*interval_80+.45*interval_90+.5*interval_100)/12, na.rm  = TRUE)  %>% 
-  mutate(first_fcast_sat = get_next_saturday(timezero) + ifelse(wday(timezero)<=2,0,7)) %>%
-  mutate(model_code = recode(factor(model),  "CovidAnalytics-DELPHI" = "Purple",  "COVIDhub-ensemble" = "Aqua", 
-    "COVIDhub-baseline" = "COVIDhub-baseline","CU-select" = "Green", "LANL-GrowthRate" = "Gray",  
-    "MOBS-GLEAM_COVID" = "Red", "UCLA-SuEIR" = "Gold", "YYG-ParamSearch" ="Pink",
-    "JHU_IDD-CovidSP" = "Goldenrod", "UMass-MechBayes" = "Maroon",  "UT-Mobility" = "Indigo", "IHME-CurveFit" = "Orange",
-    "IowaStateLW-STEM" = "Teal", "PSI-DRAFT" = "Emerald",  "USC-SI_kJalpha" = "Lilac", 
-    "USACE-ERDC_SEIR" = "Tan", "GT-DeepCOVID" = "Scarlet", "UA-EpiCovDA" = "Ruby")) %>%
-  filter(!is.na(interval_90))
-```
 
 ```{r}
 unique_cum <- cum_tmp %>%
