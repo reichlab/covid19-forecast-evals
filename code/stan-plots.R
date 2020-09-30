@@ -1,4 +1,4 @@
-stan_fit_nb <- readRDS("/Volumes/GoogleDrive/My Drive/COVID19-forecast-hub/evaluation/20200927-stan-fit-scores-negbin.rds")
+stan_fit_nb <- readRDS("../paper-inputs/20200927-stan-fit-scores-negbin.rds")
 launch_shinystan(stan_fit_nb)
 
 pp_samples <- posterior_predict(stan_fit_nb)
