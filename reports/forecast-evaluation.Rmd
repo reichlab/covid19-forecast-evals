@@ -16,10 +16,7 @@ output:
 hub_root_dir <- "../../covid19-forecast-hub" ## NICK
 knitr::opts_chunk$set(message = FALSE, warning = FALSE, echo = FALSE)
 source(file.path(hub_root_dir,"/code/processing-fxns/get_next_saturday.R"))
-library(zoltr)  ##devtools::install_github("reichlab/zoltr")
-library(lme4)
 library(lubridate)
-library(forecast)
 library(kableExtra)
 library(tidyverse)
 theme_set(theme_bw())
@@ -196,132 +193,8 @@ scored_models_df_pred <- empirical_df %>%
   anti_join(dates_to_filter) %>%  ungroup()  
 ```
 
-#Mixed Effects model creation
-
-###Models to predict MAE
-```{r baseline as ref}
-#absolute error model
-scored_models_df_pred$model_code <- relevel(scored_models_df_pred$model_code, ref = "COVIDhub-baseline")
-```
 
 
-```{r LMER for AE model-target FE interaction and location and week REs}
-cum_fit_abs_errorM1 <- lmer(log(abs_error+0.01) ~ model_code*target + (1|first_fcast_sat) + (1|location_name), data = scored_models_df_pred)
-#summary(cum_fit_abs_errorM2)
-```
-
-```{r LMER for AE model-target FE interaction and week-location RE interaction}
-cum_fit_abs_errorM2 <- lmer(log(abs_error+0.01) ~ model_code*target + (1|first_fcast_sat:location_name), data = scored_models_df_pred)
-#summary(cum_fit_abs_errorM2)
-```
-
-```{r LMER for AE model-target FE interaction and week*location + week*model RE interactions}
-cum_fit_abs_errorM3 <- lmer(log(abs_error+0.01) ~  model_code*target + (1|first_fcast_sat:location_name) + (1|first_fcast_sat:model_code), data = scored_models_df_pred)
-#summary(cum_fit_abs_errorM3)
-```
-
-```{r LMER for AE model-target FE interaction and week*model*location RE interaction}
-cum_fit_abs_errorM4 <- lmer(log(abs_error+0.01) ~  model_code*target + (1|first_fcast_sat:model_code:location_name), data = scored_models_df_pred)
-#summary(cum_fit_abs_errorM1)
-```
-
-```{r stan model sandbox}
-
-cum_fit_abs_errorM5 <- glmer.nb(round(abs_error) ~  model_code*target + (1|first_fcast_sat:location_name) + (1|first_fcast_sat:model_code), data = scored_models_df_pred)
-
-library(rstanarm)
-stan_fit <- stan_glmer(round(abs_error) ~  model_code*target + (1|first_fcast_sat:location_name), 
-  chains=1,
-  family=neg_binomial_2(),
-  data = scored_models_df_pred)
-  #data = scored_models_df_pred[sample(nrow(scored_models_df_pred), 1000),])
-#summary(cum_fit_abs_errorM1)
-```
-
-### Models to predict WIS 
-```{r LMER for WIS model-target interaction}
-cum_fit_wisM1 <- lmer(log(wis + .01) ~  model_code*target + (1|first_fcast_sat:model_code:location_name), data = scored_models_df_pred)
-#summary(cum_fit_wisM1)
-```
-
-```{r LMER for WIS model-target and model-location interaction}
-cum_fit_wisM2 <- lmer(log(wis + .01) ~ model_code*target + (1|first_fcast_sat:location_name), data = scored_models_df_pred)
-
-#summary(cum_fit_wisM2)
-```
-
-```{r LMER for WIS model-target and model-week interaction}
-cum_fit_wisM3 <- lmer(log(wis + .01) ~ model_code*target +  (1|first_fcast_sat:location_name) + (1|first_fcast_sat:model_code), data = scored_models_df_pred)
-
-#summary(cum_fit_wisM3)
-```
-
-Dataframe for model fitting
-```{r Create DF for MAE and WIS predictions}
-model_count_cum <- nrow(unique(scored_models_df_pred %>% group_by(model_code) %>% filter(model_code != "Tan" | model_code != "Orange") %>% summarise(n = n())))
-
-#To create a dataframe of predictions based on the model, I've create a dataframe that includes the names of all teams as well as the targets, locations, and submission weeks. This is an emplty datafram that gets filled in using the predict function. 
-
-total_forecast_count <- number_weeks * 4 * 51          #Count number of forecasts for each team
-total_location_count <- number_weeks * 4               #Total number of locations submitted for each team
-
-first_fcast_sat_unique <- unique(scored_models_df_pred$first_fcast_sat)
-weeks_repeat4times <- first_fcast_sat_unique %>% magrittr::extract(. <= as.Date(max_sat)) 
-
-target_unique <- unique(scored_models_df_pred$target)
-
-model_code <- c("Ruby", "Teal", "Goldenrod", "Emerald", "Scarlet", "Purple", "COVIDhub-baseline", "Aqua", "Green", "Red", "Gold", "Maroon", "Indigo", "Pink")
-
-#Create DF for MAE and WIS predictions (step 2) 
-model_code <- rep(model_code, each = total_forecast_count)   #repeat model names number of times of forecast 
-location_name <- rep(rep(fips_scoring$location_name, each = total_location_count), 14) #Repeat locations 
-
-#Repeat number of first forecast dates 
-first_fcast_sat <- rep(rep(weeks_repeat4times, each = 4), 714)
-
-#Repat number of targets taking into account weeks with 3 - 1 targets 
-target <-  rep(target_unique, 9996)
-
-length(model_code)
-length(location_name)
-length(first_fcast_sat)
-length(target)
-
-prediction_df = data.frame(model_code, location_name, first_fcast_sat, target) #merge all vectors into a dataframe
-```
-
-```{r}
-#predict MAE
-log_abs_errorM1 <- predict(cum_fit_abs_errorM1, prediction_df, allow.new.levels = TRUE)    #predict abs error based on mixed effects model
-prediction_df$abs_errorM1 <- exp(log_abs_errorM1) - .01           #exponentiate log
-
-log_abs_errorM2 <- predict(cum_fit_abs_errorM2, prediction_df)    
-prediction_df$abs_errorM2 <- exp(log_abs_errorM2) - .01           
-
-log_abs_errorM3 <- predict(cum_fit_abs_errorM3, prediction_df, allow.new.levels = TRUE)    
-prediction_df$abs_errorM3 <- exp(log_abs_errorM3) - .01        
-
-#Predict WIS
-log_wisM1 <- predict(cum_fit_wisM1, prediction_df,allow.new.levels = TRUE)
-prediction_df$wisM1 <- exp(log_wisM1) - .01
-
-log_wisM2 <- predict(cum_fit_wisM2, prediction_df, allow.new.levels = TRUE)
-prediction_df$wisM2 <- exp(log_wisM2) - .01
-
-log_wisM3 <- predict(cum_fit_wisM3, prediction_df, allow.new.levels = TRUE)
-prediction_df$wisM3 <- exp(log_wisM3) - .01
-```
-
-```{r}
-predict_df_MAE <- prediction_df %>%
-  pivot_longer(cols = starts_with("abs_error"), values_to = "MAE_value", names_to = "mae_modelnum") %>%
-  mutate(mae_modelnum = as.factor(mae_modelnum))
-
-
-predict_df_WIS <- prediction_df %>%
-  pivot_longer(cols = starts_with("wisM"), values_to = "wis_value", names_to = "wis_modelnum") %>%
-mutate(wis_modelnum = as.factor(wis_modelnum))
-```
 
 
 # Table 2: prediction interval empirical coverage for cumulative deaths by horizon 
