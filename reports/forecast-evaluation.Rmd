@@ -11,9 +11,22 @@ output:
 ---
 
 #Prelims
-```{r setup, include=FALSE}
+```{r global parameters}
+## set hub directory on local machine
 # hub_root_dir<- "~/Desktop/Reich Lab/eycramer/covid19-forecast-hub" ## ESTEE
 hub_root_dir <- "../../covid19-forecast-hub" ## NICK
+
+## minimum number of weeks for eligibility
+NUM_WEEKS_CUM <- 11
+NUM_WEEKS_INC <- 8
+
+## minumum number of models in a week to be considered eligible
+NUM_MODELS <- 25
+
+```
+
+
+```{r setup, include=FALSE}
 knitr::opts_chunk$set(message = FALSE, warning = FALSE, echo = FALSE)
 source(file.path(hub_root_dir,"/code/processing-fxns/get_next_saturday.R"))
 library(lubridate)
@@ -26,33 +39,89 @@ theme_set(theme_bw())
 ## locations file
 locs <- read_csv(file.path(hub_root_dir,"data-locations/locations.csv"))
 
-## dates with issues file
-dates_with_issues <- read_csv(file.path(hub_root_dir,"data-truth/Dates_edit_evaluation.csv"))
+## locations/dates with reporting anomalies
+dates_with_issues <- read_csv("../paper-inputs/anomaly-reporting-dates.csv") %>%
+  filter(to_remove==1)
 
 ## stan model files
 stan_model_ae <- readRDS("../paper-inputs/20200927-stan-fit-scores-negbin.rds")
 
+## read model eligibility file
+model_eligibility <- read_csv("../paper-inputs/model-eligibility.csv")
+
 ## read score files
-cum_scores <- read_csv("../paper-inputs/20200929-cum-scores.csv") %>%
+cum_scores <- read_csv("../paper-inputs/20200929-cum-scores.csv") 
+```
+
+
+```{r remove scores from ineligible models}
+## find models with minimum eligibility for full analysis
+cum_eligible_models <- model_eligibility %>%
+  group_by(model) %>%
+  summarize(num_eligible_weeks = sum(!is.na(timezero) & num_units_eligible_cum >= NUM_MODELS)) %>%
+  filter(num_eligible_weeks > NUM_WEEKS_CUM) %>%
+  pull(model)
+
+inc_eligible_models <- model_eligibility %>%
+  group_by(model) %>%
+  summarize(num_eligible_weeks = sum(!is.na(timezero) & num_units_eligible_cum >= NUM_MODELS)) %>%
+  filter(num_eligible_weeks > NUM_WEEKS_INC) %>%
+  pull(model)
+
+## filter scores
+cum_scores_eligible <- cum_scores %>%
+  filter(model %in% cum_eligible_models) 
+
+inc_scores_eligible <- inc_scores %>%
+  filter(model %in% inc_eligible_models)
+```
+
+
+```{r remove scores from location-weeks with contaminated data}
+cum_scores_eligible$to_keep <- TRUE
+for(j in 1:nrow(dates_with_issues)){
+  tmp.idx <- which(cum_scores_eligible$timezero <= dates_with_issues$first_fcast_date_impacted[j] & cum_scores_eligible$unit == dates_with_issues$fips[j])
+  cum_scores_eligible$to_keep[tmp.idx] <- FALSE
+}
+
+inc_scores_eligible$to_keep <- TRUE
+for(j in 1:nrow(dates_with_issues)){
+  tmp.idx <- which(inc_scores_eligible$timezero <= dates_with_issues$first_fcast_date_impacted[j] & inc_scores_eligible$unit == dates_with_issues$fips[j])
+  inc_scores_eligible$to_keep[tmp.idx] <- FALSE
+}
+
+cum_scores_eligible <- cum_scores_eligible %>% 
+  filter(to_keep) %>%
+  select(-to_keep)
+
+inc_scores_eligible <- inc_scores_eligible %>% 
+  filter(to_keep) %>%
+  select(-to_keep)
+
+```
+
+
+
+```{r add blinded model code}
+possible_colors <- c("Purple", "Aqua", "Green", "Gray", "Red", "Gold", "Pink", 
+  "Goldenrod", "Maroon", "Indigo", "Orange", "Teal", "Emerald", "Lilac", 
+  "Tan", "Scarlet", "Ruby")
+
+cum_scores_eligible$model_code <- factor(cum_scores_eligible$model, labels=sample(possible_colors, size = length(cum_eligible_models), replace = FALSE))
+inc_scores_eligible$model_code <- factor(inc_scores_eligible$model, labels=sample(possible_colors, size = length(inc_eligible_models), replace = FALSE))
+```
+
+
+```{r prepare scores for analysis}
+cum_scores_calc <- cum_scores_eligible %>%
   mutate(wis = (.01*interval_2+.025*interval_5+.05*interval_10+.1*interval_20+.15*interval_30+.2*interval_40+.25*interval_50+
                   .3*interval_60+.35*interval_70+.40*interval_80+.45*interval_90+.5*interval_100)/12)  %>% 
-  ## select(-starts_with("interval")) %>%
+  #select(-starts_with("interval")) %>%
   mutate(first_fcast_sat = get_next_saturday(timezero) + ifelse(wday(timezero)<=2,0,7)) %>%
-  mutate(model_code = recode(factor(model),  "CovidAnalytics-DELPHI" = "Purple",  "COVIDhub-ensemble" = "Aqua", 
-    "COVIDhub-baseline" = "COVIDhub-baseline","CU-select" = "Green", "LANL-GrowthRate" = "Gray",  
-    "MOBS-GLEAM_COVID" = "Red", "UCLA-SuEIR" = "Gold", "YYG-ParamSearch" ="Pink",
-    "JHU_IDD-CovidSP" = "Goldenrod", "UMass-MechBayes" = "Maroon",  "UT-Mobility" = "Indigo", "IHME-CurveFit" = "Orange",
-    "IowaStateLW-STEM" = "Teal", "PSI-DRAFT" = "Emerald",  "USC-SI_kJalpha" = "Lilac", 
-    "USACE-ERDC_SEIR" = "Tan", "GT-DeepCOVID" = "Scarlet", "UA-EpiCovDA" = "Ruby")) %>%
   left_join(locs, by=c("unit" = "location"))
-
 ```
 
 
-
-```{r not in function,  include=FALSE}
-'%!in%' <- function(x,y)!('%in%'(x,y))
-```
 
 ```{r, echo = FALSE}
 ## Tuesday the first timezero for which we will be evaluating forecasts
