@@ -14,8 +14,8 @@ UNITS_FOR_ELIGIBILITY <- read_csv("../covid19-forecast-hub/data-locations/locati
 
 ## All possible dates considered forecasts could have been made
 ## these include start/end dates for each cum/inc targets 
-the_timezeros_cum <- seq(from = as.Date("2020-04-28"), to = as.Date("2020-08-03"), by="days")
-the_timezeros_inc <- seq(from = as.Date("2020-05-13"), to = as.Date("2020-08-03"), by="days")
+the_timezeros_cum <- seq(from = as.Date("2020-04-28"), to = as.Date("2020-08-24"), by="days")
+the_timezeros_inc <- seq(from = as.Date("2020-05-13"), to = as.Date("2020-08-24"), by="days")
 
 
 ## connect to Zoltar

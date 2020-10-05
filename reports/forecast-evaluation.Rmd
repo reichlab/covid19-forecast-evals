@@ -17,12 +17,11 @@ output:
 hub_root_dir <- "../covid19-forecast-hub" ## NICK
 
 ## minimum number of weeks for eligibility
-NUM_WEEKS_CUM <- 11
-NUM_WEEKS_INC <- 8
+NUM_WEEKS_CUM <- 14
+NUM_WEEKS_INC <- 11
 
 ## minumum number of models in a week to be considered eligible
-NUM_MODELS <- 25
-
+NUM_UNITS <- 25
 ```
 
 
@@ -58,13 +57,13 @@ cum_scores <- read_csv("paper-inputs/20200929-cum-scores.csv")
 ## find models with minimum eligibility for full analysis
 cum_eligible_models <- model_eligibility %>%
   group_by(model) %>%
-  summarize(num_eligible_weeks = sum(!is.na(timezero) & num_units_eligible_cum >= NUM_MODELS)) %>%
+  summarize(num_eligible_weeks = sum(!is.na(timezero) & num_units_eligible_cum >= NUM_UNITS)) %>%
   filter(num_eligible_weeks > NUM_WEEKS_CUM) %>%
   pull(model)
 
 inc_eligible_models <- model_eligibility %>%
   group_by(model) %>%
-  summarize(num_eligible_weeks = sum(!is.na(timezero) & num_units_eligible_cum >= NUM_MODELS)) %>%
+  summarize(num_eligible_weeks = sum(!is.na(timezero) & num_units_eligible_cum >= NUM_UNITS)) %>%
   filter(num_eligible_weeks > NUM_WEEKS_INC) %>%
   pull(model)
 
