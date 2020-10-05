@@ -14,7 +14,7 @@ output:
 ```{r global parameters}
 ## set hub directory on local machine
 # hub_root_dir<- "~/Desktop/Reich Lab/eycramer/covid19-forecast-hub" ## ESTEE
-hub_root_dir <- "../../covid19-forecast-hub" ## NICK
+hub_root_dir <- "../covid19-forecast-hub" ## NICK
 
 ## minimum number of weeks for eligibility
 NUM_WEEKS_CUM <- 11
@@ -40,17 +40,17 @@ theme_set(theme_bw())
 locs <- read_csv(file.path(hub_root_dir,"data-locations/locations.csv"))
 
 ## locations/dates with reporting anomalies
-dates_with_issues <- read_csv("../paper-inputs/anomaly-reporting-dates.csv") %>%
+dates_with_issues <- read_csv("paper-inputs/anomaly-reporting-dates.csv") %>%
   filter(to_remove==1)
 
 ## stan model files
-stan_model_ae <- readRDS("../paper-inputs/20200927-stan-fit-scores-negbin.rds")
+stan_model_ae <- readRDS("paper-inputs/20200927-stan-fit-scores-negbin.rds")
 
 ## read model eligibility file
-model_eligibility <- read_csv("../paper-inputs/model-eligibility.csv")
+model_eligibility <- read_csv("paper-inputs/model-eligibility.csv")
 
 ## read score files
-cum_scores <- read_csv("../paper-inputs/20200929-cum-scores.csv") 
+cum_scores <- read_csv("paper-inputs/20200929-cum-scores.csv") 
 ```
 
 
@@ -72,8 +72,8 @@ inc_eligible_models <- model_eligibility %>%
 cum_scores_eligible <- cum_scores %>%
   filter(model %in% cum_eligible_models) 
 
-inc_scores_eligible <- inc_scores %>%
-  filter(model %in% inc_eligible_models)
+# inc_scores_eligible <- inc_scores %>%
+#   filter(model %in% inc_eligible_models)
 ```
 
 
@@ -84,19 +84,19 @@ for(j in 1:nrow(dates_with_issues)){
   cum_scores_eligible$to_keep[tmp.idx] <- FALSE
 }
 
-inc_scores_eligible$to_keep <- TRUE
-for(j in 1:nrow(dates_with_issues)){
-  tmp.idx <- which(inc_scores_eligible$timezero <= dates_with_issues$first_fcast_date_impacted[j] & inc_scores_eligible$unit == dates_with_issues$fips[j])
-  inc_scores_eligible$to_keep[tmp.idx] <- FALSE
-}
+# inc_scores_eligible$to_keep <- TRUE
+# for(j in 1:nrow(dates_with_issues)){
+#   tmp.idx <- which(inc_scores_eligible$timezero <= dates_with_issues$first_fcast_date_impacted[j] & inc_scores_eligible$unit == dates_with_issues$fips[j])
+#   inc_scores_eligible$to_keep[tmp.idx] <- FALSE
+# }
 
 cum_scores_eligible <- cum_scores_eligible %>% 
   filter(to_keep) %>%
   select(-to_keep)
 
-inc_scores_eligible <- inc_scores_eligible %>% 
-  filter(to_keep) %>%
-  select(-to_keep)
+# inc_scores_eligible <- inc_scores_eligible %>% 
+#   filter(to_keep) %>%
+#   select(-to_keep)
 
 ```
 
@@ -108,7 +108,7 @@ possible_colors <- c("Purple", "Aqua", "Green", "Gray", "Red", "Gold", "Pink",
   "Tan", "Scarlet", "Ruby")
 
 cum_scores_eligible$model_code <- factor(cum_scores_eligible$model, labels=sample(possible_colors, size = length(cum_eligible_models), replace = FALSE))
-inc_scores_eligible$model_code <- factor(inc_scores_eligible$model, labels=sample(possible_colors, size = length(inc_eligible_models), replace = FALSE))
+# inc_scores_eligible$model_code <- factor(inc_scores_eligible$model, labels=sample(possible_colors, size = length(inc_eligible_models), replace = FALSE))
 ```
 
 
@@ -121,77 +121,6 @@ cum_scores_calc <- cum_scores_eligible %>%
   left_join(locs, by=c("unit" = "location"))
 ```
 
-
-
-```{r, echo = FALSE}
-## Tuesday the first timezero for which we will be evaluating forecasts
-## 1 wk ahead forecasts are for the following Saturday
-incl_start_date <- as.Date("2020-04-28")
-## Monday the last timezero for the first week in which we will evaluate
-incl_end_date <- incl_start_date + 6
-## Target end date of the first set of forecasts
-wk_ahead_forecast_date <- incl_start_date + 11
-
-## Paste of forecast week
-forecast_date_epiweek <- paste0("EW", MMWRweek::MMWRweek(wk_ahead_forecast_date)$MMWRweek)
-
-#max_sat <- as.Date(Upcoming_sat - 21)  #Latest week evaluated
-min_sat <- as.Date(get_next_saturday("2020-05-05")) #Earliest week evaluated
-
-#cutoff date for final paper: 2020-08-08
-max_sat <- as.Date("2020-08-08")
-
-number_weeks <- as.integer(difftime(max_sat, min_sat, units = "weeks") + 1) #Number of weeks evaluated
-```
-
-```{r}
-# read in csv with dates to filter out due to errors in reporting
-dates_to_filter <- dates_with_issues %>%
-  mutate(target_date_sat = lubridate::ymd(date_of_error)) 
-## TODO: target_data_sat is not necessarily a saturday?
-
-#scored locations
-fips <- locs %>%
-    mutate(for_scoring = abbreviation %in% c("US", datasets::state.abb))
-
-# keep only locations that get scored 
-fips_scoring <- fips %>% filter(for_scoring)  %>%
-  select(-for_scoring)
-```
-
-
-
-```{r}
-unique_cum <- cum_tmp %>%
-  group_by(model, target, unit, first_fcast_sat) %>%     
-  arrange(timezero) %>%    #include arrange so last timezero is selected 
-  mutate(forecast_in_wk = row_number(), 
-         last_forecast_in_wk = forecast_in_wk == max(forecast_in_wk)) %>%    #number weekly submission
-  filter(last_forecast_in_wk) %>%   #keep latest weekly submission
-  mutate(target_date_sat = case_when(target == "1 wk ahead cum death" ~ first_fcast_sat,
-                                     target == "2 wk ahead cum death" ~ first_fcast_sat + 7,
-                                     target == "3 wk ahead cum death" ~ first_fcast_sat + 14, 
-                                     target == "4 wk ahead cum death" ~ first_fcast_sat + 21)) %>% 
-  ungroup()
-```
-
-
-#Fix IHME
-```{r}
-unique_cum_IHMEadjust <- unique_cum  %>%
-  filter(model == "IHME-CurveFit") %>% 
-  filter(first_fcast_sat == as.Date("2020-05-23") | first_fcast_sat == as.Date("2020-07-11")) %>% 
-  filter(target %in% c("2 wk ahead cum death", "3 wk ahead cum death", "4 wk ahead cum death", "5 wk ahead cum death")) %>%
-  mutate(target = case_when(target == "2 wk ahead cum death" ~ "1 wk ahead cum death",
-                            target == "3 wk ahead cum death" ~ "2 wk ahead cum death",
-                            target == "4 wk ahead cum death" ~ "3 wk ahead cum death",
-                            target == "5 wk ahead cum death" ~ "4 wk ahead cum death"),
-         first_fcast_sat = first_fcast_sat + 7)
-```
-
-```{r}
-unique_cum <- rbind(unique_cum, unique_cum_IHMEadjust)
-```
 
 ```{r code for calc and pred DF}
 ## Keep only unique forecasts for each week

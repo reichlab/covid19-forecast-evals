@@ -7,10 +7,15 @@ source("code/unit_timezero_forecast_complete.R")
 
 ## maximum number of weeks missing that we allow before disqualifying a model
 MAXIMUM_MISSING_WEEKS <- 3
-UNITS_FOR_ELIGIBILITY <- read_csv("../../covid19-forecast-hub/data-locations/locations.csv") %>%
+UNITS_FOR_ELIGIBILITY <- read_csv("../covid19-forecast-hub/data-locations/locations.csv") %>%
     mutate(for_scoring = abbreviation %in% c("US", datasets::state.abb)) %>%
     filter(for_scoring) %>%
     pull(location)
+
+## All possible dates considered forecasts could have been made
+## these include start/end dates for each cum/inc targets 
+the_timezeros_cum <- seq(from = as.Date("2020-04-28"), to = as.Date("2020-08-03"), by="days")
+the_timezeros_inc <- seq(from = as.Date("2020-05-13"), to = as.Date("2020-08-03"), by="days")
 
 
 ## connect to Zoltar
@@ -19,12 +24,6 @@ zoltar_authenticate(zoltar_connection, Sys.getenv("Z_USERNAME"), Sys.getenv("Z_P
 
 the_projects <- projects(zoltar_connection)
 project_url <- the_projects[the_projects$name == "COVID-19 Forecasts", "url"]
-
-## some date set-up
-
-## All possible dates considered forecasts could have been made
-the_timezeros_cum <- seq(from = as.Date("2020-04-28"), to = as.Date("2020-08-03"), by="days")
-the_timezeros_inc <- seq(as.Date("2020-05-13"), to = as.Date("2020-08-03"), by="days")
 
 ## table to help organize and choose forecasts
 timezero_weeks <- tibble(
@@ -80,15 +79,14 @@ date_eligible_models <- unique(date_filtered_models$model)
 model_completes <- tibble(model=character(), timezero=Date(), target_end_date_1wk_ahead=Date(),
     num_units_eligible_cum=numeric(), num_units_eligible_inc=numeric())
 
-for(i in 1:length(date_eligible_models)){
+for(model in date_eligible_models){
     
-    model_to_query <- date_eligible_models[i]
-    fcasts_to_query <- filter(date_filtered_models, model==model_to_query)
+    fcasts_to_query <- filter(date_filtered_models, model==model)
     
     fcasts <- do_zoltar_query(zoltar_connection, 
         project_url =  project_url,
         is_forecast_query = TRUE,
-        models = model_to_query, 
+        models = model, 
         targets = the_targets,
         units = UNITS_FOR_ELIGIBILITY,
         types = c("quantile"),
@@ -108,8 +106,8 @@ for(i in 1:length(date_eligible_models)){
         summarize(complete_cum=FALSE, complete_inc=FALSE)
     
     for(j in 1:nrow(preds_to_eval)){
-        preds_to_eval$complete_cum <- unit_timezero_forecast_complete(filter(fcasts, timezero==preds_to_eval$timezero[j]), type="cum")
-        preds_to_eval$complete_inc <- unit_timezero_forecast_complete(filter(fcasts, timezero==preds_to_eval$timezero[j]), type="inc")
+        preds_to_eval$complete_cum[j] <- unit_timezero_forecast_complete(filter(fcasts, timezero==preds_to_eval$timezero[j]), type="cum")
+        preds_to_eval$complete_inc[j] <- unit_timezero_forecast_complete(filter(fcasts, timezero==preds_to_eval$timezero[j]), type="inc")
     }
     
     this_model_completes <- preds_to_eval %>% 
