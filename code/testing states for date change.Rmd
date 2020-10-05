@@ -1,0 +1,152 @@
+---
+title: "Back-filled dates"
+author: "Estee Y Cramer"
+date: "9/30/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+#hub_root_dir <- "~/Documents/research-versioned/covid19-forecast-hub"
+hub_root_dir<- "~/Desktop/Reich Lab/eycramer/covid19-forecast-hub"
+knitr::opts_chunk$set(message = FALSE, warning = FALSE, echo = FALSE)
+source(file.path(hub_root_dir,"/code/processing-fxns/get_next_saturday.R"))
+#source("../processing-fxns/get_next_saturday.R")
+library(zoltr)  ##devtools::install_github("reichlab/zoltr")
+library(forecast)
+library(covidcast) #devtools::install_github("cmu-delphi/covidcast", ref = "main",
+                         #subdir = "R-packages/covidcast")
+library(kableExtra)
+library(tidyverse)
+theme_set(theme_bw())
+```
+
+
+Michigan 
+```{r}
+tmp_mi <- covidcast_signal("jhu-csse", "deaths_cumulative_num", geo_type = "state", geo_values = "mi", start_day = "2020-06-01", end_day = "2020-06-14", as_of="2020-06-09")
+```
+
+```{r}
+tmp_mi2 <- covidcast_signal("jhu-csse", "deaths_cumulative_num", geo_type = "state", geo_values = "mi", start_day = "2020-06-01", end_day = "2020-06-14", as_of="2020-06-11")
+```
+
+```{r}
+tmp_mi3 <- covidcast_signal("jhu-csse", "deaths_cumulative_num", geo_type = "state", geo_values = "mi", start_day = "2020-06-01", end_day = "2020-06-14", as_of="2020-10-01")
+```
+
+
+Missouri
+```{r}
+tmp_mo <- covidcast_signal("jhu-csse", "deaths_cumulative_num", geo_type = "state", geo_values = "mo", start_day = "2020-03-10", end_day = "2020-06-14", as_of="2020-05-07")
+```
+
+
+Oregon
+```{r}
+tmp_or <- covidcast_signal("jhu-csse", "deaths_cumulative_num", geo_type = "state", geo_values = "or", start_day = "2020-06-10", end_day = "2020-06-16", as_of="2020-06-17")
+```
+
+```{r}
+tmp_or2 <- covidcast_signal("jhu-csse", "deaths_cumulative_num", geo_type = "state", geo_values = "or", start_day = "2020-06-10", end_day = "2020-06-16", as_of="2020-06-20")
+```
+
+```{r}
+tmp_or3 <- covidcast_signal("jhu-csse", "deaths_cumulative_num", geo_type = "state", geo_values = "or", start_day = "2020-06-10", end_day = "2020-06-16", as_of="2020-10-01")
+```
+
+
+Mississippi
+```{r}
+tmp_ms <- covidcast_signal("jhu-csse", "deaths_cumulative_num", geo_type = "state", geo_values = "ms", start_day = "2020-06-17", end_day = "2020-06-25", as_of="2020-06-24")
+```
+
+```{r}
+tmp_ms2 <- covidcast_signal("jhu-csse", "deaths_cumulative_num", geo_type = "state", geo_values = "ms", start_day = "2020-06-17", end_day = "2020-06-25", as_of="2020-06-25")
+```
+
+```{r}
+tmp_ms3 <- covidcast_signal("jhu-csse", "deaths_cumulative_num", geo_type = "state", geo_values = "ms", start_day = "2020-06-17", end_day = "2020-06-25", as_of="2020-10-01")
+```
+
+
+Delaware
+```{r}
+tmp_de <- covidcast_signal("jhu-csse", "deaths_cumulative_num", geo_type = "state", geo_values = "de", start_day = "2020-06-20", end_day = "2020-06-28", as_of="2020-06-26")
+```
+
+```{r}
+tmp_de1 <- covidcast_signal("jhu-csse", "deaths_cumulative_num", geo_type = "state", geo_values = "de", start_day = "2020-06-20", end_day = "2020-06-28", as_of="2020-06-27")
+```
+
+```{r}
+tmp_de2 <- covidcast_signal("jhu-csse", "deaths_cumulative_num", geo_type = "state", geo_values = "de", start_day = "2020-06-20", end_day = "2020-06-28", as_of="2020-06-28")
+```
+
+```{r}
+tmp_de3 <- covidcast_signal("jhu-csse", "deaths_cumulative_num", geo_type = "state", geo_values = "de", start_day = "2020-06-20", end_day = "2020-06-28", as_of="2020-06-29")
+```
+
+```{r}
+tmp_de4 <- covidcast_signal("jhu-csse", "deaths_cumulative_num", geo_type = "state", geo_values = "de", start_day = "2020-06-20", end_day = "2020-06-28", as_of="2020-10-01")
+```
+
+
+New Jersey
+
+```{r}
+tmp_nj <- covidcast_signal("jhu-csse", "deaths_cumulative_num", geo_type = "state", geo_values = "nj", start_day = "2020-06-20", end_day = "2020-06-29", as_of="2020-06-27")
+```
+
+```{r}
+tmp_nj1 <- covidcast_signal("jhu-csse", "deaths_cumulative_num", geo_type = "state", geo_values = "nj", start_day = "2020-06-20", end_day = "2020-06-29", as_of="2020-08-27")
+```
+
+```{r}
+tmp_nj2 <- covidcast_signal("jhu-csse", "deaths_cumulative_num", geo_type = "state", geo_values = "nj", start_day = "2020-06-20", end_day = "2020-06-29", as_of="2020-10-01")
+```
+
+
+New York
+```{r}
+tmp_ny <- covidcast_signal("jhu-csse", "deaths_cumulative_num", geo_type = "state", geo_values = "ny", start_day = "2020-04-19", end_day = "2020-04-25", as_of="2020-05-07")
+```
+
+```{r}
+tmp_ny1 <- covidcast_signal("jhu-csse", "deaths_cumulative_num", geo_type = "state", geo_values = "ny", start_day = "2020-04-19", end_day = "2020-04-25", as_of="2020-06-30")
+```
+
+```{r}
+tmp_ny2 <- covidcast_signal("jhu-csse", "deaths_cumulative_num", geo_type = "state", geo_values = "ny", start_day = "2020-04-19", end_day = "2020-04-25", as_of="2020-10-01")
+```
+
+Texas
+```{r}
+tmp_tx <- covidcast_signal("jhu-csse", "deaths_cumulative_num", geo_type = "state", geo_values = "tx", start_day = "2020-07-20", end_day = "2020-07-28", as_of="2020-07-28")
+```
+
+
+```{r}
+tmp_tx1 <- covidcast_signal("jhu-csse", "deaths_cumulative_num", geo_type = "state", geo_values = "tx", start_day = "2020-07-20", end_day = "2020-07-28", as_of="2020-10-01")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
