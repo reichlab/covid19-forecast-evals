@@ -1,8 +1,9 @@
 ## determine model eligibility
 library(zoltr)  ## devtools::install_github("reichlab/zoltr")
+library(covidHubUtils) ## devtools::install_github("reichlab/covidHubUtils")
 library(tidyverse)
 library(lubridate)
-source("../covid19-forecast-hub/code/processing-fxns/get_next_saturday.R")
+# source("../covid19-forecast-hub/code/processing-fxns/get_next_saturday.R")
 source("code/unit_timezero_forecast_complete.R")
 
 ## maximum number of weeks missing that we allow before disqualifying a model
@@ -11,6 +12,14 @@ UNITS_FOR_ELIGIBILITY <- read_csv("../covid19-forecast-hub/data-locations/locati
     mutate(for_scoring = abbreviation %in% c("US", datasets::state.abb)) %>%
     filter(for_scoring) %>%
     pull(location)
+
+## minimum number of weeks for eligibility
+NUM_WEEKS_CUM <- 14
+NUM_WEEKS_INC <- 11
+
+## minumum number of models in a week to be considered eligible in a given week
+NUM_UNITS <- 25
+
 
 ## All possible dates considered forecasts could have been made
 ## these include start/end dates for each cum/inc targets 
@@ -30,7 +39,7 @@ timezero_weeks <- tibble(
     ## every possible timezero
     timezero = the_timezeros_cum, 
     ## the associated target_end_date for 1-week ahead targets
-    target_end_date_1wk_ahead = get_next_saturday(timezero) + (wday(timezero)>2)*7)
+    target_end_date_1wk_ahead = as.Date(covidHubUtils::calc_target_week_end_date(timezero, horizon=1)))
 
 ## lots of code here to determine eligible models based on elibility criteria
 
@@ -70,28 +79,31 @@ for(i in 1:nrow(primary_models)) {
 #######################################################################
 ## query potentially eligible forecasts to see if they are eligible
 
-the_targets <- c(paste(1:4, "wk ahead cum death"), paste(1:4, "wk ahead inc death"))
+inc_targets <- paste(1:4, "wk ahead inc death")
+cum_targets <- paste(1:4, "wk ahead cum death")
+the_targets <- c(inc_targets, cum_targets)
 
 ## store vectors of models to consider
 date_eligible_models <- unique(date_filtered_models$model)
 
 
 model_completes <- tibble(model=character(), timezero=Date(), target_end_date_1wk_ahead=Date(),
-    num_units_eligible_cum=numeric(), num_units_eligible_inc=numeric())
+    target_group=character(), num_units_eligible=numeric())
 
-for(model in date_eligible_models){
+for(this_model in date_eligible_models){
     
-    fcasts_to_query <- filter(date_filtered_models, model==model)
+    fcasts_to_query <- filter(date_filtered_models, model==this_model)
     
     fcasts <- do_zoltar_query(zoltar_connection, 
         project_url =  project_url,
         is_forecast_query = TRUE,
-        models = model, 
+        models = this_model, 
         targets = the_targets,
         units = UNITS_FOR_ELIGIBILITY,
         types = c("quantile"),
         timezeros = fcasts_to_query$timezero) %>%
-        select(-c(cat, prob, sample, family, param1, param2,param3))
+        select(-c(cat, prob, sample, family, param1, param2,param3)) %>%
+        mutate(target_group = ifelse(target %in% inc_targets, "inc", "cum"))
     
     if(nrow(fcasts)==0) 
         next()
@@ -102,26 +114,50 @@ for(model in date_eligible_models){
     
     ## for each unit-timezero pair, compute a binary "was this prediction complete"
     preds_to_eval <- fcasts %>%
-        group_by(model, unit, timezero) %>%
-        summarize(complete_cum=FALSE, complete_inc=FALSE)
+        group_by(model, unit, timezero, target_group) %>%
+        summarize(complete=FALSE)
     
     for(j in 1:nrow(preds_to_eval)){
-        preds_to_eval$complete_cum[j] <- unit_timezero_forecast_complete(filter(fcasts, timezero==preds_to_eval$timezero[j]), type="cum")
-        preds_to_eval$complete_inc[j] <- unit_timezero_forecast_complete(filter(fcasts, timezero==preds_to_eval$timezero[j]), type="inc")
+        preds_to_eval$complete[j] <- unit_timezero_forecast_complete(filter(fcasts, timezero==preds_to_eval$timezero[j]), type=preds_to_eval$target_group[j])
     }
     
     this_model_completes <- preds_to_eval %>% 
-        group_by(model, timezero) %>%
-        summarize(num_units_eligible_cum = sum(complete_cum), num_units_eligible_inc = sum(complete_inc)) %>%
-        mutate(target_end_date_1wk_ahead = get_next_saturday(timezero) + (wday(timezero)>2)*7)
+        group_by(model, timezero, target_group) %>%
+        summarize(num_units_eligible = sum(complete)) %>%
+        mutate(target_end_date_1wk_ahead = as.Date(covidHubUtils::calc_target_week_end_date(timezero, horizon=1)))
 
     
     model_completes <- bind_rows(model_completes, this_model_completes)
 }
 
-model_completes <- complete(model_completes, model, target_end_date_1wk_ahead,
-    fill = list(timezero=NA, num_units_eligible_cum=0, num_units_eligible_inc=0)) 
+cum_model_completes <- model_completes %>%
+    ## only look at cum targets
+    filter(target_group=="cum", timezero %in% the_timezeros_cum) %>%
+    ## calculate how many weeks had the eligible number of units
+    group_by(model) %>%
+    mutate(num_eligible_weeks = sum(num_units_eligible >= NUM_UNITS)) %>%
+    ungroup() %>%
+    ## filter so that we only have models with eligible number of weeks
+    filter(num_eligible_weeks >= NUM_WEEKS_CUM, num_units_eligible >= NUM_UNITS) %>%
+    select(-num_eligible_weeks) #%>%
+    ## complete
+    ##complete(model, target_end_date_1wk_ahead, fill = list(timezero=NA, num_units_eligible=0, target_group="cum")) %>%
+    ##group_by(model) %>%
 
-write_csv(model_completes, path="paper-inputs/model-eligibility.csv")
+inc_model_completes <- model_completes %>%
+    filter(target_group=="inc", timezero %in% the_timezeros_inc) %>%
+    ## calculate how many weeks had the eligible number of units
+    group_by(model) %>%
+    mutate(num_eligible_weeks = sum(num_units_eligible >= NUM_UNITS)) %>%
+    ungroup() %>%
+    ## filter so that we only have models with eligible number of weeks
+    filter(num_eligible_weeks >= NUM_WEEKS_INC, num_units_eligible >= NUM_UNITS) %>%
+    select(-num_eligible_weeks)
+    ## complete(model, target_end_date_1wk_ahead, fill = list(timezero=NA, num_units_eligible=0, target_group="inc"))
+
+
+all_model_completes <- bind_rows(cum_model_completes, inc_model_completes)
+
+write_csv(all_model_completes, path="paper-inputs/model-eligibility.csv")
 
 ## output data.frame with list of models and eligibility
