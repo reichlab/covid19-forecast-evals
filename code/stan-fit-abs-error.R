@@ -1,3 +1,4 @@
+library(tidyverse)
 library(rstanarm)
 
 CORES <- 20 ## good for nick's desktop
@@ -6,12 +7,13 @@ CORES <- 20 ## good for nick's desktop
 options(mc.cores = parallel::detectCores())
 
 ## read in scores with eligibility criteria
+cum_scores <- read_csv("paper-inputs/20201013-cum-scores.csv")
 
 ## fit stan model
 stan_fit <- stan_glmer(round(abs_error) ~  model_code*target + (1|first_fcast_sat:location_name), 
     chains=CORES,
     thin=10, ## earlier runs showed substantial auto-correlation
     family=neg_binomial_2(),
-    data = scored_models_df_pred)
+    data = cum_scores)
 
 ## save the model
