@@ -17,3 +17,4 @@ stan_fit <- stan_glmer(round(abs_error) ~  model_code*target + (1|first_fcast_sa
     data = cum_scores)
 
 ## save the model
+saveRDS(stan_fit, file=paste0("paper-inputs/", Sys.Date(), "stan-fit.rds"))
