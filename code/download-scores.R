@@ -1,11 +1,12 @@
 ## download scores from Zoltar
 library(zoltr)  ##devtools::install_github("reichlab/zoltr")
 library(tidyverse)
+library(covidHubUtils) ## devtools::install_github("reichlab/covidHubUtils")
 
-hub_root_dir <- "../covid19-forecast-hub" ## NICK
+data(hub_locations)
+
 
 model_eligibility <- read_csv("paper-inputs/model-eligibility.csv")
-locs <- read_csv(file.path(hub_root_dir,"data-locations/locations.csv"))
 
 ## locations/dates with reporting anomalies
 dates_with_issues <- read_csv("paper-inputs/anomaly-reporting-dates.csv", col_types = "nDccDnnnc") %>%
@@ -84,13 +85,13 @@ cum_scores_calc <- cum_scores_eligible %>%
     mutate(wis = (.01*interval_2+.025*interval_5+.05*interval_10+.1*interval_20+.15*interval_30+.2*interval_40+.25*interval_50+
             .3*interval_60+.35*interval_70+.40*interval_80+.45*interval_90+.5*interval_100)/12)  %>% 
     #select(-starts_with("interval")) %>%
-    left_join(locs, by=c("unit" = "location"))
+    left_join(hub_locations, by=c("unit" = "fips"))
 
 inc_scores_calc <- inc_scores_eligible %>%
     mutate(wis = (.01*interval_2+.025*interval_5+.05*interval_10+.1*interval_20+.15*interval_30+.2*interval_40+.25*interval_50+
             .3*interval_60+.35*interval_70+.40*interval_80+.45*interval_90+.5*interval_100)/12)  %>% 
     #select(-starts_with("interval")) %>%
-    left_join(locs, by=c("unit" = "location"))
+    left_join(hub_locations, by=c("unit" = "fips"))
 
 
 write_csv(cum_scores_calc, path = paste0("paper-inputs/", format(Sys.Date(), "%Y%m%d"), "-cum-scores.csv"))
