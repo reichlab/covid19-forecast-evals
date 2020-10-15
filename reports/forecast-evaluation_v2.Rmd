@@ -1,0 +1,409 @@
+---
+title: "Assessing predictive performance of models in the COVID-19 Forcast Hub"
+author: "Estee Y Cramer, Nicholas G Reich, "
+date: "`r Sys.Date()`"
+output:
+  rmdformats::html_clean:
+    highlight: kate
+    number_sections: no
+    fig_width: 18
+    fig_height: 10
+---
+
+#Prelims
+```{r global parameters}
+## set hub directory on local machine
+#hub_root_dir <- "../covid19-forecast-hub" ## NICK
+
+hub_root_dir<- "~/Desktop/Reich Lab/eycramer/covid19-forecast-hub" ## ESTEE
+eval_root_dir <- "/Users/esteecramer/Desktop/Reich Lab/eycramer/covid19-forecast-evals" ## ESTEE
+
+## minimum number of weeks for eligibility
+NUM_WEEKS_CUM <- 17 
+NUM_WEEKS_INC <- 11
+
+## minumum number of models in a week to be considered eligible
+NUM_UNITS <- 25
+```
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE, echo = FALSE)
+source(file.path(hub_root_dir,"/code/processing-fxns/get_next_saturday.R"))
+library(lubridate)
+library(kableExtra)
+library(tidyverse)
+theme_set(theme_bw())
+```
+
+```{r read in other files to be used later}
+
+## stan model files
+stan_model_ae <- readRDS(file.path(eval_root_dir, "paper-inputs/20200927-stan-fit-scores-negbin.rds"))
+
+## read score files
+cum_scores <- read_csv(file.path(eval_root_dir,"paper-inputs/20201013-cum-scores.csv"))
+
+inc_scores <- read_csv(file.path(eval_root_dir,"paper-inputs/20201013-inc-scores.csv"))
+
+## read model eligibility file
+model_eligibility <- read_csv(file.path(eval_root_dir,"paper-inputs/model-eligibility.csv"))
+
+## locations/dates with reporting anomalies
+dates_to_filter <- read_csv(file.path(eval_root_dir,"paper-inputs/anomaly-reporting-dates.csv")) %>%
+  filter(to_remove==1)
+```
+
+```{r add blinded model code}
+possible_colors <- c("Purple", "Aqua", "Green", "Gray", "Red", "Gold", "Pink", 
+  "Goldenrod", "Maroon", "Indigo", "Orange", "Teal", "Emerald", "Lilac", 
+  "Tan", "Scarlet", "Ruby")
+
+cum_scores$model_code <- factor(cum_scores$model, labels=sample(possible_colors, size = length(unique(cum_scores$model)), replace = FALSE)) 
+
+inc_scores$model_code <- factor(inc_scores$model, labels=sample(possible_colors, size = length(unique(inc_scores$model)), replace = FALSE))
+
+#change baseline model_code to baseline
+cum_scores <- cum_scores %>%
+  mutate(model_code = ifelse(model == "COVIDhub-baseline", "COVIDhub-baseline", as.character(model_code))) %>%
+  mutate(model_code = as.factor(model_code))
+
+inc_scores <- inc_scores %>%
+  mutate(model_code = ifelse(model == "COVIDhub-baseline", "COVIDhub-baseline", as.character(model_code))) %>%
+  mutate(model_code = as.factor(model_code))
+```
+
+```{r add first forecast column}
+cum_scores <- cum_scores %>%
+  mutate(first_fcast_sat = get_next_saturday(timezero) + ifelse(wday(timezero)<=2,0,7))
+
+inc_scores <- inc_scores %>%
+  mutate(first_fcast_sat = get_next_saturday(timezero) + ifelse(wday(timezero)<=2,0,7))
+```
+
+```{r filter to 4 targets}
+cum_scores_calc <- cum_scores %>%
+  filter(target %in% c("1 wk ahead cum death", "2 wk ahead cum death", "3 wk ahead cum death", "4 wk ahead cum death")) #keep only targets 1-4
+
+inc_scores_calc <- inc_scores %>%
+  filter(target %in% c("1 wk ahead inc death", "2 wk ahead inc death", "3 wk ahead inc death", "4 wk ahead inc death")) 
+```
+
+```{r include missing combinations}
+
+#Cumulative Missing Combos: 
+
+#list all combinations
+missing_combos <- cum_scores_calc %>%
+  expand(model_code, first_fcast_sat, location_name, target)
+
+#fill in missing combinations into main dataset 
+cum_scores_calc1 <- cum_scores_calc %>%
+  right_join(missing_combos)
+
+#merge with dates to filter to remove locations with backfilled weeks
+cum_scores_calc2 <- cum_scores_calc1 %>%
+  left_join(dates_to_filter) %>%
+  filter((first_fcast_sat > first_fcast_date_impacted + 4) | is.na(first_fcast_date_impacted) | is.na(first_fcast_sat))
+
+
+#Incident Missing Combos: 
+
+#list all combinations
+missing_combos_inc <- inc_scores_calc %>%
+  expand(model_code, first_fcast_sat, location_name, target)
+
+#fill in missing combinations into main dataset 
+inc_scores_calc1 <- inc_scores_calc %>%
+  right_join(missing_combos_inc)
+
+#merge with dates to filter to remove locations with backfilled weeks
+inc_scores_calc2 <- inc_scores_calc1 %>%
+  left_join(dates_to_filter) %>%
+  filter((first_fcast_sat > first_fcast_date_impacted + 4) | is.na(first_fcast_date_impacted) | is.na(first_fcast_sat))
+```
+
+#Figure 2
+```{r Figure 2: Calculated Cumulative Deaths Stratified by Target Week, fig.width= 10, fig.height=10}
+avg_bytarget_calc <- cum_scores_calc2 %>%
+  filter(location_name %in% c("US", datasets::state.name)) %>%
+ group_by(model_code, target) %>%
+  summarise(MAE  = round(mean(abs_error, na.rm = F),1),  #calc MAE
+        n_obs_ae=sum(abs_error),
+         avg_wis = round(mean(wis),1),       #calc wis
+        n_obs_int=sum(wis)) %>%    #sanity check count
+  ungroup() %>%
+  group_by(target) %>%
+  mutate_at(vars(MAE), funs(percent_change_baseline_MAE = (((.- .[model_code=="COVIDhub-baseline"]) / .[model_code =="COVIDhub-baseline"])*100))) %>%
+  mutate_at(vars(avg_wis), funs(percent_change_baseline_WIS = (((.- .[model_code =="COVIDhub-baseline"]) / .[model_code ="COVIDhub-baseline"])*100))) %>%
+  ungroup() 
+
+#MAE with calculated data
+avg_bytarget_calc$model_code <- reorder(avg_bytarget_calc$model_code, avg_bytarget_calc$MAE)
+
+ggplot(avg_bytarget_calc, aes(x=model_code, y=target, fill= percent_change_baseline_MAE)) + 
+  geom_tile() +
+  geom_text(aes(label=round(MAE)), size = 6) +
+  scale_fill_gradient2(low = "blue2",
+  high = "red", midpoint = 0,  name = "% change from baseline") + 
+  xlab("Scored Models") + ylab("Forecast Target") +
+  theme(axis.text.x =  element_text(angle = 45, hjust = 1, size = 16),
+        axis.title.x=element_blank(),
+        axis.text.y = element_text(size = 16)) +
+  ggtitle("Calculated MAE")
+
+#WIS with calculated data
+avg_bytarget_calc$model_code <- reorder(avg_bytarget_calc$model_code, avg_bytarget_calc$avg_wis)
+
+ggplot(avg_bytarget_calc, aes(x=model_code, y=target, fill= percent_change_baseline_WIS)) + 
+  geom_tile() +
+  geom_text(aes(label=round(avg_wis,0)), size = 6) +
+  scale_fill_gradient2(low = "blue", high = "red", midpoint = 0, name = "% Change from baseline")+ 
+  xlab("Scored model_codes") + 
+  theme(axis.text.x =  element_text(angle = 45, hjust = 1, size = 16),
+        axis.title.x=element_blank(),
+        axis.text.y = element_text(size = 16)) +
+  ggtitle("Calculated WIS")
+```
+
+```{r Figure 2 continued: Predicted MAE and WIS from stan model, fig.width= 10, fig.height=10}
+average_byweek_pred <- stan_model_ae_df %>%
+  filter(location_name %in% c("US", datasets::state.name)) %>%
+ group_by(model_code, target) %>%
+  summarise(MAE  = round(mean(abs_error, na.rm = F),1),  #calc MAE
+        n_obs_ae=sum(abs_error),
+         avg_wis = round(mean(wis),1),       #calc wis
+        n_obs_int=sum(wis)) %>%    #sanity check count
+  ungroup() %>%
+  group_by(target) %>%
+  mutate_at(vars(MAE), funs(percent_change_baseline_MAE = (((.- .[model_code=="COVIDhub-baseline"]) / .[model_code =="COVIDhub-baseline"])*100))) %>%
+  mutate_at(vars(avg_wis), funs(percent_change_baseline_WIS = (((.- .[model_code =="COVIDhub-baseline"]) / .[model_code ="COVIDhub-baseline"])*100))) %>%
+  ungroup() 
+
+#MAE with predicted data
+average_byweek_pred$model_code <- reorder(average_byweek_pred$model_code, average_byweek_pred$MAE)
+
+ggplot(average_byweek_pred, aes(x=model_code, y=target, fill= percent_change_baseline_MAE)) + 
+  geom_tile() +
+  geom_text(aes(label=round(MAE)), size = 6) +
+  scale_fill_gradient2(low = "blue2",
+  high = "red", midpoint = 0,  name = "% change from baseline") + 
+  xlab("Scored Models") + ylab("Forecast Target") +
+  theme(axis.text.x =  element_text(angle = 45, hjust = 1, size = 16),
+        axis.title.x=element_blank(),
+        axis.text.y = element_text(size = 16)) +
+  ggtitle("Predicted MAE")
+
+#WIS with predicted data
+average_byweek_pred$model_code <- reorder(average_byweek_pred$model_code, average_byweek_pred$avg_wis)
+
+ggplot(average_byweek_pred, aes(x=model_code, y=target, fill= percent_change_baseline_WIS)) + 
+  geom_tile() +
+  geom_text(aes(label=round(avg_wis,0)), size = 6) +
+  scale_fill_gradient2(low = "blue", high = "red", midpoint = 0, name = "% Change from baseline")+ 
+  xlab("Scored model_codes") + 
+  theme(axis.text.x =  element_text(angle = 45, hjust = 1, size = 16),
+        axis.title.x=element_blank(),
+        axis.text.y = element_text(size = 16)) +
+  ggtitle("Predicted WIS")
+```
+
+
+#Figure 3: average performance of each model by location (emperical estimates)
+```{r Figure 3: aggregate by location, fig.width=18, fig.height=10}
+avg_byloc_calc <- cum_scores_calc2  %>%
+  group_by(model_code, location_name) %>% 
+  summarise(MAE  = round(mean(abs_error),1),        #calc MAE
+        n_obs_ae = sum(abs_error),          #sanity check (not used in graph)
+        avg_wis = round(mean(wis),1),    #calc WIS       
+        n_obs_int=sum(wis)) %>% 
+  group_by(location_name) %>%     
+  mutate_at(vars(MAE), funs(percent_change_baseline_MAE = (((.- .[model_code=="COVIDhub-baseline"]) / .[model_code =="COVIDhub-baseline"])*100))) %>%
+  mutate_at(vars(avg_wis), funs(percent_change_baseline_WIS = (((.- .[model_code =="COVIDhub-baseline"]) / .[model_code ="COVIDhub-baseline"])*100))) %>%
+  ungroup()
+
+#Figure 3: MAE scores
+avg_byloc_calc$model_code <- reorder(avg_byloc_calc$model_code, avg_byloc_calc$MAE) #sort models by MAE for plot
+avg_byloc_calc$location_name <- reorder(avg_byloc_calc$location_name, avg_byloc_calc$MAE, na.rm = F)
+
+ggplot(avg_byloc_calc, aes(x=model_code, y=location_name, fill= percent_change_baseline_MAE)) +
+  geom_tile() +
+  geom_text(aes(label=round(MAE))) +
+  scale_fill_gradient2(low = "navy", high = "red", name = "% Change from baseline")+ 
+  xlab("Scored Models") + ylab("Location") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+#Figure 3: WIS scores 
+avg_byloc_calc$model_code <- reorder(avg_byloc_calc$model_code, avg_byloc_calc$avg_wis) #sort models by MAE for plot
+avg_byloc_calc$location_name <- reorder(avg_byloc_calc$location_name, avg_byloc_calc$avg_wis, na.rm = T)
+
+ggplot(avg_byloc_calc, aes(x=model_code, y=location_name, fill= percent_change_baseline_WIS)) +
+  geom_tile() +
+  geom_text(aes(label=round(avg_wis))) +
+  scale_fill_gradient2(low = "navy", high = "red", name = "% Change from baseline")+ 
+  xlab("Scored Models") + ylab("Location") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
+#Figure 4: average performance of each model by week (averaged across locations, not imputed for weeks that are missing)
+```{r}
+myColors_cum <- c("black", "cyan2", "firebrick3",
+                  "goldenrod4", "darkgreen", "brown2", 
+                  "blue4", "darkorchid", "cadetblue2", 
+                  "seagreen3", "red",  "darkgoldenrod1", 
+                  "brown", "deeppink1", "darkorange")
+
+names(myColors_cum) <- c("COVIDhub-baseline", "Teal", "Ruby",
+                         "Goldenrod", "Emerald", "Scarlet", 
+                         "Indigo", "Purple", "Aqua",
+                         "Green",  "Red",  "Gold",  
+                         "Maroon", "Pink", "Orange")
+
+colScale_cum <- scale_colour_manual(name = "model_code", values = myColors_cum)
+```
+
+```{r Figure 4: Models aggregated by target and location Panel 1A, fig.height= 8, fig.width= 10}
+avg_byweek_calc <- cum_scores_calc2 %>%
+  filter(location_name %in% c("US", datasets::state.name)) %>%
+  group_by(model_code, first_fcast_sat) %>%
+  summarise(MAE = round(mean(abs_error), 1),
+        n_obs_ae = sum(abs_error), 
+        avg_wis = round(mean(wis),1), 
+        n_obs_int=sum(wis)) %>% 
+   group_by(first_fcast_sat) %>%
+  mutate_at(vars(MAE), funs(percent_change_baseline_MAE = (((.- .[model_code=="COVIDhub-baseline"]) / .[model_code =="COVIDhub-baseline"])*100))) %>%
+  mutate_at(vars(avg_wis), funs(percent_change_baseline_WIS = (((.- .[model_code =="COVIDhub-baseline"]) / .[model_code ="COVIDhub-baseline"])*100))) %>%
+  mutate_at(vars(MAE), funs(relative_MAE = (. / .[model_code =="COVIDhub-baseline"]))) %>%
+  mutate_at(vars(avg_wis), funs(relative_WIS = (. / .[model_code ="COVIDhub-baseline"]))) %>%
+  ungroup() %>% arrange(first_fcast_sat, model_code)
+
+
+#Plot of MAE stratified by submission week
+ggplot(avg_bytarget_calc, aes(x= lubridate::ymd(first_fcast_sat), y=MAE, color = model_code, fill = model_code)) +
+  scale_x_date(date_labels = "%Y-%m-%d", breaks = c(avg_byweek_calc$first_fcast_sat)) + 
+  geom_line() + 
+  colScale_cum +
+  geom_point(size = 2) + 
+  xlab("1 Week Ahead Target Date") + ylab(NULL) + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 15)) +
+  ggtitle("MAE")
+
+#Figure 4: Relative MAE
+ggplot(avg_byweek_calc, aes(x= lubridate::ymd(first_fcast_sat), y=relative_MAE, color = model_code, fill = model_code)) +
+  scale_x_date(date_labels = "%Y-%m-%d", breaks = c(avg_byweek_calc$first_fcast_sat)) +
+  #scale_color_manual(values = colors2) +
+   geom_line() + 
+  colScale_cum +
+  geom_point(size = 2, value = colors) + 
+  xlab("1 week ahead target date") + ylab(NULL) + ggtitle("MAE relative to baseline") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 15))
+
+#Figure 4: average WIS
+ggplot(avg_byweek_calc, aes(x= lubridate::ymd(first_fcast_sat), y=avg_wis, color = model_code, fill = model_code)) +
+  scale_x_date(date_labels = "%Y-%m-%d", breaks = c(avg_byweek_calc$first_fcast_sat)) + 
+  geom_line() + 
+  colScale_cum +
+  geom_point(size = 2) + 
+  xlab("1 Week Ahead Target Date") + ylab(NULL) + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 15)) +
+  ggtitle("WIS")
+
+#Figure 4: relative WIS
+ggplot(avg_byweek_calc, aes(x= lubridate::ymd(first_fcast_sat), y=relative_WIS, color = model_code, fill = model_code)) +
+  scale_x_date(date_labels = "%Y-%m-%d", breaks = c(avg_byweek_calc$first_fcast_sat)) +
+  #scale_color_manual(values = colors2) +
+   geom_line() + 
+  colScale_cum +
+  geom_point(size = 2, value = colors) + 
+ # xlab("1 week ahead target date") + ylab(NULL) + ggtitle("WIS relative to baseline") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 15))
+```
+
+#Figure 5: Average performance of incident models by target 
+```{r Figure 5: Calculated Incident Deaths Stratified by Target Week, fig.width= 10, fig.height=10}
+avg_bytarget_calc_inc <- inc_scores_calc2 %>%
+  filter(location_name %in% c("US", datasets::state.name)) %>%
+ group_by(model_code, target, first_fcast_sat, location_name) %>%
+  summarise(MAE  = round(mean(abs_error, na.rm = F),1),  #calc MAE
+        n_obs_ae=sum(abs_error),
+         avg_wis = round(mean(wis),1),       #calc wis
+        n_obs_int=sum(wis)) %>%    #sanity check count
+  ungroup() %>%
+  group_by(target) %>%
+  mutate_at(vars(MAE), funs(percent_change_baseline_MAE = (((.- .[model_code=="COVIDhub-baseline"]) / .[model_code =="COVIDhub-baseline"])*100))) %>%
+  mutate_at(vars(avg_wis), funs(percent_change_baseline_WIS = (((.- .[model_code =="COVIDhub-baseline"]) / .[model_code ="COVIDhub-baseline"])*100))) %>%
+  ungroup() 
+
+#MAE with calculated data
+avg_bytarget_calc_inc$model_code <- reorder(avg_bytarget_calc_inc$model_code, avg_bytarget_calc_inc$MAE)
+
+ggplot(avg_bytarget_calc_inc, aes(x=model_code, y=target, fill= percent_change_baseline_MAE)) + 
+  geom_tile() +
+  geom_text(aes(label=round(MAE)), size = 6) +
+  scale_fill_gradient2(low = "blue2",
+  high = "red", midpoint = 0,  name = "% change from baseline") + 
+  xlab("Scored Models") + ylab("Forecast Target") +
+  theme(axis.text.x =  element_text(angle = 45, hjust = 1, size = 16),
+        axis.title.x=element_blank(),
+        axis.text.y = element_text(size = 16)) +
+  ggtitle("Calculated MAE")
+
+#WIS with calculated data
+avg_bytarget_calc_inc$model_code <- reorder(avg_bytarget_calc_inc$model_code, avg_bytarget_calc_inc$avg_wis)
+
+ggplot(avg_bytarget_calc_inc, aes(x=model_code, y=target, fill= percent_change_baseline_WIS)) + 
+  geom_tile() +
+  geom_text(aes(label=round(avg_wis,0)), size = 6) +
+  scale_fill_gradient2(low = "blue", high = "red", midpoint = 0, name = "% Change from baseline")+ 
+  xlab("Scored model_codes") + 
+  theme(axis.text.x =  element_text(angle = 45, hjust = 1, size = 16),
+        axis.title.x=element_blank(),
+        axis.text.y = element_text(size = 16)) +
+  ggtitle("Calculated WIS")
+
+avg_bytarget_calc_inc %>% 
+  filter(is.na(MAE))
+
+```
+
+
+
+
+
+
+
+
+
+# Table 2: prediction interval empirical coverage for cumulative deaths by horizon 
+```{r}
+# #only query specific models and timezeros that are needed. Require table to say which are needed for each model. Use unique_cum to specify which timezeros are needed for eval. (maybe)
+# calculated_models1 <- c("UCLA-SuEIR", "CU-select", "LANL-GrowthRate", "MOBS-GLEAM_COVID")
+# calculated_models2<- c( "COVIDhub-ensemble", "CovidAnalytics-DELPHI", "YYG-ParamSearch", "COVIDhub-baseline")
+# 
+# cum_calibration <- do_zoltar_query(zoltar_connection, 
+#                                    project_url =  "https://zoltardata.com/api/project/44/",
+#                                    is_forecast_query = TRUE,
+#                                    models = calculated_models1, 
+#                                    units = the_locations, 
+#                                    targets = the_targets_cum,
+#                                    timezeros = the_timezeros_cum, 
+#                                    scores = the_intervals, 
+#                                    types = c("quantile")) %>%
+#   filter(quantile == .025 | quantile == .25 | quantile == .75 | quantile == .975) %>%
+#   filter(timezero <= as.Date("2020-08-08"))
+# 
+# cum_calibration2 <- do_zoltar_query(zoltar_connection, 
+#                                    project_url =  "https://zoltardata.com/api/project/44/",
+#                                    is_forecast_query = TRUE,
+#                                    models = calculated_models2, 
+#                                    units = the_locations, 
+#                                    targets = the_targets_cum,
+#                                    timezeros = the_timezeros_cum, 
+#                                    scores = the_intervals, 
+#                                    types = c("quantile")) %>%
+#   filter(quantile == .025 | quantile == .25 | quantile == .75 | quantile == .975) %>%
+#   filter(timezero <= as.Date("2020-08-08"))
+# 
+# cum_calibration <- rbind(cum_calibration, cum_calibration2)
+```
