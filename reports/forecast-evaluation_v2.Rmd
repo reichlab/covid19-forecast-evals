@@ -11,46 +11,38 @@ output:
 ---
 
 #Prelims
-```{r global parameters}
-## set hub directory on local machine
-#hub_root_dir <- "../covid19-forecast-hub" ## NICK
-
-hub_root_dir<- "~/Desktop/Reich Lab/eycramer/covid19-forecast-hub" ## ESTEE
-eval_root_dir <- "/Users/esteecramer/Desktop/Reich Lab/eycramer/covid19-forecast-evals" ## ESTEE
-
-## minimum number of weeks for eligibility
-NUM_WEEKS_CUM <- 17 
-NUM_WEEKS_INC <- 11
-
-## minumum number of models in a week to be considered eligible
-NUM_UNITS <- 25
-```
-
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(message = FALSE, warning = FALSE, echo = FALSE)
-source(file.path(hub_root_dir,"/code/processing-fxns/get_next_saturday.R"))
 library(lubridate)
 library(kableExtra)
 library(tidyverse)
 theme_set(theme_bw())
 ```
 
+```{r global parameters}
+## minimum number of weeks for eligibility
+NUM_WEEKS_CUM <- 14
+NUM_WEEKS_INC <- 11
+
+## minumum number of models in a week to be considered eligible
+NUM_UNITS <- 25
+```
+
 ```{r read in other files to be used later}
 
 ## stan model files
-stan_model_ae <- readRDS(file.path(eval_root_dir, "paper-inputs/20200927-stan-fit-scores-negbin.rds"))
+stan_model_ae <- readRDS("../paper-inputs/20200927-stan-fit-scores-negbin.rds")
 
 ## read score files
-cum_scores <- read_csv(file.path(eval_root_dir,"paper-inputs/20201013-cum-scores.csv"))
+cum_scores <- read_csv("../paper-inputs/20201013-cum-scores.csv")
 
-inc_scores <- read_csv(file.path(eval_root_dir,"paper-inputs/20201013-inc-scores.csv"))
+inc_scores <- read_csv("../paper-inputs/20201013-inc-scores.csv")
 
 ## read model eligibility file
-model_eligibility <- read_csv(file.path(eval_root_dir,"paper-inputs/model-eligibility.csv"))
+model_eligibility <- read_csv("../paper-inputs/model-eligibility.csv")
 
 ## locations/dates with reporting anomalies
-dates_to_filter <- read_csv(file.path(eval_root_dir,"paper-inputs/anomaly-reporting-dates.csv")) %>%
+dates_to_filter <- read_csv("../paper-inputs/anomaly-reporting-dates.csv") %>%
   filter(to_remove==1)
 ```
 
@@ -73,13 +65,6 @@ inc_scores <- inc_scores %>%
   mutate(model_code = as.factor(model_code))
 ```
 
-```{r add first forecast column}
-cum_scores <- cum_scores %>%
-  mutate(first_fcast_sat = get_next_saturday(timezero) + ifelse(wday(timezero)<=2,0,7))
-
-inc_scores <- inc_scores %>%
-  mutate(first_fcast_sat = get_next_saturday(timezero) + ifelse(wday(timezero)<=2,0,7))
-```
 
 ```{r filter to 4 targets}
 cum_scores_calc <- cum_scores %>%
@@ -95,7 +80,7 @@ inc_scores_calc <- inc_scores %>%
 
 #list all combinations
 missing_combos <- cum_scores_calc %>%
-  expand(model_code, first_fcast_sat, location_name, target)
+  tidyr::expand(model_code, target_end_date_1wk_ahead, location_name, target)
 
 #fill in missing combinations into main dataset 
 cum_scores_calc1 <- cum_scores_calc %>%
@@ -104,14 +89,13 @@ cum_scores_calc1 <- cum_scores_calc %>%
 #merge with dates to filter to remove locations with backfilled weeks
 cum_scores_calc2 <- cum_scores_calc1 %>%
   left_join(dates_to_filter) %>%
-  filter((first_fcast_sat > first_fcast_date_impacted + 4) | is.na(first_fcast_date_impacted) | is.na(first_fcast_sat))
+  filter((target_end_date_1wk_ahead > first_fcast_date_impacted + 4) | is.na(first_fcast_date_impacted) | is.na(target_end_date_1wk_ahead))
 
 
 #Incident Missing Combos: 
-
 #list all combinations
 missing_combos_inc <- inc_scores_calc %>%
-  expand(model_code, first_fcast_sat, location_name, target)
+  tidyr::expand(model_code, target_end_date_1wk_ahead, location_name, target)
 
 #fill in missing combinations into main dataset 
 inc_scores_calc1 <- inc_scores_calc %>%
@@ -120,13 +104,13 @@ inc_scores_calc1 <- inc_scores_calc %>%
 #merge with dates to filter to remove locations with backfilled weeks
 inc_scores_calc2 <- inc_scores_calc1 %>%
   left_join(dates_to_filter) %>%
-  filter((first_fcast_sat > first_fcast_date_impacted + 4) | is.na(first_fcast_date_impacted) | is.na(first_fcast_sat))
+  filter((target_end_date_1wk_ahead > first_fcast_date_impacted + 4) | is.na(first_fcast_date_impacted) | is.na(target_end_date_1wk_ahead))
 ```
 
-#Figure 2
-```{r Figure 2: Calculated Cumulative Deaths Stratified by Target Week, fig.width= 10, fig.height=10}
+#Figure 2: Model Performance stratified by target (aggregated by week and location): emperical and calculated values
+```{r Figure 2: Calculated Cumulative Deaths Stratified by Target Week, fig.width= 12, fig.height=10}
 avg_bytarget_calc <- cum_scores_calc2 %>%
-  filter(location_name %in% c("US", datasets::state.name)) %>%
+  filter(location_name %in% c("United States", datasets::state.name)) %>%
  group_by(model_code, target) %>%
   summarise(MAE  = round(mean(abs_error, na.rm = F),1),  #calc MAE
         n_obs_ae=sum(abs_error),
@@ -135,8 +119,8 @@ avg_bytarget_calc <- cum_scores_calc2 %>%
   ungroup() %>%
   group_by(target) %>%
   mutate_at(vars(MAE), funs(percent_change_baseline_MAE = (((.- .[model_code=="COVIDhub-baseline"]) / .[model_code =="COVIDhub-baseline"])*100))) %>%
-  mutate_at(vars(avg_wis), funs(percent_change_baseline_WIS = (((.- .[model_code =="COVIDhub-baseline"]) / .[model_code ="COVIDhub-baseline"])*100))) %>%
-  ungroup() 
+  mutate_at(vars(avg_wis), funs(percent_change_baseline_WIS = (((.- .[model_code =="COVIDhub-baseline"]) / .[model_code =="COVIDhub-baseline"])*100))) %>%
+  ungroup()
 
 #MAE with calculated data
 avg_bytarget_calc$model_code <- reorder(avg_bytarget_calc$model_code, avg_bytarget_calc$MAE)
@@ -145,7 +129,7 @@ ggplot(avg_bytarget_calc, aes(x=model_code, y=target, fill= percent_change_basel
   geom_tile() +
   geom_text(aes(label=round(MAE)), size = 6) +
   scale_fill_gradient2(low = "blue2",
-  high = "red", midpoint = 0,  name = "% change from baseline") + 
+  high = "red", midpoint = 0,  name = "% Change from baseline") + 
   xlab("Scored Models") + ylab("Forecast Target") +
   theme(axis.text.x =  element_text(angle = 45, hjust = 1, size = 16),
         axis.title.x=element_blank(),
@@ -166,51 +150,56 @@ ggplot(avg_bytarget_calc, aes(x=model_code, y=target, fill= percent_change_basel
   ggtitle("Calculated WIS")
 ```
 
-```{r Figure 2 continued: Predicted MAE and WIS from stan model, fig.width= 10, fig.height=10}
-average_byweek_pred <- stan_model_ae_df %>%
-  filter(location_name %in% c("US", datasets::state.name)) %>%
- group_by(model_code, target) %>%
-  summarise(MAE  = round(mean(abs_error, na.rm = F),1),  #calc MAE
-        n_obs_ae=sum(abs_error),
-         avg_wis = round(mean(wis),1),       #calc wis
-        n_obs_int=sum(wis)) %>%    #sanity check count
-  ungroup() %>%
-  group_by(target) %>%
-  mutate_at(vars(MAE), funs(percent_change_baseline_MAE = (((.- .[model_code=="COVIDhub-baseline"]) / .[model_code =="COVIDhub-baseline"])*100))) %>%
-  mutate_at(vars(avg_wis), funs(percent_change_baseline_WIS = (((.- .[model_code =="COVIDhub-baseline"]) / .[model_code ="COVIDhub-baseline"])*100))) %>%
-  ungroup() 
+```{r Figure 2 continued: Predicted MAE and WIS from stan model, fig.width= 12, fig.height=10}
+stan_ae_df <- broom::tidy(stan_model_ae)
 
-#MAE with predicted data
-average_byweek_pred$model_code <- reorder(average_byweek_pred$model_code, average_byweek_pred$MAE)
+model_df <- stan_ae_df[2:16,1:2]
+names(model_df) <- c("model_code", "MC_coef")
 
-ggplot(average_byweek_pred, aes(x=model_code, y=target, fill= percent_change_baseline_MAE)) + 
+week_df <- stan_ae_df[17:19,1:2]
+week_df <- week_df[rep(seq_len(nrow(week_df)), each = 15), ]
+
+interaction_df <- stan_ae_df[20:64,1:2]
+
+m_df_coef <- cbind(model_df, week_df, interaction_df)
+
+colnames(m_df_coef) <- c("model_code", "MC_coef", "target", "target_coef", "interaction", "interaction_coef")
+
+m_df_coef <- bind_rows(m_df_coef, model_df)
+
+baseline0 <- data.frame("COVIDhub-baseline",0, "target1 wk ahead cum death", 0, "none", 0)
+baseline1 <- data.frame("COVIDhub-baseline",0,  "target2 wk ahead cum death", stan_ae_df$estimate[stan_ae_df$term == "target2 wk ahead cum death"], "none", 0)
+baseline2 <- data.frame("COVIDhub-baseline",0, "target3 wk ahead cum death", stan_ae_df$estimate[stan_ae_df$term == "target3 wk ahead cum death"], "none", 0)
+baseline3 <- data.frame("COVIDhub-baseline",0, "target4 wk ahead cum death", stan_ae_df$estimate[stan_ae_df$term == "target4 wk ahead cum death"], "none", 0)
+
+names(baseline0) <- names(m_df_coef)
+names(baseline1) <- names(m_df_coef)
+names(baseline2) <- names(m_df_coef)
+names(baseline3) <- names(m_df_coef)
+
+m_df_coef <- rbind(baseline0,baseline1,baseline2,baseline3,m_df_coef) %>%
+  mutate(target = replace_na(target, "target1 wk ahead cum death")) %>%
+  rowwise() %>%
+  mutate(total_coef = sum(MC_coef , target_coef , interaction_coef, na.rm = TRUE)) %>%
+  mutate(model_code = str_remove(model_code, "model_code")) %>%
+  mutate(target = str_remove(target, "ahead cum death"))
+
+ggplot(m_df_coef, aes(x=model_code, y=target, fill= total_coef)) + 
   geom_tile() +
-  geom_text(aes(label=round(MAE)), size = 6) +
+  geom_text(aes(label=round(total_coef, 2)), size = 10) +
   scale_fill_gradient2(low = "blue2",
-  high = "red", midpoint = 0,  name = "% change from baseline") + 
+  high = "red", midpoint = 1,  name = "% change from baseline") + 
   xlab("Scored Models") + ylab("Forecast Target") +
-  theme(axis.text.x =  element_text(angle = 45, hjust = 1, size = 16),
+  theme(axis.text.x =  element_text(angle = 45, hjust = 1, size = 20),
         axis.title.x=element_blank(),
-        axis.text.y = element_text(size = 16)) +
-  ggtitle("Predicted MAE")
-
-#WIS with predicted data
-average_byweek_pred$model_code <- reorder(average_byweek_pred$model_code, average_byweek_pred$avg_wis)
-
-ggplot(average_byweek_pred, aes(x=model_code, y=target, fill= percent_change_baseline_WIS)) + 
-  geom_tile() +
-  geom_text(aes(label=round(avg_wis,0)), size = 6) +
-  scale_fill_gradient2(low = "blue", high = "red", midpoint = 0, name = "% Change from baseline")+ 
-  xlab("Scored model_codes") + 
-  theme(axis.text.x =  element_text(angle = 45, hjust = 1, size = 16),
-        axis.title.x=element_blank(),
-        axis.text.y = element_text(size = 16)) +
-  ggtitle("Predicted WIS")
+        axis.text.y = element_text(size = 20)) +
+  guides(fill = FALSE) + 
+  ggtitle("Absolute Error model coefficients from STAN")
 ```
 
 
 #Figure 3: average performance of each model by location (emperical estimates)
-```{r Figure 3: aggregate by location, fig.width=18, fig.height=10}
+```{r Figure 3: aggregate by location mae, fig.width=18, fig.height=10}
 avg_byloc_calc <- cum_scores_calc2  %>%
   group_by(model_code, location_name) %>% 
   summarise(MAE  = round(mean(abs_error),1),        #calc MAE
@@ -219,12 +208,12 @@ avg_byloc_calc <- cum_scores_calc2  %>%
         n_obs_int=sum(wis)) %>% 
   group_by(location_name) %>%     
   mutate_at(vars(MAE), funs(percent_change_baseline_MAE = (((.- .[model_code=="COVIDhub-baseline"]) / .[model_code =="COVIDhub-baseline"])*100))) %>%
-  mutate_at(vars(avg_wis), funs(percent_change_baseline_WIS = (((.- .[model_code =="COVIDhub-baseline"]) / .[model_code ="COVIDhub-baseline"])*100))) %>%
+  mutate_at(vars(avg_wis), funs(percent_change_baseline_WIS = (((.- .[model_code =="COVIDhub-baseline"]) / .[model_code =="COVIDhub-baseline"])*100))) %>%
   ungroup()
 
 #Figure 3: MAE scores
-avg_byloc_calc$model_code <- reorder(avg_byloc_calc$model_code, avg_byloc_calc$MAE) #sort models by MAE for plot
-avg_byloc_calc$location_name <- reorder(avg_byloc_calc$location_name, avg_byloc_calc$MAE, na.rm = F)
+avg_byloc_calc$model_code <- reorder(avg_byloc_calc$model_code, avg_byloc_calc$MAE, na.rm = T) #sort models by MAE for plot
+avg_byloc_calc$location_name <- reorder(avg_byloc_calc$location_name, avg_byloc_calc$MAE, na.rm = T)
 
 ggplot(avg_byloc_calc, aes(x=model_code, y=location_name, fill= percent_change_baseline_MAE)) +
   geom_tile() +
@@ -234,7 +223,7 @@ ggplot(avg_byloc_calc, aes(x=model_code, y=location_name, fill= percent_change_b
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 #Figure 3: WIS scores 
-avg_byloc_calc$model_code <- reorder(avg_byloc_calc$model_code, avg_byloc_calc$avg_wis) #sort models by MAE for plot
+avg_byloc_calc$model_code <- reorder(avg_byloc_calc$model_code, avg_byloc_calc$avg_wis, na.rm = T) #sort models by MAE for plot
 avg_byloc_calc$location_name <- reorder(avg_byloc_calc$location_name, avg_byloc_calc$avg_wis, na.rm = T)
 
 ggplot(avg_byloc_calc, aes(x=model_code, y=location_name, fill= percent_change_baseline_WIS)) +
@@ -247,41 +236,41 @@ ggplot(avg_byloc_calc, aes(x=model_code, y=location_name, fill= percent_change_b
 
 
 #Figure 4: average performance of each model by week (averaged across locations, not imputed for weeks that are missing)
-```{r}
+```{r add color scheme to hide model names}
 myColors_cum <- c("black", "cyan2", "firebrick3",
                   "goldenrod4", "darkgreen", "brown2", 
                   "blue4", "darkorchid", "cadetblue2", 
                   "seagreen3", "red",  "darkgoldenrod1", 
-                  "brown", "deeppink1", "darkorange")
+                  "brown", "deeppink1", "darkorange", "wheat3", "plum2")
 
 names(myColors_cum) <- c("COVIDhub-baseline", "Teal", "Ruby",
                          "Goldenrod", "Emerald", "Scarlet", 
                          "Indigo", "Purple", "Aqua",
                          "Green",  "Red",  "Gold",  
-                         "Maroon", "Pink", "Orange")
+                         "Maroon", "Pink", "Orange", "Tan", "Lilac") 
 
 colScale_cum <- scale_colour_manual(name = "model_code", values = myColors_cum)
 ```
 
-```{r Figure 4: Models aggregated by target and location Panel 1A, fig.height= 8, fig.width= 10}
+```{r Figure 4: models strat by week, fig.height= 8, fig.width= 10}
 avg_byweek_calc <- cum_scores_calc2 %>%
-  filter(location_name %in% c("US", datasets::state.name)) %>%
-  group_by(model_code, first_fcast_sat) %>%
+  filter(location_name %in% c("United States ", datasets::state.name)) %>%
+  group_by(model_code, target_end_date_1wk_ahead) %>%
   summarise(MAE = round(mean(abs_error), 1),
         n_obs_ae = sum(abs_error), 
         avg_wis = round(mean(wis),1), 
         n_obs_int=sum(wis)) %>% 
-   group_by(first_fcast_sat) %>%
+   group_by(target_end_date_1wk_ahead) %>%
   mutate_at(vars(MAE), funs(percent_change_baseline_MAE = (((.- .[model_code=="COVIDhub-baseline"]) / .[model_code =="COVIDhub-baseline"])*100))) %>%
-  mutate_at(vars(avg_wis), funs(percent_change_baseline_WIS = (((.- .[model_code =="COVIDhub-baseline"]) / .[model_code ="COVIDhub-baseline"])*100))) %>%
+  mutate_at(vars(avg_wis), funs(percent_change_baseline_WIS = (((.- .[model_code =="COVIDhub-baseline"]) / .[model_code =="COVIDhub-baseline"])*100))) %>%
   mutate_at(vars(MAE), funs(relative_MAE = (. / .[model_code =="COVIDhub-baseline"]))) %>%
-  mutate_at(vars(avg_wis), funs(relative_WIS = (. / .[model_code ="COVIDhub-baseline"]))) %>%
-  ungroup() %>% arrange(first_fcast_sat, model_code)
+  mutate_at(vars(avg_wis), funs(relative_WIS = (. / .[model_code =="COVIDhub-baseline"]))) %>%
+  ungroup() %>% arrange(target_end_date_1wk_ahead, model_code)
 
 
 #Plot of MAE stratified by submission week
-ggplot(avg_bytarget_calc, aes(x= lubridate::ymd(first_fcast_sat), y=MAE, color = model_code, fill = model_code)) +
-  scale_x_date(date_labels = "%Y-%m-%d", breaks = c(avg_byweek_calc$first_fcast_sat)) + 
+ggplot(avg_byweek_calc, aes(x= lubridate::ymd(target_end_date_1wk_ahead), y=MAE, color = model_code, fill = model_code)) +
+  scale_x_date(date_labels = "%Y-%m-%d", breaks = c(avg_byweek_calc$target_end_date_1wk_ahead)) + 
   geom_line() + 
   colScale_cum +
   geom_point(size = 2) + 
@@ -290,8 +279,8 @@ ggplot(avg_bytarget_calc, aes(x= lubridate::ymd(first_fcast_sat), y=MAE, color =
   ggtitle("MAE")
 
 #Figure 4: Relative MAE
-ggplot(avg_byweek_calc, aes(x= lubridate::ymd(first_fcast_sat), y=relative_MAE, color = model_code, fill = model_code)) +
-  scale_x_date(date_labels = "%Y-%m-%d", breaks = c(avg_byweek_calc$first_fcast_sat)) +
+ggplot(avg_byweek_calc, aes(x= lubridate::ymd(target_end_date_1wk_ahead), y=relative_MAE, color = model_code, fill = model_code)) +
+  scale_x_date(date_labels = "%Y-%m-%d", breaks = c(avg_byweek_calc$target_end_date_1wk_ahead)) +
   #scale_color_manual(values = colors2) +
    geom_line() + 
   colScale_cum +
@@ -300,8 +289,8 @@ ggplot(avg_byweek_calc, aes(x= lubridate::ymd(first_fcast_sat), y=relative_MAE, 
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 15))
 
 #Figure 4: average WIS
-ggplot(avg_byweek_calc, aes(x= lubridate::ymd(first_fcast_sat), y=avg_wis, color = model_code, fill = model_code)) +
-  scale_x_date(date_labels = "%Y-%m-%d", breaks = c(avg_byweek_calc$first_fcast_sat)) + 
+ggplot(avg_byweek_calc, aes(x= lubridate::ymd(target_end_date_1wk_ahead), y=avg_wis, color = model_code, fill = model_code)) +
+  scale_x_date(date_labels = "%Y-%m-%d", breaks = c(avg_byweek_calc$target_end_date_1wk_ahead)) + 
   geom_line() + 
   colScale_cum +
   geom_point(size = 2) + 
@@ -310,21 +299,20 @@ ggplot(avg_byweek_calc, aes(x= lubridate::ymd(first_fcast_sat), y=avg_wis, color
   ggtitle("WIS")
 
 #Figure 4: relative WIS
-ggplot(avg_byweek_calc, aes(x= lubridate::ymd(first_fcast_sat), y=relative_WIS, color = model_code, fill = model_code)) +
-  scale_x_date(date_labels = "%Y-%m-%d", breaks = c(avg_byweek_calc$first_fcast_sat)) +
-  #scale_color_manual(values = colors2) +
+ggplot(avg_byweek_calc, aes(x= lubridate::ymd(target_end_date_1wk_ahead), y=relative_WIS, color = model_code, fill = model_code)) +
+  scale_x_date(date_labels = "%Y-%m-%d", breaks = c(avg_byweek_calc$target_end_date_1wk_ahead)) +
    geom_line() + 
   colScale_cum +
   geom_point(size = 2, value = colors) + 
- # xlab("1 week ahead target date") + ylab(NULL) + ggtitle("WIS relative to baseline") +
+  xlab("1 week ahead target date") + ylab(NULL) + ggtitle("WIS relative to baseline") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 15))
 ```
 
 #Figure 5: Average performance of incident models by target 
 ```{r Figure 5: Calculated Incident Deaths Stratified by Target Week, fig.width= 10, fig.height=10}
 avg_bytarget_calc_inc <- inc_scores_calc2 %>%
-  filter(location_name %in% c("US", datasets::state.name)) %>%
- group_by(model_code, target, first_fcast_sat, location_name) %>%
+  filter(location_name %in% c("United States", datasets::state.name)) %>%
+ group_by(model_code, target) %>%
   summarise(MAE  = round(mean(abs_error, na.rm = F),1),  #calc MAE
         n_obs_ae=sum(abs_error),
          avg_wis = round(mean(wis),1),       #calc wis
@@ -332,7 +320,7 @@ avg_bytarget_calc_inc <- inc_scores_calc2 %>%
   ungroup() %>%
   group_by(target) %>%
   mutate_at(vars(MAE), funs(percent_change_baseline_MAE = (((.- .[model_code=="COVIDhub-baseline"]) / .[model_code =="COVIDhub-baseline"])*100))) %>%
-  mutate_at(vars(avg_wis), funs(percent_change_baseline_WIS = (((.- .[model_code =="COVIDhub-baseline"]) / .[model_code ="COVIDhub-baseline"])*100))) %>%
+  mutate_at(vars(avg_wis), funs(percent_change_baseline_WIS = (((.- .[model_code =="COVIDhub-baseline"]) / .[model_code =="COVIDhub-baseline"])*100))) %>%
   ungroup() 
 
 #MAE with calculated data
@@ -361,49 +349,98 @@ ggplot(avg_bytarget_calc_inc, aes(x=model_code, y=target, fill= percent_change_b
         axis.title.x=element_blank(),
         axis.text.y = element_text(size = 16)) +
   ggtitle("Calculated WIS")
-
-avg_bytarget_calc_inc %>% 
-  filter(is.na(MAE))
-
 ```
 
 
+#Figure 6: average performance of each model by location (Incident Deaths)
+```{r Figure 6: aggregate by location for incident deaths, fig.width=18, fig.height=10}
+avg_byloc_calc_inc <- inc_scores_calc2  %>%
+  group_by(model_code, location_name) %>% 
+  summarise(MAE  = round(mean(abs_error),1),        #calc MAE
+        n_obs_ae = sum(abs_error),          #sanity check (not used in graph)
+        avg_wis = round(mean(wis),1),    #calc WIS       
+        n_obs_int=sum(wis)) %>% 
+  group_by(location_name) %>%     
+  mutate_at(vars(MAE), funs(percent_change_baseline_MAE = (((.- .[model_code=="COVIDhub-baseline"]) / .[model_code =="COVIDhub-baseline"])*100))) %>%
+  mutate_at(vars(avg_wis), funs(percent_change_baseline_WIS = (((.- .[model_code =="COVIDhub-baseline"]) / .[model_code =="COVIDhub-baseline"])*100))) %>%
+  ungroup()
+
+#Figure 6: MAE scores inc
+avg_byloc_calc_inc$model_code <- reorder(avg_byloc_calc_inc$model_code, avg_byloc_calc_inc$MAE) #sort models by MAE for plot
+avg_byloc_calc_inc$location_name <- reorder(avg_byloc_calc_inc$location_name, avg_byloc_calc_inc$MAE, na.rm = F)
+
+ggplot(avg_byloc_calc_inc, aes(x=model_code, y=location_name, fill= percent_change_baseline_MAE)) +
+  geom_tile() +
+  geom_text(aes(label=round(MAE))) +
+  scale_fill_gradient2(low = "navy", high = "red", name = "% Change from baseline")+ 
+  xlab("Scored Models") + ylab("Location") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+#Figure 6: WIS scores inc
+avg_byloc_calc_inc$model_code <- reorder(avg_byloc_calc_inc$model_code, avg_byloc_calc_inc$avg_wis) 
+avg_byloc_calc_inc$location_name <- reorder(avg_byloc_calc_inc$location_name, avg_byloc_calc_inc$avg_wis, na.rm = T)
+
+ggplot(avg_byloc_calc_inc, aes(x=model_code, y=location_name, fill= percent_change_baseline_WIS)) +
+  geom_tile() +
+  geom_text(aes(label=round(avg_wis))) +
+  scale_fill_gradient2(low = "navy", high = "red", name = "% Change from baseline") + 
+  xlab("Scored Models") + ylab("Location") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+#Figure 7 Average performance stratified by week of submission
+```{r Figure 7: Models aggregated by target and location Inc, fig.height= 8, fig.width= 10}
+avg_byweek_calc_inc <- inc_scores_calc2 %>%
+  filter(location_name %in% c("United States ", datasets::state.name)) %>%
+  group_by(model_code, target_end_date_1wk_ahead) %>%
+  summarise(MAE = round(mean(abs_error), 1),
+        n_obs_ae = sum(abs_error), 
+        avg_wis = round(mean(wis),1), 
+        n_obs_int=sum(wis)) %>% 
+   group_by(target_end_date_1wk_ahead) %>%
+  mutate_at(vars(MAE), funs(percent_change_baseline_MAE = (((.- .[model_code=="COVIDhub-baseline"]) / .[model_code =="COVIDhub-baseline"])*100))) %>%
+  mutate_at(vars(avg_wis), funs(percent_change_baseline_WIS = (((.- .[model_code =="COVIDhub-baseline"]) / .[model_code =="COVIDhub-baseline"])*100))) %>%
+  mutate_at(vars(MAE), funs(relative_MAE = (. / .[model_code =="COVIDhub-baseline"]))) %>%
+  mutate_at(vars(avg_wis), funs(relative_WIS = (. / .[model_code =="COVIDhub-baseline"]))) %>%
+  ungroup() %>% arrange(target_end_date_1wk_ahead, model_code)
 
 
+#Plot of MAE stratified by submission week
+ggplot(avg_byweek_calc_inc, aes(x= lubridate::ymd(target_end_date_1wk_ahead), y=MAE, color = model_code, fill = model_code)) +
+  scale_x_date(date_labels = "%Y-%m-%d", breaks = c(avg_byweek_calc_inc$target_end_date_1wk_ahead)) + 
+  geom_line() + 
+  colScale_cum +
+  geom_point(size = 2) + 
+  xlab("1 Week Ahead Target Date") + ylab(NULL) + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 15)) +
+  ggtitle("MAE")
 
+#Figure 4: Relative MAE
+ggplot(avg_byweek_calc_inc, aes(x= lubridate::ymd(target_end_date_1wk_ahead), y=relative_MAE, color = model_code, fill = model_code)) +
+  scale_x_date(date_labels = "%Y-%m-%d", breaks = c(avg_byweek_calc_inc$target_end_date_1wk_ahead)) +
+  #scale_color_manual(values = colors2) +
+   geom_line() + 
+  colScale_cum +
+  geom_point(size = 2, value = colors) + 
+  xlab("1 week ahead target date") + ylab(NULL) + ggtitle("MAE relative to baseline") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 15))
 
+#Figure 4: average WIS
+ggplot(avg_byweek_calc_inc, aes(x= lubridate::ymd(target_end_date_1wk_ahead), y=avg_wis, color = model_code, fill = model_code)) +
+  scale_x_date(date_labels = "%Y-%m-%d", breaks = c(avg_byweek_calc_inc$target_end_date_1wk_ahead)) + 
+  geom_line() + 
+  colScale_cum +
+  geom_point(size = 2) + 
+  xlab("1 Week Ahead Target Date") + ylab(NULL) + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 15)) +
+  ggtitle("WIS")
 
-
-
-# Table 2: prediction interval empirical coverage for cumulative deaths by horizon 
-```{r}
-# #only query specific models and timezeros that are needed. Require table to say which are needed for each model. Use unique_cum to specify which timezeros are needed for eval. (maybe)
-# calculated_models1 <- c("UCLA-SuEIR", "CU-select", "LANL-GrowthRate", "MOBS-GLEAM_COVID")
-# calculated_models2<- c( "COVIDhub-ensemble", "CovidAnalytics-DELPHI", "YYG-ParamSearch", "COVIDhub-baseline")
-# 
-# cum_calibration <- do_zoltar_query(zoltar_connection, 
-#                                    project_url =  "https://zoltardata.com/api/project/44/",
-#                                    is_forecast_query = TRUE,
-#                                    models = calculated_models1, 
-#                                    units = the_locations, 
-#                                    targets = the_targets_cum,
-#                                    timezeros = the_timezeros_cum, 
-#                                    scores = the_intervals, 
-#                                    types = c("quantile")) %>%
-#   filter(quantile == .025 | quantile == .25 | quantile == .75 | quantile == .975) %>%
-#   filter(timezero <= as.Date("2020-08-08"))
-# 
-# cum_calibration2 <- do_zoltar_query(zoltar_connection, 
-#                                    project_url =  "https://zoltardata.com/api/project/44/",
-#                                    is_forecast_query = TRUE,
-#                                    models = calculated_models2, 
-#                                    units = the_locations, 
-#                                    targets = the_targets_cum,
-#                                    timezeros = the_timezeros_cum, 
-#                                    scores = the_intervals, 
-#                                    types = c("quantile")) %>%
-#   filter(quantile == .025 | quantile == .25 | quantile == .75 | quantile == .975) %>%
-#   filter(timezero <= as.Date("2020-08-08"))
-# 
-# cum_calibration <- rbind(cum_calibration, cum_calibration2)
+#Figure 4: relative WIS
+ggplot(avg_byweek_calc_inc, aes(x= lubridate::ymd(target_end_date_1wk_ahead), y=relative_WIS, color = model_code, fill = model_code)) +
+  scale_x_date(date_labels = "%Y-%m-%d", breaks = c(avg_byweek_calc_inc$target_end_date_1wk_ahead)) +
+   geom_line() + 
+  colScale_cum +
+  geom_point(size = 2, value = colors) + 
+  xlab("1 week ahead target date") + ylab(NULL) + ggtitle("WIS relative to baseline") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 15))
 ```
