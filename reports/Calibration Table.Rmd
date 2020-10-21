@@ -1,0 +1,95 @@
+---
+title: "Calibration_Tables"
+author: "Estee Y Cramer"
+date: "10/21/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE, echo = FALSE)
+library(lubridate)
+library(tidyverse)
+theme_set(theme_bw())
+```
+
+```{r read in other files to be used later}
+cum_scores <- read_csv("../paper-inputs/20201013-cum-scores.csv") %>%
+  filter(location_name %in% datasets:: state.name)
+inc_scores <- read_csv("../paper-inputs/20201013-inc-scores.csv") %>%
+    filter(location_name %in% datasets:: state.name)
+
+cum_calibration <- read_csv("../paper-inputs/20201021-cum-calibration.csv") %>%
+  filter(location_name %in% datasets:: state.name)
+
+inc_calibration <-  read_csv("../paper-inputs/20201021-inc-calibration.csv") %>%
+  filter(location_name %in% datasets:: state.name)
+```
+
+
+```{r cumulative calibration table}
+cum_scores_merge <- cum_scores %>%
+  left_join(cum_calibration) %>%
+  select(model, unit, target, truth, location_name, target_end_date_1wk_ahead, quantile, value) %>%
+  pivot_wider(names_from = "quantile", values_from = "value") %>%
+  mutate(calib_95 = ifelse(truth >= `0.025` & truth <= `0.975`, 1, 0),
+         calib_50 = ifelse(truth >= `0.25` & truth <= `0.75`, 1, 0))
+
+calibration_scores_cum <- cum_scores_merge %>%
+  group_by(model, target) %>%
+  summarise(percent_calib50 = round(sum(calib_50)/ n(),2),
+            percent_calib95 = round(sum(calib_95) / n(),2)) %>%
+    mutate(target = fct_relevel(target, 
+                              "1 wk ahead cum death",  "2 wk ahead cum death",  "3 wk ahead cum death",  "4 wk ahead cum death",
+                               "5 wk ahead cum death",  "6 wk ahead cum death",  "7 wk ahead cum death",  "8 wk ahead cum death",
+                               "9 wk ahead cum death",  "10 wk ahead cum death",  "11 wk ahead cum death",  "12 wk ahead cum death",
+                              "13 wk ahead cum death",  "14 wk ahead cum death",  "15 wk ahead cum death",  "16 wk ahead cum death",
+                              "17 wk ahead cum death",  "18 wk ahead cum death"))
+
+calibration_scores_cum_table <- calibration_scores_cum  %>%
+    pivot_wider(names_from = target, values_from = c(percent_calib50, percent_calib95))
+
+options(knitr.kable.NA = '')
+kableExtra::kable(calibration_scores_cum_table) %>%
+  add_header_above(c(" ", "50% Calibration" = 18, "95% Calibration" = 18)) %>%
+   kable_styling()
+```
+
+```{r bar plot cum calibration}
+ggplot(calibration_scores_cum, aes(fill=target, y=percent_calib50, x=model)) + 
+  scale_color_brewer()+
+    geom_bar(position="dodge", stat="identity")
+```
+
+```{r inc calibration table}
+inc_scores_merge <- inc_scores %>%
+  left_join(inc_calibration) %>%
+  select(model, unit, target, truth, location_name, target_end_date_1wk_ahead, quantile, value) %>%
+  pivot_wider(names_from = "quantile", values_from = "value") %>%
+  mutate(calib_95 = ifelse(truth >= `0.025` & truth <= `0.975`, 1, 0),
+         calib_50 = ifelse(truth >= `0.25` & truth <= `0.75`, 1, 0))
+
+calibration_scores_inc <- inc_scores_merge %>%
+  group_by(model, target) %>%
+  summarise(percent_calib50 = round(sum(calib_50)/ n(),2),
+            percent_calib95 = round(sum(calib_95) / n(),2)) %>% 
+  mutate(target = fct_relevel(target, 
+                              "1 wk ahead inc death",  "2 wk ahead inc death",  "3 wk ahead inc death",  "4 wk ahead inc death",
+                               "5 wk ahead inc death",  "6 wk ahead inc death",  "7 wk ahead inc death",  "8 wk ahead inc death",
+                               "9 wk ahead inc death",  "10 wk ahead inc death",  "11 wk ahead inc death",  "12 wk ahead inc death",
+                              "13 wk ahead inc death",  "14 wk ahead inc death",  "15 wk ahead inc death",  "16 wk ahead inc death",
+                              "17 wk ahead inc death",  "18 wk ahead inc death"))
+
+calibration_scores_inc_table <- calibration_scores_inc %>%
+    pivot_wider(names_from = target, values_from = c(percent_calib50, percent_calib95)) 
+
+options(knitr.kable.NA = '')
+kableExtra::kable(calibration_scores_inc_table) %>%
+  add_header_above(c(" ", "50% Calibration" = 18, "95% Calibration" = 18)) %>%
+   kable_styling()
+```
+
+
+```{r bar plot incident calibration}
+ggplot(calibration_scores_inc, aes(fill=target, y=percent_calib50, x=model)) + 
+    geom_bar(position="dodge", stat="identity")
+```
