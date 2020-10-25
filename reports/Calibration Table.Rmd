@@ -9,6 +9,7 @@ output: html_document
 knitr::opts_chunk$set(message = FALSE, warning = FALSE, echo = FALSE)
 library(lubridate)
 library(tidyverse)
+library(kableExtra)
 theme_set(theme_bw())
 ```
 
@@ -18,18 +19,14 @@ cum_scores <- read_csv("../paper-inputs/20201013-cum-scores.csv") %>%
 inc_scores <- read_csv("../paper-inputs/20201013-inc-scores.csv") %>%
     filter(location_name %in% datasets:: state.name)
 
-cum_calibration <- read_csv("../paper-inputs/20201021-cum-calibration.csv") %>%
-  filter(location_name %in% datasets:: state.name)
+cum_calibration <- read_csv("../paper-inputs/20201022-cum-calibration.csv") 
 
-inc_calibration <-  read_csv("../paper-inputs/20201021-inc-calibration.csv") %>%
-  filter(location_name %in% datasets:: state.name)
+inc_calibration <-  read_csv("../paper-inputs/20201022-inc-calibration.csv") 
 ```
-
 
 ```{r cumulative calibration table}
 cum_scores_merge <- cum_scores %>%
   left_join(cum_calibration) %>%
-  select(model, unit, target, truth, location_name, target_end_date_1wk_ahead, quantile, value) %>%
   pivot_wider(names_from = "quantile", values_from = "value") %>%
   mutate(calib_95 = ifelse(truth >= `0.025` & truth <= `0.975`, 1, 0),
          calib_50 = ifelse(truth >= `0.25` & truth <= `0.75`, 1, 0))
@@ -48,22 +45,25 @@ calibration_scores_cum <- cum_scores_merge %>%
 calibration_scores_cum_table <- calibration_scores_cum  %>%
     pivot_wider(names_from = target, values_from = c(percent_calib50, percent_calib95))
 
+library(kableExtra)
 options(knitr.kable.NA = '')
-kableExtra::kable(calibration_scores_cum_table) %>%
-  add_header_above(c(" ", "50% Calibration" = 18, "95% Calibration" = 18)) %>%
+kable(calibration_scores_cum_table) %>%
+  kableExtra::add_header_above(c(" ", "50% Calibration" = 18, "95% Calibration" = 18)) %>%
    kable_styling()
 ```
 
 ```{r bar plot cum calibration}
+n <- length(unique(calibration_scores_cum$target))
+palette <- randomcoloR::distinctColorPalette(n)
+
 ggplot(calibration_scores_cum, aes(fill=target, y=percent_calib50, x=model)) + 
-  scale_color_brewer()+
+  scale_fill_manual(values = palette)+
     geom_bar(position="dodge", stat="identity")
 ```
 
 ```{r inc calibration table}
 inc_scores_merge <- inc_scores %>%
   left_join(inc_calibration) %>%
-  select(model, unit, target, truth, location_name, target_end_date_1wk_ahead, quantile, value) %>%
   pivot_wider(names_from = "quantile", values_from = "value") %>%
   mutate(calib_95 = ifelse(truth >= `0.025` & truth <= `0.975`, 1, 0),
          calib_50 = ifelse(truth >= `0.25` & truth <= `0.75`, 1, 0))
@@ -91,5 +91,6 @@ kableExtra::kable(calibration_scores_inc_table) %>%
 
 ```{r bar plot incident calibration}
 ggplot(calibration_scores_inc, aes(fill=target, y=percent_calib50, x=model)) + 
+    scale_fill_manual(values = palette)+
     geom_bar(position="dodge", stat="identity")
 ```
