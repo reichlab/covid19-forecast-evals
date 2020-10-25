@@ -1,0 +1,109 @@
+---
+title: "All_teams_Location_count"
+author: "Estee Y Cramer"
+date: "10/25/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+## determine model eligibility
+library(zoltr)  ## devtools::install_github("reichlab/zoltr")
+library(covidHubUtils) ## devtools::install_github("reichlab/covidHubUtils")
+library(tidyverse)
+library(lubridate)
+source("../code/unit_timezero_forecast_complete.R")
+```
+
+
+
+```{r zoltar-connection-and-data, cache=FALSE, include=FALSE, results="hide"}
+#Download score from zoltar. Only 4th inc death target for all models and all target dates up through September 30th
+
+zoltar_connection <- new_connection()
+zoltar_authenticate(zoltar_connection, Sys.getenv("Z_USERNAME"), Sys.getenv("Z_PASSWORD"))
+
+the_projects <- projects(zoltar_connection)
+project_url <- the_projects[the_projects$name == "COVID-19 Forecasts", "url"]
+
+the_scores <- c("interval_50")
+
+the_models <- c() 
+  
+the_locations <- c()
+
+the_targets_inc <- c("4 wk ahead inc death")
+
+the_timezeros_inc <- seq(as.Date("2020-04-13"), as.Date("2020-09-30"), by="days")
+
+
+inc_tmp <- do_zoltar_query(zoltar_connection, project_url =  "https://zoltardata.com/api/project/44/", 
+                           is_forecast_query = FALSE, 
+                           models = the_models, 
+                           units = the_locations, 
+                           targets = the_targets_inc, 
+                           timezeros = the_timezeros_inc,
+                           scores = the_scores)
+
+```
+
+```{r}
+#Select only unique forecasts from each week
+inc_tmp_unique <-  inc_tmp %>%
+   mutate(first_fcast_sat = get_next_saturday(timezero) + ifelse(wday(timezero)<=2,0,7)) %>%
+  group_by(model, unit, first_fcast_sat) %>%     
+  arrange(timezero) %>%    #include arrange so last timezero is selected 
+  mutate(forecast_in_wk = row_number(), 
+         last_forecast_in_wk = forecast_in_wk == max(forecast_in_wk)) %>%    #number weekly submission
+  filter(last_forecast_in_wk) %>%                                            #keep latest weekly submission
+  ungroup()
+
+#count number of weeks each team submitted
+by_weeks <- inc_tmp_unique %>%
+  group_by(model, unit) %>%
+  summarise(n_weeks_submit_forecast = n()) %>%
+  select(-unit) %>%
+  distinct() %>%
+  group_by(model) %>%
+  filter(n_weeks_submit_forecast == max(n_weeks_submit_forecast))
+
+
+#Count number of locations each team submitted weekly
+for_loc_figure <-inc_tmp_unique %>%
+  group_by(model, first_fcast_sat) %>%
+  summarise(n_loc = n()) %>%
+  right_join(by_weeks) %>%
+  mutate(model = as.factor(model))
+```
+
+```{r}
+
+for_loc_figure$model <- fct_reorder(for_loc_figure$model, for_loc_figure$n_weeks_submit_forecast) #reorder factors by number of submission weeks
+for_loc_figure$model_numeric <- as.numeric(for_loc_figure$model)  #create numeric value for model names
+
+#Plot of locations each model submitted to each week
+ggplot(for_loc_figure, aes(y=model, x=first_fcast_sat, fill= for_loc_figure$n_loc)) + 
+    geom_tile() +
+    geom_text(aes(label=n_loc), size = 5) +
+  geom_rect(aes(color="red"),xmin=as.Date("2020-05-26"), #color of box, start date 3 days before actual date so rectangle covers entire box
+            xmax=as.Date("2020-09-07"),
+            ymax= unique(for_loc_figure$model_numeric[for_loc_figure$model == "YYG-ParamSearch"]) + .5,
+            ymin= unique(for_loc_figure$model_numeric[for_loc_figure$model == "MOBS-GLEAM_COVID"]) - .5,  
+            size = 2, fill=alpha("grey",0)) +
+    geom_rect(aes(color="red"),
+            xmin=as.Date("2020-05-26"),
+            xmax=as.Date("2020-09-07"),
+            ymax= unique(for_loc_figure$model_numeric[for_loc_figure$model == "UMass-MechBayes"]) + .5, 
+            ymin= unique(for_loc_figure$model_numeric[for_loc_figure$model == "Covid19Sim-Simulator"]) - .5,
+            size = 2,fill=alpha("grey",0)) +
+  scale_fill_steps(low="white", high="blue", name = "Number of Locations") +
+   xlab("1 week ahead target date") + ylab(NULL) +
+  scale_x_date(date_labels = "%Y-%m-%d", breaks = c(for_loc_figure$first_fcast_sat)) +
+   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+         axis.title.x = element_text(size = 10),
+         axis.text.y = element_text(size = 10),
+         title = element_text(size = 10)) +
+    guides(fill=FALSE, size = FALSE, color = FALSE, alpha = FALSE) +
+  ggtitle("Number of locations submitted for incidence death forecasts") 
+```
+
+
