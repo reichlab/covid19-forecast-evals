@@ -79,8 +79,8 @@ num_loc <-inc_tmp_unique %>%
 for_loc_figure <- num_loc %>%
   group_by(model) %>%
   filter(max(n_loc) >= 25) %>% #remove models with fewer than 25 locations at all times
-  filter(min(sat_fcast_week) <= as.Date("2020-08-29")) %>% #filter models that have 
-  filter(!(model %in% c( "CU-nochange", "CU-scenario_high", "CU-scenario_low", "CU-scenario_mid")))
+  filter(min(sat_fcast_week) <= as.Date("2020-08-29")) %>% #filter models that have start date before end of scored period
+  filter(!(model %in% c( "CU-nochange", "CU-scenario_high", "CU-scenario_low", "CU-scenario_mid"))) #remove models that aren't secondary or primary
 ```
 
 ```{r}
