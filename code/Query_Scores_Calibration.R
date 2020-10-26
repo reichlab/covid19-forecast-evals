@@ -48,7 +48,7 @@ project_url <- the_projects[the_projects$name == "COVID-19 Forecasts", "url"]
 cum_calibration1 <- do_zoltar_query(zoltar_connection,
                                     project_url =  "https://zoltardata.com/api/project/44/",
                                     is_forecast_query = TRUE,
-                                    models = the_models_cum[1:7],
+                                    models = the_models_cum[1:9],
                                     units = the_locations,
                                     targets = the_targets_cum,
                                     timezeros = the_timezeros_cum,
@@ -65,44 +65,25 @@ cum_calibration2 <- do_zoltar_query(zoltar_connection,
                                     types = c("quantile")) %>%
   filter(quantile == .025 | quantile == .25 | quantile == .75 | quantile == .975)
 
-cum_calibration3 <- do_zoltar_query(zoltar_connection,
+cum_calibration2 <- do_zoltar_query(zoltar_connection,
                                     project_url =  "https://zoltardata.com/api/project/44/",
                                     is_forecast_query = TRUE,
-                                    models = the_models_cum[11:15],
+                                    models = the_models_cum[10:15],
                                     units = the_locations,
                                     targets = the_targets_cum,
                                     timezeros = the_timezeros_cum,
                                     types = c("quantile"), verbose = FALSE) %>%
   filter(quantile == .025 | quantile == .25 | quantile == .75 | quantile == .975)
 
-cum_calibration <- rbind(cum_calibration1, cum_calibration2, cum_calibration3) 
+cum_calibration <- rbind(cum_calibration1, cum_calibration2) 
 
 
-#Query incidence values 
-inc_calibration1 <- do_zoltar_query(zoltar_connection,
+#Query incidence forecasts 
+
+inc_calibration <- do_zoltar_query(zoltar_connection,
                                     project_url =  "https://zoltardata.com/api/project/44/",
                                     is_forecast_query = TRUE,
-                                    models = the_models_inc[1:6],
-                                    units = the_locations,
-                                    targets = the_targets_inc,
-                                    timezeros = the_timezeros_inc,
-                                    types = c("quantile")) %>%
-  filter(quantile == .025 | quantile == .25 | quantile == .75 | quantile == .975)
-
-inc_calibration2 <- do_zoltar_query(zoltar_connection,
-                                    project_url =  "https://zoltardata.com/api/project/44/",
-                                    is_forecast_query = TRUE,
-                                    models = the_models_inc[7:9],
-                                    units = the_locations,
-                                    targets = the_targets_inc,
-                                    timezeros = the_timezeros_inc,
-                                    types = c("quantile")) %>%
-  filter(quantile == .025 | quantile == .25 | quantile == .75 | quantile == .975)
-
-inc_calibration3 <- do_zoltar_query(zoltar_connection,
-                                    project_url =  "https://zoltardata.com/api/project/44/",
-                                    is_forecast_query = TRUE,
-                                    models = the_models_inc[10:12],
+                                    models = the_models_inc,
                                     units = the_locations,
                                     targets = the_targets_inc,
                                     timezeros = the_timezeros_inc,
@@ -110,7 +91,7 @@ inc_calibration3 <- do_zoltar_query(zoltar_connection,
   filter(quantile == .025 | quantile == .25 | quantile == .75 | quantile == .975)
 
 
-inc_calibration <- rbind(inc_calibration1, inc_calibration2, inc_calibration3) 
+
 
 #Write csv files with zoltar data 
 write_csv(cum_calibration, path = paste0("paper-inputs/", format(Sys.Date(), "%Y%m%d"), "-cum-calibration.csv"))
