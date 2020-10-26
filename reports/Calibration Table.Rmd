@@ -9,19 +9,27 @@ output: html_document
 knitr::opts_chunk$set(message = FALSE, warning = FALSE, echo = FALSE)
 library(lubridate)
 library(tidyverse)
-library(kableExtra)
+
+library(covidHubUtils)
+library(directlabels)
 theme_set(theme_bw())
+data("hub_locations")
 ```
 
 ```{r read in other files to be used later}
 cum_scores <- read_csv("../paper-inputs/20201013-cum-scores.csv") %>%
-  filter(location_name %in% datasets:: state.name)
+  filter(location_name %in% datasets::state.name)
+
 inc_scores <- read_csv("../paper-inputs/20201013-inc-scores.csv") %>%
-    filter(location_name %in% datasets:: state.name)
+  filter(location_name %in% datasets::state.name)
 
-cum_calibration <- read_csv("../paper-inputs/20201022-cum-calibration.csv") 
+cum_calibration <- read_csv("../paper-inputs/20201022-cum-calibration.csv") %>%
+  left_join(hub_locations, by=c("unit" = "fips")) %>%
+  filter(location_name %in% datasets::state.name)
 
-inc_calibration <-  read_csv("../paper-inputs/20201022-inc-calibration.csv") 
+inc_calibration <-  read_csv("../paper-inputs/20201022-inc-calibration.csv") %>%
+  left_join(hub_locations, by=c("unit" = "fips")) %>%
+  filter(location_name %in% datasets::state.name)
 ```
 
 ```{r cumulative calibration table}
@@ -77,7 +85,9 @@ calibration_scores_inc <- inc_scores_merge %>%
                                "5 wk ahead inc death",  "6 wk ahead inc death",  "7 wk ahead inc death",  "8 wk ahead inc death",
                                "9 wk ahead inc death",  "10 wk ahead inc death",  "11 wk ahead inc death",  "12 wk ahead inc death",
                               "13 wk ahead inc death",  "14 wk ahead inc death",  "15 wk ahead inc death",  "16 wk ahead inc death",
-                              "17 wk ahead inc death",  "18 wk ahead inc death"))
+                              "17 wk ahead inc death",  "18 wk ahead inc death"),
+    horizon = str_split(target, " ", simplify = TRUE),
+    horizon = as.numeric(horizon[,1]))
 
 calibration_scores_inc_table <- calibration_scores_inc %>%
     pivot_wider(names_from = target, values_from = c(percent_calib50, percent_calib95)) 
@@ -90,7 +100,40 @@ kableExtra::kable(calibration_scores_inc_table) %>%
 
 
 ```{r bar plot incident calibration}
+line_labels <- calibration_scores_inc %>%
+  group_by(model) %>%
+  summarize(max_horizon = max(horizon), last_coera)
+
 ggplot(calibration_scores_inc, aes(fill=target, y=percent_calib50, x=model)) + 
-    scale_fill_manual(values = palette)+
-    geom_bar(position="dodge", stat="identity")
+  geom_bar(position="dodge", stat="identity") + 
+  geom_hline(yintercept=.5, linetype=2) +
+  theme(axis.text.x = element_text(angle=45, vjust=1, hjust=1))
+
+ggplot(calibration_scores_inc, aes(fill=target, y=percent_calib95, x=model)) + 
+  geom_bar(position="dodge", stat="identity") + 
+  geom_hline(yintercept=.95, linetype=2) +
+  theme(axis.text.x = element_text(angle=45, vjust=1, hjust=1))
+
+calib95 <- ggplot(calibration_scores_inc, aes(x=horizon, y=percent_calib95, color=model, group=model)) + 
+  geom_line() + geom_point() + 
+  #geom_label(aes(label=model)) +
+  geom_dl(aes(label=model), method = list(dl.trans(x = x + 0.2), "last.points", cex = 0.8)) +
+  geom_hline(yintercept=.95, linetype=2) +
+  scale_y_continuous(name = "Empirical prediction interval coverage", limits = c(0,1)) +
+  scale_x_continuous(name = "Forecast horizon (weeks)", breaks=seq(0, 16, by=4), limits=c(1, 20)) +
+  guides(color=FALSE) +
+  ggtitle("B: 95% prediction interval coverage rates, by model")
+
+calib50 <- ggplot(calibration_scores_inc, aes(x=horizon, y=percent_calib50, color=model, group=model)) + 
+  geom_line() + geom_point() + 
+  #geom_label(aes(label=model)) +
+  geom_hline(yintercept=.5, linetype=2) +
+  geom_dl(aes(label=model), method = list(dl.trans(x = x + 0.2), "last.points", cex = 0.8)) +
+  scale_y_continuous(name = "Empirical prediction interval coverage", limits = c(0,1)) +
+  scale_x_continuous(name = NULL, breaks=seq(0, 16, by=4), limits=c(1, 20)) +
+  guides(color=FALSE) +
+  ggtitle("A: 50% prediction interval coverage rates, by model")
+
+gridExtra::grid.arrange(calib50, calib95)
+
 ```
