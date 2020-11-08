@@ -10,11 +10,17 @@ knitr::opts_chunk$set(message = FALSE, warning = FALSE, echo = FALSE)
 library(lubridate)
 library(tidyverse)
 <<<<<<< HEAD
+<<<<<<< HEAD
 library(kableExtra)
 =======
 library(covidHubUtils)
 library(directlabels)
 >>>>>>> cdb2361511baf26cc8b612447d3d5a0081296aab
+=======
+
+library(covidHubUtils)
+library(directlabels)
+>>>>>>> fc3daa10e7bb75d9529866f2ba4f8bbda0a006eb
 theme_set(theme_bw())
 data("hub_locations")
 ```
@@ -31,6 +37,7 @@ cum_calibration <- read_csv("../paper-inputs/20201022-cum-calibration.csv") %>%
   filter(location_name %in% datasets::state.name)
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 cum_calibration <- read_csv("../paper-inputs/20201022-cum-calibration.csv") 
 
 inc_calibration <-  read_csv("../paper-inputs/20201022-inc-calibration.csv") 
@@ -40,6 +47,11 @@ inc_calibration <-  read_csv("../paper-inputs/20201022-inc-calibration.csv") %>%
   filter(location_name %in% datasets::state.name)
 
 >>>>>>> cdb2361511baf26cc8b612447d3d5a0081296aab
+=======
+inc_calibration <-  read_csv("../paper-inputs/20201022-inc-calibration.csv") %>%
+  left_join(hub_locations, by=c("unit" = "fips")) %>%
+  filter(location_name %in% datasets::state.name)
+>>>>>>> fc3daa10e7bb75d9529866f2ba4f8bbda0a006eb
 ```
 
 ```{r cumulative calibration table}
@@ -116,9 +128,12 @@ line_labels <- calibration_scores_inc %>%
 
 ggplot(calibration_scores_inc, aes(fill=target, y=percent_calib50, x=model)) + 
 <<<<<<< HEAD
+<<<<<<< HEAD
     scale_fill_manual(values = palette)+
     geom_bar(position="dodge", stat="identity")
 =======
+=======
+>>>>>>> fc3daa10e7bb75d9529866f2ba4f8bbda0a006eb
   geom_bar(position="dodge", stat="identity") + 
   geom_hline(yintercept=.5, linetype=2) +
   theme(axis.text.x = element_text(angle=45, vjust=1, hjust=1))
@@ -150,5 +165,8 @@ calib50 <- ggplot(calibration_scores_inc, aes(x=horizon, y=percent_calib50, colo
 
 gridExtra::grid.arrange(calib50, calib95)
 
+<<<<<<< HEAD
 >>>>>>> cdb2361511baf26cc8b612447d3d5a0081296aab
+=======
+>>>>>>> fc3daa10e7bb75d9529866f2ba4f8bbda0a006eb
 ```
