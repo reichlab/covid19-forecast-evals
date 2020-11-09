@@ -1,5 +1,6 @@
 library(lubridate)
 library(tidyverse)
+library(ggrepel)
 library(covidHubUtils)
 library(directlabels)
 
@@ -32,7 +33,10 @@ calibration_scores_inc <- inc_scores_merge %>%
                               "13 wk ahead inc death",  "14 wk ahead inc death",  "15 wk ahead inc death",  "16 wk ahead inc death",
                               "17 wk ahead inc death",  "18 wk ahead inc death"),
     horizon = str_split(target, " ", simplify = TRUE),
-    horizon = as.numeric(horizon[,1]))
+    horizon = as.numeric(horizon[,1])) %>%
+  ungroup() %>%
+  group_by(model) %>%
+  mutate(label = if_else(horizon == min(horizon), model, NA_character_))
 
 calibration_scores_inc_table <- calibration_scores_inc %>%
     pivot_wider(names_from = target, values_from = c(percent_calib50, percent_calib95)) 
@@ -50,22 +54,39 @@ ggplot(calibration_scores_inc, aes(fill=target, y=percent_calib95, x=model)) +
 calib95 <- ggplot(calibration_scores_inc, aes(x=horizon, y=percent_calib95, color=model, group=model)) + 
   geom_line() + geom_point() + 
   #geom_label(aes(label=model)) +
-  geom_dl(aes(label=model), method = list(dl.trans(x = x + 0.2), "last.bumpup", cex = 0.8)) +
+  #geom_dl(aes(label=model), method = list(dl.trans(x = x + 0.2), "last.bumpup", cex = 0.8)) +
   geom_hline(yintercept=.95, linetype=2) +
   scale_y_continuous(name = "Empirical prediction interval coverage", limits = c(0,1)) +
-  scale_x_continuous(name = "Forecast horizon (weeks)", breaks=seq(0, 16, by=4), limits=c(1, 20)) +
+  scale_x_continuous(name = "Forecast horizon (weeks)", breaks=seq(0, 16, by=4), limits=c(-2.5, 20)) +
   guides(color=FALSE) +
-  ggtitle("B: 95% prediction interval coverage rates, by model")
+  ggtitle("B: 95% prediction interval coverage rates, by model")+
+  geom_label_repel(aes(label = label),
+    nudge_x = -0.5,
+    hjust = 1,
+    size=2,
+    box.padding = 0.1,
+    direction = "y",
+    min.segment.length = Inf,
+    na.rm = TRUE)
 
-calib50 <- ggplot(calibration_scores_inc, aes(x=horizon, y=percent_calib50, color=model, group=model)) + 
+calib50 <- 
+  ggplot(calibration_scores_inc, aes(x=horizon, y=percent_calib50, color=model, group=model)) + 
   geom_line() + geom_point() + 
   #geom_label(aes(label=model)) +
   geom_hline(yintercept=.5, linetype=2) +
-  geom_dl(aes(label=model), method = list(dl.trans(x = x + 0.2), "last.bumpup", cex = 0.8)) +
+  #geom_dl(aes(label=model), method = list(dl.trans(x = x), "left.polygons", cex = 0.8)) +
   scale_y_continuous(name = "Empirical prediction interval coverage", limits = c(0,1)) +
-  scale_x_continuous(name = NULL, breaks=seq(0, 16, by=4), limits=c(1, 20)) +
+  scale_x_continuous(name = NULL, breaks=seq(0, 16, by=4), limits=c(-2.5, 20)) +
   guides(color=FALSE) +
-  ggtitle("A: 50% prediction interval coverage rates, by model")
+  ggtitle("A: 50% prediction interval coverage rates, by model") +
+  geom_label_repel(aes(label = label),
+    nudge_x = -0.5,
+    hjust = 1,
+    size=2,
+    box.padding = 0.1,
+    direction = "y",
+    min.segment.length = Inf,
+    na.rm = TRUE)
 
 
 pdf(file = "figures/pi-coverage.pdf", width=8, height=6)
