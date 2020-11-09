@@ -5,7 +5,8 @@ library(covidHubUtils) ## devtools::install_github("reichlab/covidHubUtils")
 
 data(hub_locations)
 
-model_eligibility <- read_csv("paper-inputs/model-eligibility.csv")
+model_eligibility_inc <- read_csv("paper-inputs/model-eligibility-inc.csv")
+model_eligibility_cum <- read_csv("paper-inputs/model-eligibility.csv")
 
 ## locations/dates with reporting anomalies
 dates_with_issues <- read_csv("paper-inputs/anomaly-reporting-dates.csv", col_types = "nDccDnnnc") %>%
@@ -29,10 +30,10 @@ inc_scores_calc <- inc_scores %>%
 
 ## keep only forecasts for eligible model-timezeros 
 cum_scores_eligible <- cum_scores_calc %>%
-  right_join(filter(model_eligibility, target_group=="cum"))
+  right_join(filter(model_eligibility_cum, target_group=="cum"))
 
 inc_scores_eligible <- inc_scores_calc %>%
-  right_join(filter(model_eligibility, target_group=="inc"))
+  right_join(filter(model_eligibility_inc, target_group=="inc"))
 
 ## remove contaminated weeks of data
 
