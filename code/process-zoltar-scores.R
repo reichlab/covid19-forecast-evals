@@ -12,8 +12,8 @@ model_eligibility_cum <- read_csv("paper-inputs/model-eligibility.csv")
 dates_with_issues <- read_csv("paper-inputs/anomaly-reporting-dates.csv", col_types = "nDccDnnnc") %>%
     filter(to_remove==1)
 
-cum_scores <- read_csv("data-raw/20201013-cum-scores-from-zoltar.csv", col_types = "ncDcccnnnnnnnnnnnnnn") %>% select(-X1)
-inc_scores <- read_csv("data-raw/20201013-inc-scores-from-zoltar.csv", col_types = "ncDcccnnnnnnnnnnnnnn") %>% select(-X1)
+cum_scores <- read_csv("data-raw/cum-scores-from-zoltar.csv", col_types = "ncDcccnnnnnnnnnnnnnn") %>% select(-X1)
+inc_scores <- read_csv("data-raw/inc-scores-from-zoltar.csv", col_types = "ncDcccnnnnnnnnnnnnnn") %>% select(-X1)
 
 ## calculate WIS add other useful fields
 cum_scores_calc <- cum_scores %>%
