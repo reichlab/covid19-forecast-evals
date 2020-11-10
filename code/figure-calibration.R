@@ -2,7 +2,7 @@ library(lubridate)
 library(tidyverse)
 library(ggrepel)
 library(covidHubUtils)
-library(directlabels)
+library(directlabels) 
 
 theme_set(theme_bw())
 data("hub_locations")
