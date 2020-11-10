@@ -70,4 +70,4 @@ inc_calibration <- bind_rows(inc_calibration1, inc_calibration2)
 
 
 #Write csv files with zoltar data 
-write_csv(inc_calibration, path = paste0("paper-inputs/", format(Sys.Date(), "%Y%m%d"), "-inc-calibration.csv"))
+write_csv(inc_calibration, path = paste0("paper-inputs/inc-calibration.csv"))

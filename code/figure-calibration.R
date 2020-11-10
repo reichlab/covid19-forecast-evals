@@ -8,10 +8,10 @@ theme_set(theme_bw())
 data("hub_locations")
 
 ## load in inc scores
-inc_scores <- read_csv("paper-inputs/20201013-inc-scores.csv") %>%
+inc_scores <- read_csv("paper-inputs/inc-scores.csv") %>%
   filter(location_name %in% datasets::state.name)
 
-inc_calibration <-  read_csv("paper-inputs/20201109-inc-calibration.csv") %>%
+inc_calibration <-  read_csv("paper-inputs/inc-calibration.csv") %>%
   left_join(hub_locations, by=c("unit" = "fips")) %>%
   filter(location_name %in% datasets::state.name)
 
