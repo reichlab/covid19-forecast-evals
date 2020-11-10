@@ -3,7 +3,6 @@ library(zoltr)  ## devtools::install_github("reichlab/zoltr")
 library(covidHubUtils) ## devtools::install_github("reichlab/covidHubUtils")
 library(tidyverse)
 library(lubridate)
-# source("../covid19-forecast-hub/code/processing-fxns/get_next_saturday.R")
 source("code/unit_timezero_forecast_complete.R")
 
 ## maximum number of weeks missing that we allow before disqualifying a model
