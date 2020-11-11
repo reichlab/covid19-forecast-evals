@@ -1,4 +1,5 @@
 library(tidyverse)
+library(ggrepel)
 
 theme_set(theme_bw())
 
