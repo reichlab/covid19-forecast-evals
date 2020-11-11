@@ -93,7 +93,7 @@ sf1 <- ggplot(for_loc_figure, aes(y=model, x=sat_fcast_week, fill= n_loc)) +
 # ggsave("../figures/inc_loc_heatmap.jpg", width=3, height=5)
 # ggsave("../figures/incidence_loc_heatmap.png", width=3, height=5)
 
-pdf(file = "figures/inc-loc-heatmap.pdf",width=8, height=5,res=300)
+pdf(file = "figures/inc-loc-heatmap.pdf",width=8, height=5)
 print(sf1)
 dev.off()
 
