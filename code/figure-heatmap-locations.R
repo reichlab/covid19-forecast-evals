@@ -72,14 +72,14 @@ sf1 <- ggplot(for_loc_figure, aes(y=model, x=sat_fcast_week, fill= n_loc)) +
             xmin=as.Date("2020-05-23") - 3.5, #color of box, start date 3 days before actual date so rectangle covers entire box
             xmax=as.Date("2020-08-29") + 3.5 ,
             ymax= unique(for_loc_figure$model_numeric[for_loc_figure$model == "YYG-ParamSearch"]) + .5,
-            ymin= unique(for_loc_figure$model_numeric[for_loc_figure$model == "USACE-ERDC_SEIR"]) - .5,  
+            ymin= unique(for_loc_figure$model_numeric[for_loc_figure$model == "UCLA-SuEIR"]) - .5,  
             size = 1, fill=alpha("grey",0)) +
-  geom_rect(aes(color="red"),
-            xmin=as.Date("2020-05-23") - 3.5,
-            xmax=as.Date("2020-08-29") + 3.5,
-            ymax= unique(for_loc_figure$model_numeric[for_loc_figure$model == "LANL-GrowthRate"]) + .5,
-            ymin= unique(for_loc_figure$model_numeric[for_loc_figure$model == "UCLA-SuEIR"]) - .5,
-            size = 1,fill=alpha("grey",0)) +
+  # geom_rect(aes(color="red"),
+  #           xmin=as.Date("2020-05-23") - 3.5,
+  #           xmax=as.Date("2020-08-29") + 3.5,
+  #           ymax= unique(for_loc_figure$model_numeric[for_loc_figure$model == "LANL-GrowthRate"]) + .5,
+  #           ymin= unique(for_loc_figure$model_numeric[for_loc_figure$model == "UCLA-SuEIR"]) - .5,
+  #           size = 1,fill=alpha("grey",0)) +
   scale_fill_steps(low="white", high="blue", name = "Number of Locations") +
   xlab("Saturday of Forecast Submission Week") + ylab(NULL) +
   scale_x_date(date_labels = "%Y-%m-%d", breaks = c(for_loc_figure$sat_fcast_week)) +
@@ -93,10 +93,10 @@ sf1 <- ggplot(for_loc_figure, aes(y=model, x=sat_fcast_week, fill= n_loc)) +
 # ggsave("../figures/inc_loc_heatmap.jpg", width=3, height=5)
 # ggsave("../figures/incidence_loc_heatmap.png", width=3, height=5)
 
-pdf(file = "figures/inc-loc-heatmap.pdf",width=8, height=5)
+pdf(file = "figures/inc-loc-heatmap.pdf",width=8, height=5,res=300)
 print(sf1)
 dev.off()
 
-jpeg(file = "figures/inc-loc-heatmap.jpg", width=8, height=5, units="in", res=200)
+jpeg(file = "figures/inc-loc-heatmap.jpg", width=8, height=5, units="in", res=300)
 print(sf1)
 dev.off()
