@@ -1,5 +1,5 @@
 # make figures
-figures: figures/pi-coverage.jpg figures/model-target-week-wis-avgs.jpg 
+figures: figures/pi-coverage.jpg figures/model-target-week-wis-avgs.jpg figures/inc-loc-heatmap.jpg
 
 # processes scores after updates to anomaly dates, eligibility changes or new scores
 paper-inputs/inc-scores.csv: data-raw/inc-scores-from-zoltar.csv paper-inputs/model-eligibility-inc.csv paper-inputs/anomaly-reporting-dates.csv code/process-zoltar-scores.R
