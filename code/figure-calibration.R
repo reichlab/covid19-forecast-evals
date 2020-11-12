@@ -101,3 +101,27 @@ gridExtra::grid.arrange(calib50, calib95)
 dev.off()
 
 
+#Calibration table (table 2)
+calib_table <- inc_scores_merge %>%
+  filter(target %in% c("1 wk ahead inc death",  "2 wk ahead inc death",  "3 wk ahead inc death",  "4 wk ahead inc death")) %>% 
+  group_by(model) %>%
+  summarise(percent_calib50 = round(sum(calib_50)/ n(),2),
+            percent_calib95 = round(sum(calib_95) / n(),2))
+
+count_forecasts <- inc_scores %>%
+  filter(target %in% c("1 wk ahead inc death",  "2 wk ahead inc death",  "3 wk ahead inc death",  "4 wk ahead inc death")) %>%
+  group_by(model) %>%
+  summarise(n_forecasts = n())
+
+calib_table <- count_forecasts %>%
+  inner_join(calib_table)
+
+
+
+
+
+
+
+
+
+
