@@ -1,6 +1,6 @@
 library(lubridate)
 library(tidyverse)
-library(ggrepel)
+library(ggrepel) # need install from github I think.
 library(covidHubUtils)
 library(directlabels)
 
@@ -36,56 +36,59 @@ calibration_scores_inc <- inc_scores_merge %>%
     horizon = as.numeric(horizon[,1])) %>%
   ungroup() %>%
   group_by(model) %>%
-  mutate(label = if_else(horizon == min(horizon), model, NA_character_))
+  mutate(label = if_else(horizon == 4, model, NA_character_))
 
 calibration_scores_inc_table <- calibration_scores_inc %>%
     pivot_wider(names_from = target, values_from = c(percent_calib50, percent_calib95)) 
 
-ggplot(calibration_scores_inc, aes(fill=target, y=percent_calib50, x=model)) + 
-  geom_bar(position="dodge", stat="identity") + 
-  geom_hline(yintercept=.5, linetype=2) +
-  theme(axis.text.x = element_text(angle=45, vjust=1, hjust=1))
+# ggplot(calibration_scores_inc, aes(fill=target, y=percent_calib50, x=model)) + 
+#   geom_bar(position="dodge", stat="identity") + 
+#   geom_hline(yintercept=.5, linetype=2) +
+#   theme(axis.text.x = element_text(angle=45, vjust=1, hjust=1))
 
-ggplot(calibration_scores_inc, aes(fill=target, y=percent_calib95, x=model)) + 
-  geom_bar(position="dodge", stat="identity") + 
-  geom_hline(yintercept=.95, linetype=2) +
-  theme(axis.text.x = element_text(angle=45, vjust=1, hjust=1))
+# ggplot(calibration_scores_inc, aes(fill=target, y=percent_calib95, x=model)) + 
+#  geom_bar(position="dodge", stat="identity") + 
+#  geom_hline(yintercept=.95, linetype=2) +
+#  theme(axis.text.x = element_text(angle=45, vjust=1, hjust=1))
 
-calib95 <- ggplot(calibration_scores_inc, aes(x=horizon, y=percent_calib95, color=model, group=model)) + 
+calib95 <- 
+  ggplot(filter(calibration_scores_inc, horizon < 5), aes(x=horizon, y=percent_calib95, color=model, group=model)) + 
   geom_line() + geom_point() + 
   #geom_label(aes(label=model)) +
   #geom_dl(aes(label=model), method = list(dl.trans(x = x + 0.2), "last.bumpup", cex = 0.8)) +
-  geom_hline(yintercept=.95, linetype=2) +
-  scale_y_continuous(name = "Empirical prediction interval coverage", limits = c(0,1)) +
-  scale_x_continuous(name = "Forecast horizon (weeks)", breaks=seq(0, 16, by=4), limits=c(-2.5, 20)) +
+  geom_hline(yintercept=.95, linetype=5, color="darkgray") +
+  scale_y_continuous(name = "Empirical prediction interval coverage", limits = c(0,1), breaks=c(0, .25, .5, .75, .95, 1)) +
+  scale_x_continuous(name = "Forecast horizon (weeks)", breaks=1:4, limits=c(1, 5)) +
   guides(color=FALSE) +
   ggtitle("B: 95% prediction interval coverage rates, by model")+
-  geom_label_repel(aes(label = label),
-    nudge_x = -0.5,
-    hjust = 1,
+  geom_text_repel(aes(label = label),
+    nudge_x = 0.5,
+    hjust = 0,
     size=2,
     box.padding = 0.1,
     direction = "y",
-    min.segment.length = Inf,
+    segment.linetype = 2, 
+    # min.segment.length = Inf,
     na.rm = TRUE)
 
 calib50 <- 
-  ggplot(calibration_scores_inc, aes(x=horizon, y=percent_calib50, color=model, group=model)) + 
+  ggplot(filter(calibration_scores_inc, horizon < 5), aes(x=horizon, y=percent_calib50, color=model, group=model)) + 
   geom_line() + geom_point() + 
   #geom_label(aes(label=model)) +
-  geom_hline(yintercept=.5, linetype=2) +
+  geom_hline(yintercept=.5, linetype=5, color="darkgray") +
   #geom_dl(aes(label=model), method = list(dl.trans(x = x), "left.polygons", cex = 0.8)) +
-  scale_y_continuous(name = "Empirical prediction interval coverage", limits = c(0,1)) +
-  scale_x_continuous(name = NULL, breaks=seq(0, 16, by=4), limits=c(-2.5, 20)) +
+  scale_y_continuous(name = "Empirical prediction interval coverage", limits = c(0,1), breaks=c(0, .25, .5, .75, 1)) +
+  scale_x_continuous(name = "Forecast horizon (weeks)", breaks=1:4, limits=c(1, 5)) +
   guides(color=FALSE) +
   ggtitle("A: 50% prediction interval coverage rates, by model") +
-  geom_label_repel(aes(label = label),
-    nudge_x = -0.5,
-    hjust = 1,
+  geom_text_repel(aes(label = label),
+    nudge_x = 0.5,
+    hjust = 0,
     size=2,
     box.padding = 0.1,
     direction = "y",
-    min.segment.length = Inf,
+    segment.linetype = 2, 
+    # min.segment.length = Inf,
     na.rm = TRUE)
 
 
