@@ -22,4 +22,5 @@ v2_idx <- model_eligibility$in_zoltar=="v2"
 # below should return TRUE
 all(is.na(model_eligibility$v3_github_timestamp[v2_idx]))
 
+write_csv(forecast_versions, "paper-inputs/forecast-versions.csv")
 
