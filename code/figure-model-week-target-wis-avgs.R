@@ -195,44 +195,37 @@ avg_scores_byweek <- avg_wis_by_model_target_week %>%
   mutate(target_end_date_0wk_ahead = target_end_date_1wk_ahead - 7) %>%
   group_by(target_end_date_0wk_ahead, target) %>%
   mutate_at(vars("mean_wis"), funs(relative_wis = (. / .[model=="COVIDhub-baseline"]))) %>%
-  ungroup() %>% 
-  mutate(label = if_else(target_end_date_0wk_ahead  == max(target_end_date_0wk_ahead), model, factor(NA_character_))) 
+  ungroup() %>%  group_by(model) %>%
+  mutate(label = if_else(target_end_date_0wk_ahead  == max(target_end_date_0wk_ahead), model, factor(NA_character_))) %>% ungroup()
 
 avg_scores_byweek$model <- factor(as.character(avg_scores_byweek$model))
 
 f4 <- ggplot(avg_scores_byweek, aes(x= lubridate::ymd(target_end_date_0wk_ahead), y= relative_wis, color = model, group = model)) +
-  scale_x_date(date_labels = "%Y-%m-%d", breaks = c(unique(avg_scores_byweek$target_end_date_0wk_ahead))) +
+  scale_x_date(date_labels = "%Y-%m-%d", breaks = c(unique(avg_scores_byweek$target_end_date_0wk_ahead)),name = "Forecast Week",
+               limits = c(min(avg_scores_byweek$target_end_date_0wk_ahead), max(avg_scores_byweek$target_end_date_0wk_ahead) + 10)) +
   geom_line() + 
   geom_point(size = 2) + 
   expand_limits(y=0) +
   scale_y_log10() + 
-  ylab("Average WIS relative to Baseline WIS") + xlab("Forecast Week")+
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 15)) + 
-  #geom_hline(data=baseline_avg, aes(yintercept=mean_wis), linetype=2) + 
+  ylab("Average WIS relative to baseline") + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 11)) + 
+  #scale_x_continuous(name = "Forecast Week", breaks= unique(avg_scores_byweek$target_end_date_0wk_ahead)[c(TRUE,FALSE)], limits=c(1, 5)) +
   facet_wrap(~ target, scales="free_y", ncol = 1) +
   guides(color=FALSE,  group = FALSE) +
-  geom_label_repel(aes(label = label),
-                   nudge_x = 0.5,
-                   hjust = -1.5,
-                   size=2,
-                   box.padding = 0.1,
-                   direction = "y",
-                   min.segment.length = Inf,
+  geom_text_repel(aes(label = label),
+                  box.padding = .3,
+                  direction = "y",
+                  segment.linetype = 2,
+                   nudge_x = 10,
+                   hjust = 0,
+                   size=1.3,
                    na.rm = TRUE)
-
 
 pdf(file = "figures/week-model-target-fig4.pdf", width=8, height=6)
 print(f4)
 dev.off()
 
+
 jpeg(file = "figures/week-model-target-fig4.jpg", width=8, height=6, units="in", res=200)
 print(f4)
 dev.off()
-
-
-
-
-
-
-
-
