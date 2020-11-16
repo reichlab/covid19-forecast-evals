@@ -94,7 +94,7 @@ inc_calibration <- do_zoltar_query(zoltar_connection,
 
 
 #Write csv files with zoltar data 
-write_csv(cum_calibration, path = paste0("paper-inputs/", format(Sys.Date(), "%Y%m%d"), "-cum-calibration.csv"))
-write_csv(inc_calibration, path = paste0("paper-inputs/", format(Sys.Date(), "%Y%m%d"), "-inc-calibration.csv"))
+write_csv(cum_calibration, file = paste0("paper-inputs/", format(Sys.Date(), "%Y%m%d"), "-cum-calibration.csv"))
+write_csv(inc_calibration, file = paste0("paper-inputs/", format(Sys.Date(), "%Y%m%d"), "-inc-calibration.csv"))
 
 

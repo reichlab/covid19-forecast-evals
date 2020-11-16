@@ -77,9 +77,9 @@ inc_scores_calc <- left_join(inc_scores_calc, timezero_end_dates) %>%
 
 
 ## write to disk
-write_csv(cum_scores_eligible, path = paste0("paper-inputs/cum-scores.csv"))
-write_csv(inc_scores_eligible, path = paste0("paper-inputs/inc-scores.csv"))
+write_csv(cum_scores_eligible, file = paste0("paper-inputs/cum-scores.csv"))
+write_csv(inc_scores_eligible, file = paste0("paper-inputs/inc-scores.csv"))
 
-write_csv(cum_scores_calc, path = paste0("paper-inputs/cum-scores_all.csv"))
-write_csv(inc_scores_calc, path = paste0("paper-inputs/inc-scores_all.csv"))
+write_csv(cum_scores_calc, file = paste0("paper-inputs/cum-scores_all.csv"))
+write_csv(inc_scores_calc, file = paste0("paper-inputs/inc-scores_all.csv"))
 

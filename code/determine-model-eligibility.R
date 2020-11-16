@@ -158,6 +158,6 @@ inc_model_completes <- model_completes %>%
 
 all_model_completes <- bind_rows(cum_model_completes, inc_model_completes)
 
-write_csv(all_model_completes, path="paper-inputs/model-eligibility.csv")
+write_csv(all_model_completes, file="paper-inputs/model-eligibility.csv")
 
 ## output data.frame with list of models and eligibility
