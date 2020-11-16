@@ -94,5 +94,5 @@ inc_scores_calc <- inc_scores_eligible %>%
     left_join(hub_locations, by=c("unit" = "fips"))
 
 
-write_csv(cum_scores_calc, path = paste0("paper-inputs/", format(Sys.Date(), "%Y%m%d"), "-cum-scores.csv"))
-write_csv(inc_scores_calc, path = paste0("paper-inputs/", format(Sys.Date(), "%Y%m%d"), "-inc-scores.csv"))
+write_csv(cum_scores_calc, file = paste0("paper-inputs/", format(Sys.Date(), "%Y%m%d"), "-cum-scores.csv"))
+write_csv(inc_scores_calc, file = paste0("paper-inputs/", format(Sys.Date(), "%Y%m%d"), "-inc-scores.csv"))
