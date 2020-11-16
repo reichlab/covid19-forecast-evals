@@ -1,0 +1,445 @@
+\documentclass{article}
+\usepackage[left=2.3cm,right=2.3cm, top = 2.2cm, bottom = 3cm]{geometry}
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+\begin{document}
+\SweaveOpts{concordance=TRUE}
+
+\section*{Evaluation of incident death forecasts based on pairwise model comparisons}
+\textbf{Johannes Bracher (johannes.bracher@kit.edu)}
+
+\medskip
+
+\section{What we could write in a paper (still a bit long)}
+
+Comparative evaluation of the considered forecasters $1, \dots, M$ is hampered by the fact that not all of them provide forecasts for the same set of locations and time points. One possible approach is to compare each model to the baseline forecaster $B$ and report the \textit{relative WIS skill} with respect to the baseline, given by
+$$
+\theta_{iB} = \frac{\text{mean WIS of model } i}{\text{mean WIS of baseline model } B},
+$$
+evaluated on the set of forecast targets covered by model $i$. A value of $0 < \theta_{iB}  < 1$ means that model $i$ is better than the baseline, a value of $\theta_{iB} > 1$ means that the baseline is better. Models could then be ranked by their performance relative to the baseline. A problem with this approach is that beating the baseline model can be more challenging in some states or weeks than in others; notably, in periods of quick growth or decline, it is much easier to outperform the baseline (``last observation carried forward'') than in periods of relative stability, when the latter may actually be doing a good job. To take this into account we adopt the following procedure: For each pair of forecasters $i$ and $j$ we compute the relative WIS skill $\theta_{ij} = (\text{mean WIS of model } i)/(\text{mean WIS of model } j)$ based on the available overlap of forecast targets. Subsequently we compute for each model the geometric mean of the results achieved in the different pairwise comparisons, denoted by
+\begin{equation}
+\theta_{i} = \left(\prod_{i = 1}^M \theta_{ij} \right)^{1/M}.
+\label{eq:theta_i}
+\end{equation}
+We call $\theta_{i}$ the relative WIS skill of model $i$ with respect to the set of models $1, \dots, M$. The central assumption here is that performing well relative to models $1, \dots, M$ is similarly difficult for each week and state, so that no model can gain an advantage by focussing on just some of them. As is, $\theta_{i}$ is a comparison to a hypothetical ``average'' model. As we consider a comparison to the baseline model more straightforward to interpret, we re-scale the obtained summary measure and report
+$$
+\theta^*_{iB} = \frac{\theta_i}{\theta_B},
+$$
+where $\theta_B$ is defined in analogy to equation \eqref{eq:theta_i}. The quantity $\theta^*_{iB}$ then describes performance relative to the baseline, but corrected for the fact that the baseline is more difficult to beat in some weeks and states than in others. We therefore refer to it as the \textit{corrected relative WIS skill} with respect to the baseline. Again, a value of $0 < \theta^*_{iB}  < 1$ means that model $i$ is better than the baseline, a value of $\theta^*_{iB} > 1$ means that the baseline is better. Corrected relative WIS skills can also be reported stratified by week or forecast horizon to get more detailed insights on relative performance.
+
+To assess more formally whether the forecast performance between two models $i$ and $j$ differs we apply a permutation test with the relative WIS skill $\theta_{ij}$ as the test statistic. To generate one sample from the reference distribution we proceed as follows:
+\begin{enumerate}
+\item Split the available pairs of scores from $i$ and $j$ into blocks by forecast date. This serves to account for dependencies between forecasts made at the same time, but for different states and horizons.
+\item For each block independently and with probability 1/2 either flip all pairs of scores between $i$ and $j$ or none.
+\item Compute the relative WIS skill $\theta_{ij}^{\text{perm}}$ from the permuted scores.
+\end{enumerate}
+We then generate a large number of samples from the reference distribution and compute a $p$-value as the fraction of samples $\theta_{ij}^{\text{perm}}$ exceeding the observed $\theta_{ij}$
+
+
+
+\section{Longer justification of the approach}
+
+\textit{This is an older an slightly more technical motivation which I left in the document because it contains some additional thoughts.}
+
+\bigskip
+
+Consider forecasters $i = 1, \dots, M$ and denote this set of forecasters by $\mathcal{M}$. In addition there is one baseline forecaster which we denote by $B$. We would like to summarize the performance of each forecaster over a given set $\mathcal{A}$ of forecast targets (combinations of forecast time points, horizons and locations) into a single number. This number shall enable primarily two types of comparisons:
+\begin{itemize}
+\item comparison to the baseline forecaster to judge whether a model offers at least some additional insight.
+\item comparison to other available forecast models.
+\end{itemize}
+If all forecasters covered the whole set $\mathcal{A}$ of forecast tasks, two possible options are:
+\begin{itemize}
+\item The \textit{WIS skill} (name to be discussed) relative to the baseline model:
+\begin{equation}
+\gamma_{iB} = \frac{\text{mean WIS model } i}{\text{mean WIS of baseline model } B} = \begin{cases} < 1 \text{ if } i \text{ better than baseline} \\ > 1 \text{ if } i \text{ worse than baseline}\end{cases}
+\end{equation}
+This describes the relative (multiplicative) improvement in mean WIS model $i$ offers to the baseline for the set $\mathcal{A}$ of forecast tasks.
+\item The WIS skill relative to the set of models $\mathcal{M}$:
+\begin{equation}
+\gamma_{i} = \frac{\text{mean WIS model } i}{\left(\prod_{m = 1}^M \text{mean WIS model } m \right)^{1/M}} = \begin{cases} < 1 \text{ if } i \text{ better than average of models in } \mathcal{M} \\ > 1 \text{ if } i \text{ worse than avergage}\end{cases}
+\end{equation}
+This describes the relative (multiplicative) improvement in mean WIS model $i$ offers to the average performance of all considered models.
+\end{itemize}
+
+The summary scores $\gamma_{iB}$ and $\gamma_{i}$ use different references, but both contain the information needed to compare each pair of models as we can recover the relative WIS skill with respect to any model $j$:
+\begin{equation}
+\gamma_{ij} = \frac{\text{mean WIS model } i}{\text{mean WIS model } j}  = \frac{\gamma_{iB}}{\gamma_{jB}} = \frac{\gamma_{i}}{\gamma_{j}} = \begin{cases} < 1 \text{ if } i \text{ better than } j \\ > 1 \text{ if } i \text{ worse than } j\end{cases}
+\end{equation}
+In particular we can also recover the $\gamma_{iB}$ from the $\gamma_{i}$ as
+\begin{equation}
+\gamma_{iB} = \frac{\gamma_{i}}{\gamma_{B}}.\label{eq:thetaIB_theta_IM}
+\end{equation}
+
+Things become more complicated if not all forecasters covered all forecast tasks, meaning that we can then no longer compute the $\gamma_{iB}, \gamma_{i}$ and $\gamma_{ij}$. We assume that for each pair $i, j$ of forecasters there is at least some overlap of forecast tasks, which we denote by $\mathcal{A}_{ij}$. We can then still compute
+\begin{equation}
+\theta_{iB} =\frac{\text{mean WIS model } i \text{ on } \mathcal{A}_{iB}}{\text{mean WIS of baseline model } B \text{ on } \mathcal{A}_{iB}},
+\end{equation}
+and all $\theta_{ij}$, which are defined analoguously. A difficulty of using $\theta_{iB}$ to summarize relative performance of model $i$ is that beating the baseline model is easier in some periods and states than in others. In situations of relative stability (when one is essentially forecasting a flat line) it can tough to beat the Forecast Hub baseline model. In periods of rapid increase or decline this is much easier. So the $\theta_{iB}$ may depend a lot on which targets were covered by a forecaster. This means comparing the relative skills $\theta_{iB}$ and $\theta_{jB}$ may be misleading, as the direct comparison $\theta_{ij}$ and the indirect one $\theta_{iB}/\theta_{jB}$ can return quite different results.
+
+It is reasonable to assume that the full set $\mathcal{M}$ of models offers a more stable reference to assess performance than the baseline model, and it should be similarly difficult to be good relative to $\mathcal{M}$ irrespective of the exact set of forecast targets covered by a given model. I therefore suggest to take into account all
+\begin{equation}
+\theta_{ij} =\frac{\text{mean WIS of model } i \text{ on } \mathcal{A}_{ij}}{\text{mean WIS of model } j \text{ on } \mathcal{A}_{ij}},\label{eq:theta_ij}
+\end{equation}
+when computing summary scores. To this end we start by noting that if all forecasts were available for all models,
+\begin{equation}
+\gamma_{i} = \left(\prod_{m = 1}^M \gamma_{im}\right)^{1/M}.
+\end{equation}
+would hold. We then analoguously compute
+\begin{equation}
+\theta_{i} = \left(\prod_{m = 1}^M \theta_{im}\right)^{1/M},
+\end{equation}
+which describes how model $i$ is faring on average in all possible pairwise comparisons with other models. This implicitly takes into account the fact that forecasting is more or less difficult in different situations, assuming that this relative difficulty behaves similarly for all ``serious'' models.
+
+I argue that $\theta_{i}$ is a fair comparison relative to the set of models $\mathcal{M}$. Comparing these relative skills for two models $i$ and $j$ is reasonable as empirically (see next section. Figures \ref{fig:discrepancy} and \ref{fig:discrepancy_star})
+
+\begin{equation}
+\theta_{ij} \approx \frac{\theta_{i}}{\theta_{j}},
+\end{equation}
+with better agreement than for $\theta_{iB}/\theta_{jB}$. A downside of $\theta_{i}$ is that the comparison to a hypothetical ``average model'' may be considered less informative than a comparison to the baseline model. To address this one could follow the lines of relationship \eqref{eq:thetaIB_theta_IM} and report
+\begin{equation}
+\theta^{*}_{iB} = \frac{\theta_{i}}{\theta_{B}}.
+\end{equation}
+This is a measure of performance relative to the baseline model with a correction for the fact that certain models may have covered prediction tasks for which the baseline is more or less difficult to outperform. Note that if all forecast targets were covered by all forecasters, then $\theta^{*}_{iB} = \theta_{iB}$ would hold. This reflects the fact that in this case there would not be any need to correct for missing forecasts and varying diffculty of the adressed forecast tasks.
+
+\newpage
+
+\section{Application}
+
+The following analysis is restricted to state-level forecasts 1 through 4 wk ahead and models providing forecasts for at least 12 out of 15 weeks between May and August 2020. Weeks with major revisions of truth data have been removed from the evaluation. (This selection has been done by Estee and Nick). As shown in Figure \ref{fig:availability}, even after this restriction, the number of states covered each week by the different models varies considerably.
+
+We start by displaying the raw pairwise comparisons $\theta_{ij}$ as defined in \eqref{eq:theta_ij}. In Figure \ref{fig:pairwise} it can be seen that these pairwise comparisons are \textit{almost} transitive, i.e. if $i$ beats $j$ and $j$ beats $k$ then $i$ usually also beats $k$. This is encouraging as it seems like the missingness does not cause major incoherences.
+
+
+<<preparation, echo=FALSE, cache=TRUE>>=
+# some preparation...
+# setwd("/home/johannes/Documents/COVID/pairwise_comparisons")
+#invisible(Sys.setlocale(category = "LC_TIME", locale = "en_US.UTF8"))
+
+# helper function
+next_monday <- function(date){
+  nm <- rep(NA, length(date))
+  for(i in seq_along(date)){
+    nm[i] <- date[i] + (0:6)[weekdays(date[i] + (0:6)) == "Monday"]
+  }
+  return(as.Date(nm, origin = "1970-01-01"))
+}
+
+# load scores:
+scores <- read.csv("../paper-inputs/inc-scores.csv", # stringsAsFactors = FALSE,
+                   colClasses = list(timezero = "Date"), stringsAsFactors = FALSE)
+
+# bring all timezeros to Monday:
+scores$timezero <- next_monday(scores$timezero)
+
+# restrict to 1-4 wk ahead state-level (this had been missing previously!)
+scores <- subset(scores, target %in% paste(1:4, "wk ahead inc death") &
+                   unit != "US")
+
+scores <- scores[, c("model", "timezero", "unit", "target", "abs_error", "wis")]
+
+# the included models:
+models <- unique(scores$model)
+@
+
+
+\begin{figure}[h!]
+<<pairwise_comparison,echo=FALSE, cache=TRUE>>=
+invisible(library(surveillance)) # contains permutation test
+
+# function for pairwise comparison of models
+pairwise_comparison <- function(scores, mx, my, subset = rep(TRUE, nrow(scores)),
+                                permutation_test = FALSE){
+  # apply subset:
+  scores <- scores[subset, ]
+
+  # subsets of available scores for both models:
+  subx <- subset(scores, model == mx)
+  suby <- subset(scores, model == my)
+
+  # merge together and restrict to overlap:
+  sub <- merge(subx, suby, by = c("timezero", "unit", "target"),
+               all.x = FALSE, all.y = FALSE)
+
+  # compute ratio:
+  ratio <- sum(sub$wis.x) / sum(sub$wis.y)
+
+  # perform permutation tests:
+  if(permutation_test){
+    pval <- permutationTest(sub$wis.x, sub$wis.y,
+                            nPermutation = 999)$pVal.permut
+
+    # aggregate by forecast date:
+    sub_fcd <- aggregate(cbind(wis.x, wis.y) ~ timezero, data = sub, FUN = mean)
+    pval_fcd <- permutationTest(sub_fcd$wis.x, sub_fcd$wis.y,
+                                nPermutation = 999)$pVal.permut
+  }else{
+    pval <- NULL
+    pval_fcd <- NULL
+  }
+
+  return(list(ratio = ratio, pval = pval, pval_fcd = pval_fcd, mx = mx, my = my))
+}
+
+# matrices to store:
+results_ratio <- results_pval <- results_pval_fcd <- matrix(ncol = length(models),
+                                                            nrow = length(models),
+                                                            dimnames = list(models, models))
+
+set.seed(123) # set seed for permutation tests
+
+for(mx in seq_along(models)){
+  for(my in 1:mx){
+    pwc <- pairwise_comparison(scores = scores, mx = models[mx], my = models[my],
+                               permutation_test = TRUE)
+    results_ratio[mx, my] <- pwc$ratio
+    results_ratio[my, mx] <- 1/pwc$ratio
+    results_pval[mx, my] <-
+      results_pval[my, mx] <- pwc$pval
+    results_pval_fcd[mx, my] <-
+      results_pval_fcd[my, mx] <- pwc$pval_fcd
+  }
+}
+@
+
+<<plot_availability, cache=TRUE, fig.width=9, fig.height=5, echo=FALSE>>=
+library(pheatmap)
+library(RColorBrewer)
+
+# re-order accoring to performance:
+ord <- order(rowSums(results_ratio > 1, na.rm = TRUE))
+
+labels_models <- colnames(results_ratio)[ord]
+names(labels_models) <- colnames(results_ratio)[ord]
+
+
+cols_availability <- brewer.pal(n = 7, name = "Blues")
+cols_availability[1] <- "white"
+breaks_availability <- c(1, 20, 40, 45, 50, 55)
+model_availability <- table(scores$model, scores$timezero)/4
+rownames(model_availability) <- labels_models[rownames(model_availability)]
+pheatmap(model_availability, display_numbers = TRUE, cluster_rows = FALSE,
+         cluster_cols = FALSE, color = cols_availability, breaks = breaks_availability, legend = TRUE,
+         main = "Number of covered locations by date and model")
+@
+\caption{Number of regions covered by each model after restriction of forecasts as described in the text.}
+\label{fig:availability}
+\end{figure}
+
+\begin{figure}[h!]
+<<plot_wis_ratios, echo=FALSE, cache=TRUE, fig.width=9, fig.height=5>>=
+cols <- rev(brewer.pal(n = 7, name = "RdBu"))
+cols[4] <- "lightgrey"
+breaks <- c(0, 0.5, 0.75, 0.95, 1.05, 1.33, 2, 4)
+
+# direct comparisons:
+colnames(results_ratio) <- rownames(results_ratio) <- labels_models[colnames(results_ratio)]
+options(warn=-1)
+pheatmap(results_ratio[ord, ord], display_numbers = TRUE, cluster_rows = FALSE,
+         cluster_cols = FALSE, color = cols, breaks = breaks, legend = TRUE,
+         main = expression("Direct pairwise comparisons:"~theta[ij]))
+@
+\caption{Pairwise relative WIS skills $\theta_{ij}$ of twelve forecast models. Note that these are computed from different sets of forecast targets depending on the overlap between time points and states covered by the different models. Numbers below one (blue) indicate that the row model is better, numbers above one (red) indicate that the column model is better.}
+\label{fig:pairwise}
+\end{figure}
+
+In Table \ref{tab:scores} we break down this set of pairwise comparisons into the different model-specific summary measures $\theta_{iB}, \theta_{i}$ and $\theta^*_{iB}$ discussed in the previous section. While $\theta_{i}$ and $\theta^*_{iB}$ are obviously proportional, there is some disagreement between the two and $\theta_{iB}$. The models \texttt{GT-DeepCOVID} and \texttt{JHU IDD-CovidSP} have a better (lower) value after adjusting for how difficult it is to beat the baseline in different states or time periods ($\theta^*_{iB} < \theta_{iB}$). This indicates that \texttt{GT-DeepCOVID} and \texttt{JHU IDD-CovidSP} have issued more forecasts for targets where beating the baseline was difficult. The opposite holds true for \texttt{UT-mobility}.
+\begin{table}
+\caption{Summary scores of included models. $\theta_{iB}$ and $\theta_{i}/\theta_B$ are constructed such that the baseline model has a value of 1. $\theta_{i}$ and $\theta{i}/\theta_B$ take into account all pairwise comparisons, while $\theta_{iB}$ takes only into account direct comparisons to the baseline.}
+\center
+\begin{tabular}{l l l l}
+Model & $\theta_{i}$ & $\theta_{iB}$ & $\theta^*_{iB}$\\
+<<tab_skill, results="asis", echo=FALSE, cache=TRUE>>=
+ind_baseline <- which(rownames(results_ratio) == "COVIDhub-baseline")
+geom_mean_ratios <- exp(rowMeans(log(results_ratio[, -ind_baseline]), na.rm = TRUE))
+ratios_baseline <- results_ratio[, "COVIDhub-baseline"]
+ratios_baseline2 <- geom_mean_ratios/geom_mean_ratios["COVIDhub-baseline"]
+
+tab <- data.frame(model = names(geom_mean_ratios),
+                  geom_mean_ratios = geom_mean_ratios,
+                  ratios_baseline = ratios_baseline,
+                  ratios_baseline2 = ratios_baseline2)
+
+tab <- tab[order(tab$ratios_baseline2), ]
+library(xtable)
+print(xtable(tab), only.contents = TRUE, include.colnames = FALSE, include.rownames = FALSE)
+@
+\end{tabular}
+\label{tab:scores}
+\end{table}
+
+
+The $\theta_{iB}$, $\theta_i$ and $\theta^*_{iB}$ are imperfect ways of aggregating performance as we know that the respective ratios do not always align with the respective direct comparisons, i.e.\ in general
+$$
+\frac{\theta_{iB}}{\theta_{jB}} \neq \theta_{ij}, \ \ \ \frac{\theta^*_{iB}}{\theta^*_{jB}}  = \frac{\theta_i}{\theta_j} \neq \theta_{ij}.
+$$
+
+However, we can check empirically which one of them allows us to better recover (or preserve) the $\theta_{ij}$, which we know are apples-to-apples comparisons. We can see that overall using $\theta^*_{iB}/\theta^*_{jB}$ leads to less strong deviations from $\theta_{ij}$ than $\theta_{iB}/\theta_{jB}$ (Figures \ref{fig:discrepancy} and \ref{fig:discrepancy_star}).
+
+\begin{figure}
+<<comparisons_coherence, echo=FALSE, fig.width=9, fig.height=5>>=
+library(pheatmap)
+recovered_pairwise_baseline <- ratios_baseline %*% t(1/ratios_baseline)
+
+colnames(recovered_pairwise_baseline) <- rownames(recovered_pairwise_baseline) <- labels_models[colnames(recovered_pairwise_baseline)]
+options(warn=-1)
+pheatmap(recovered_pairwise_baseline[ord, ord], display_numbers = TRUE, cluster_rows = FALSE,
+         cluster_cols = FALSE, color = cols, breaks = breaks, legend = TRUE,
+         main = expression("Indirect comparisons via baseline:"~theta[iB]/theta[jB]))
+@
+\caption{Indirect pairwise comparisons $\theta_{iB}/\theta_{jB}$. Here we compare each of the models $i$ and $j$ to the baseline $B$ and then compare the results achieved by both models.}
+\end{figure}
+
+\begin{figure}
+<<comparisons_coherence2, echo=FALSE, fig.width=9, fig.height=5>>=
+recovered_pairwise_baseline2 <- ratios_baseline2 %*% t(1/ratios_baseline2)
+
+colnames(recovered_pairwise_baseline2) <- rownames(recovered_pairwise_baseline2) <- labels_models[colnames(recovered_pairwise_baseline2)]
+options(warn=-1)
+pheatmap(recovered_pairwise_baseline2[ord, ord], display_numbers = TRUE, cluster_rows = FALSE,
+         cluster_cols = FALSE, color = cols, breaks = breaks, legend = TRUE,
+         main = expression("Corrected indirect comparisons:"~theta[iB]^"*"/theta[jB]^"*"~(equivalent~to~theta[i]/theta[j])))
+@
+\caption{Corrected indirect pairwise comparisons $\theta^*_{iB}/\theta^*_{jB} = \theta_i/\theta_j$. Here we compare each of the models $i$ and $j$ to the entire set $\mathcal{M}$ of models and then compare the results achieved by both models.}
+\end{figure}
+
+\begin{figure}
+<<comparisons_coherence3, echo=FALSE, fig.width=9, fig.height=5>>=
+comparison1 <- recovered_pairwise_baseline/results_ratio
+
+library(RColorBrewer)
+cols_comparison <- brewer.pal(n = 7, name = "PiYG")
+breaks_comparison <- c(0.7, 0.8, 0.9, 0.95, 1.05, 1.1, 1.2, 1.3)
+
+pheatmap(comparison1[ord, ord], display_numbers = TRUE, cluster_rows = FALSE,
+         cluster_cols = FALSE, color = cols_comparison, breaks = breaks_comparison, legend = TRUE,
+         main = expression("Discrepancy between indirect and direct comparisons:"~frac(theta[iB]/theta[jB], theta[ij])))
+
+@
+\caption{Relative discrepancy between indirect comparisons $\theta_{iB}/\theta_{jB}$ and direct comparisons $\theta_{ij}$. This describes how much we move away from the original pairwise comparisons when using $\theta_{iB}$ as a summary measure.}
+\label{fig:discrepancy}
+\end{figure}
+
+\begin{figure}
+<<comparisons_coherence4, echo=FALSE, fig.width=9, fig.height=5>>=
+comparison2 <- recovered_pairwise_baseline2/results_ratio
+
+pheatmap(comparison2[ord, ord], display_numbers = TRUE, cluster_rows = FALSE,
+         cluster_cols = FALSE, color = cols_comparison, breaks = breaks_comparison, legend = TRUE,
+         main = expression("Discrepancy between corrected indirect and direct comparisons:"~frac(theta[iB]^"*"/theta[jB]^"*", theta[ij])))
+@
+\caption{Relative discrepancy between indirect comparisons $\theta^*_{iB}/\theta^*_{jB}$ with correction and direct pairwise comparisons $\theta_{ij}$. This describes how much we move away from the original pairwise comparisons when using the corrected $\theta^*_{iB}$ as a summary measure.}
+\label{fig:discrepancy_star}
+\end{figure}
+
+In the following we therefore focus on $\theta^*_{iB}$ as the summary measure to describe performance of model $i$ relative to the baseline. The relative performance measure $\theta^*_{iB}$ per model can also be shown over time by computing it for subsets of forecasts made on specific date (Figure \ref{fig:by_horizon}) or with a specific forecast horizon (Figure \ref{fig:by_forecast_date}). Here we can see that the ensemble, \texttt{UMass-MechBayesand} and \texttt{YYG-ParamSearch} are rather consistently the best models
+
+\begin{figure}
+<<plot_by_timezero, echo=FALSE, cache=TRUE, fig.width=9, fig.height=5>>=
+ind_baseline <- which(rownames(results_ratio) == "COVIDhub-baseline")
+
+# compare by timezero:
+timezeros <- sort(unique(scores$timezero))
+results_ratio_timezero <- array(dim = c(length(models), length(models), length(timezeros)),
+                                dimnames = list(models, models, as.character(timezeros)))
+results_ratio_geommean_timezero <- matrix(nrow = length(timezeros), ncol = length(models),
+                                          dimnames = list(as.character(timezeros), models))
+
+for(tz in seq_along(timezeros)){
+  for(mx in models){
+    for(my in models){
+      pwc <- pairwise_comparison(scores = scores, mx = mx, my = my,
+                                 subset = scores$timezero == timezeros[tz])
+      results_ratio_timezero[mx, my, tz] <- pwc$ratio
+    }
+  }
+  results_ratio_geommean_timezero[tz, ] <-
+    exp(rowMeans(log(results_ratio_timezero[, -ind_baseline,tz]), na.rm = TRUE))
+}
+
+results_ratio_geommean_timezero[is.nan(results_ratio_geommean_timezero)] <- NA
+results_ratio_baseline2_timezero <- results_ratio_geommean_timezero/results_ratio_geommean_timezero[, "COVIDhub-baseline"]
+
+cols <- rep("lightgrey", length(models))
+cols[models == "COVIDhub-baseline"] <- "black"
+cols[models == "COVIDhub-ensemble"] <- "darkgreen"
+cols[models == "YYG-ParamSearch"] <- "darkred"
+cols[models == "UMass-MechBayes"] <- "darkblue"
+
+par(mar = c(4, 4.5, 4, 1), las = 1)
+
+matplot((results_ratio_baseline2_timezero), pch = NA, type = "l", lty = 1,
+        axes = FALSE, xlab = "forecast date", col = cols, ylab = expression(theta[iB]^"*"),
+        main = expression("Relative WIS skill "~theta[iB]^"*"~"by forecast date"), ylim = c(0, 3))
+axis(1, at = 1:length(timezeros), labels = timezeros)
+axis(2, at = c(0, 0.5, 1, 1.5, 2, 2.5),
+     labels = c(0, 0.5, 1, 1.5, 2, 2.5))
+box()
+legend("topleft", col = c("black", "darkgreen", "darkred", "darkblue", "lightgrey"),
+       legend = c("COVIDhub-baseline", "COVIDhub-ensemble", "YYG-ParamSearch",
+                  "UMass-MechBayes", "others"),
+       lty = 1, ncol = 2, bg = "n", bty = "n")
+@
+\caption{Corrected relative WIS skill $\theta^*_{iB}$ with respect to the baseline model, shown per forecast date.}
+\label{fig:by_forecast_date}
+\end{figure}
+
+\begin{figure}
+<<plot_by_target, echo=FALSE, cache=TRUE, fig.width=9, fig.height=5>>=
+# compare by target_end_date:
+targets <- sort(unique(scores$target))
+results_ratio_target <- array(dim = c(length(models), length(models), length(targets)),
+                              dimnames = list(models, models, as.character(targets)))
+results_ratio_geommean_target <- matrix(nrow = length(targets), ncol = length(models),
+                                        dimnames = list(as.character(targets), models))
+
+for(ted in seq_along(targets)){
+  for(mx in models){
+    for(my in models){
+      pwc <- pairwise_comparison(scores = scores, mx = mx, my = my,
+                                 subset = scores$target == targets[ted])
+      results_ratio_target[mx, my, ted] <- pwc$ratio
+    }
+  }
+  results_ratio_geommean_target[ted, ] <-
+    exp(rowMeans(log(results_ratio_target[, -ind_baseline,ted]), na.rm = TRUE))
+}
+
+results_ratio_geommean_target[is.nan(results_ratio_geommean_target)] <- NA
+results_ratio_baseline2_target <- results_ratio_geommean_target/results_ratio_geommean_target[, "COVIDhub-baseline"]
+
+par(mar = c(4, 4.5, 4, 1), las = 1)
+
+matplot((results_ratio_baseline2_target), pch = NA, type = "l",
+        lty = 1, axes = FALSE, xlab = "target",
+        col = cols, ylab = expression(theta[iB]^"*"), main = expression("Relative WIS skill "~theta[iB]^"*"~"by horizon"),
+        ylim = c(0, 2.5))
+axis(1, at = 1:length(targets), labels = targets)
+axis(2, at = (c(0, 0.5, 1, 1.5, 2, 2.5)), labels = c(0, 0.5, 1, 1.5, 2, 2.5))
+box()
+legend("topleft", col = c("black", "darkgreen", "darkred", "darkblue", "lightgrey"),
+       legend = c("COVIDhub-baseline", "COVIDhub-ensemble", "YYG-ParamSearch",
+                  "UMass-MechBayes", "others"),
+       lty = 1, ncol = 2, bg = "n", bty = "n")
+@
+\caption{Corrected relative WIS skill $\theta^*_{iB}$ with respect to the baseline model, shown per forecast horizon.}
+\label{fig:by_horizon}
+\end{figure}
+
+Lastly we provide the $p$-values for the pariwise tests for different forecast performance in Figure \ref{fig:p_values}. It can be seen that the ensemble forecast provides indeed significantly better forecasts than any of the member forecasts.
+
+\begin{figure}
+<<plot_pval_fcd, echo=FALSE, cache=TRUE, fig.width=9, fig.height=5>>=
+cols_pvals <- brewer.pal(n = 6, name = "PiYG")
+breaks_pvals <- c(0, 0.01, 0.05, 0.1, 1)
+colnames(results_pval_fcd) <- rownames(results_pval_fcd) <- labels_models[colnames(results_pval_fcd)]
+pheatmap(results_pval_fcd[ord, ord], display_numbers = TRUE, cluster_rows = FALSE,
+         cluster_cols = FALSE, color = cols_pvals, breaks = breaks_pvals, legend = TRUE,
+         main = expression("p-values for difference in forecast performance (with blocking by forecast date)"))
+@
+\caption{Pairwise $p$-values for differences in forecast performance, based on permutation test with blocking by forecast date.}
+\label{fig:p_values}
+\end{figure}
+
+\end{document}
