@@ -2,7 +2,7 @@
 figures: figures/pi-coverage.jpg figures/model-target-week-wis-avgs.jpg figures/inc-loc-heatmap.jpg figures/long-range.jpg
 
 # processes scores after updates to anomaly dates, eligibility changes or new scores
-paper-inputs/inc-scores.csv: data-raw/inc-scores-from-zoltar.csv paper-inputs/model-eligibility-inc.csv paper-inputs/anomaly-reporting-dates.csv code/process-zoltar-scores.R
+paper-inputs/inc-scores.csv: data-raw/inc-scores-from-zoltar.csv paper-inputs/model-eligibility-inc.csv code/process-zoltar-scores.R
 	Rscript code/process-zoltar-scores.R
 
 ## update calibration scores
@@ -16,6 +16,7 @@ paper-inputs/inc-calibration.csv: paper-inputs/model-eligibility-inc.csv paper-i
 figures/pi-coverage.jpg: code/figure-calibration.R paper-inputs/inc-calibration.csv paper-inputs/inc-scores.csv
 	Rscript code/figure-calibration.R
 
+## this script builds 3 figures: model-target-week-wis-avgs, week-model-target-fig4, overall-wis-boxplot
 figures/model-target-week-wis-avgs.jpg: code/figure-model-week-target-wis-avgs.R paper-inputs/inc-scores_all.csv paper-inputs/inc-scores.csv
 	Rscript code/figure-model-week-target-wis-avgs.R
 

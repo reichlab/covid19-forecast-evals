@@ -39,8 +39,7 @@ inc_scores <- read_csv("paper-inputs/inc-scores.csv") %>%
   mutate(horizon = str_split(target, " ", simplify = TRUE),
     horizon = as.numeric(horizon[,1])) %>%
   group_by(model, horizon) %>%
-  mutate(nobs=n(), nlocs = length(unique(unit))) %>%
-  filter(nlocs==49)
+  mutate(nobs=n(), nlocs = length(unique(unit)))
 
 mae_plot <- inc_scores %>%
   group_by(model, horizon) %>%

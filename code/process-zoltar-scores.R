@@ -8,10 +8,6 @@ data(hub_locations)
 model_eligibility_inc <- read_csv("paper-inputs/model-eligibility-inc.csv")
 model_eligibility_cum <- read_csv("paper-inputs/model-eligibility.csv")
 
-## locations/dates with reporting anomalies
-dates_with_issues <- read_csv("paper-inputs/anomaly-reporting-dates.csv", col_types = "nDccDnnnc") %>%
-    filter(to_remove==1)
-
 cum_scores <- read_csv("data-raw/cum-scores-from-zoltar.csv", col_types = "ncDcccnnnnnnnnnnnnnn") %>% select(-X1)
 inc_scores <- read_csv("data-raw/inc-scores-from-zoltar.csv", col_types = "ncDcccnnnnnnnnnnnnnn") %>% select(-X1)
 
@@ -35,28 +31,6 @@ cum_scores_eligible <- cum_scores_calc %>%
 inc_scores_eligible <- inc_scores_calc %>%
   right_join(filter(model_eligibility_inc, target_group=="inc"))
 
-## remove contaminated weeks of data
-
-## for each location with an issue, remove the scores prior to the issue
-cum_scores_eligible$to_keep <- TRUE
-for(j in 1:nrow(dates_with_issues)){
-  tmp.idx <- which(cum_scores_eligible$timezero <= dates_with_issues$first_fcast_date_impacted[j] & cum_scores_eligible$unit == dates_with_issues$fips[j])
-  cum_scores_eligible$to_keep[tmp.idx] <- FALSE
-}
-
-inc_scores_eligible$to_keep <- TRUE
-for(j in 1:nrow(dates_with_issues)){
-  tmp.idx <- which(inc_scores_eligible$timezero <= dates_with_issues$first_fcast_date_impacted[j] & inc_scores_eligible$unit == dates_with_issues$fips[j])
-  inc_scores_eligible$to_keep[tmp.idx] <- FALSE
-}
-
-cum_scores_eligible <- cum_scores_eligible %>% 
-  filter(to_keep) %>%
-  select(-to_keep)
-
-inc_scores_eligible <- inc_scores_eligible %>%
-  filter(to_keep) %>%
-  select(-to_keep)
 
 ## add target_wk_end_date for all scores and remove second forecasts per week
 timezero_end_dates <- tibble(
