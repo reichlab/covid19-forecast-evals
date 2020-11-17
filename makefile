@@ -17,7 +17,7 @@ figures/pi-coverage.jpg: code/figure-calibration.R paper-inputs/inc-calibration.
 	Rscript code/figure-calibration.R
 
 ## this script builds 3 figures: model-target-week-wis-avgs, week-model-target-fig4, overall-wis-boxplot
-figures/model-target-week-wis-avgs.jpg: code/figure-model-week-target-wis-avgs.R paper-inputs/inc-scores_all.csv paper-inputs/inc-scores.csv
+figures/model-target-week-wis-avgs.jpg: code/figure-model-week-target-wis-avgs.R paper-inputs/inc-scores.csv
 	Rscript code/figure-model-week-target-wis-avgs.R
 
 figures/inc-loc-heatmap.jpg: code/figure-heatmap-locations.R

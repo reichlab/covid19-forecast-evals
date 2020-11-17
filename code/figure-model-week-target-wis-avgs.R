@@ -10,7 +10,7 @@ inc_score_models <- read_csv("paper-inputs/inc-scores.csv") %>%
 start_target_end_date <- as.Date("2020-05-23")
 end_target_end_date <- as.Date("2020-09-05")
 
-inc_scores <- read_csv("paper-inputs/inc-scores_all.csv") %>%
+inc_scores <- read_csv("paper-inputs/inc-scores.csv") %>%
     filter(target %in% paste(1:4, "wk ahead inc death"),
         model %in% inc_score_models,
         target_end_date_1wk_ahead >= start_target_end_date,
