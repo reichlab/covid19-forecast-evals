@@ -56,7 +56,7 @@ calib95 <-
   geom_line() + geom_point() + 
   #geom_label(aes(label=model)) +
   #geom_dl(aes(label=model), method = list(dl.trans(x = x + 0.2), "last.bumpup", cex = 0.8)) +
-  geom_hline(yintercept=.95, linetype=5, color="darkgray") +
+  geom_hline(yintercept=.95, linetype=5) +
   scale_y_continuous(name = "Empirical prediction interval coverage", limits = c(0,1), breaks=c(0, .25, .5, .75, .95, 1)) +
   scale_x_continuous(name = "Forecast horizon (weeks)", breaks=1:4, limits=c(1, 5)) +
   guides(color=FALSE) +
@@ -64,10 +64,11 @@ calib95 <-
   geom_text_repel(aes(label = label),
     nudge_x = 0.5,
     hjust = 0,
-    size=2,
+    size=2.5,
     box.padding = 0.1,
     direction = "y",
     segment.linetype = 2, 
+    segment.alpha = 0.5, 
     # min.segment.length = Inf,
     na.rm = TRUE)
 
@@ -75,7 +76,7 @@ calib50 <-
   ggplot(filter(calibration_scores_inc, horizon < 5), aes(x=horizon, y=percent_calib50, color=model, group=model)) + 
   geom_line() + geom_point() + 
   #geom_label(aes(label=model)) +
-  geom_hline(yintercept=.5, linetype=5, color="darkgray") +
+  geom_hline(yintercept=.5, linetype=5) +
   #geom_dl(aes(label=model), method = list(dl.trans(x = x), "left.polygons", cex = 0.8)) +
   scale_y_continuous(name = "Empirical prediction interval coverage", limits = c(0,1), breaks=c(0, .25, .5, .75, 1)) +
   scale_x_continuous(name = "Forecast horizon (weeks)", breaks=1:4, limits=c(1, 5)) +
@@ -84,10 +85,11 @@ calib50 <-
   geom_text_repel(aes(label = label),
     nudge_x = 0.5,
     hjust = 0,
-    size=2,
+    size=2.5,
     box.padding = 0.1,
     direction = "y",
     segment.linetype = 2, 
+    segment.alpha = 0.5, 
     # min.segment.length = Inf,
     na.rm = TRUE)
 
