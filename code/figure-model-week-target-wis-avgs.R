@@ -202,7 +202,7 @@ avg_scores_byweek$model <- factor(as.character(avg_scores_byweek$model))
 
 f4 <- ggplot(avg_scores_byweek, aes(x= lubridate::ymd(target_end_date_0wk_ahead), y= relative_wis, color = model, group = model)) +
   scale_x_date(date_labels = "%Y-%m-%d", breaks = c(unique(avg_scores_byweek$target_end_date_0wk_ahead)),name = "Forecast Week",
-               limits = c(min(avg_scores_byweek$target_end_date_0wk_ahead), max(avg_scores_byweek$target_end_date_0wk_ahead) + 10)) +
+               limits = c(min(avg_scores_byweek$target_end_date_0wk_ahead), max(avg_scores_byweek$target_end_date_0wk_ahead) + 20)) +
   geom_line() + 
   geom_point(size = 2) + 
   expand_limits(y=0) +
@@ -216,10 +216,11 @@ f4 <- ggplot(avg_scores_byweek, aes(x= lubridate::ymd(target_end_date_0wk_ahead)
                   box.padding = .3,
                   direction = "y",
                   segment.linetype = 2,
-                   nudge_x = 10,
-                   hjust = 0,
-                   size=1.3,
-                   na.rm = TRUE)
+                  nudge_x = 10,
+                  segment.alpha=.5,
+                  hjust = 0,
+                  size=2.5,
+                  na.rm = TRUE)
 
 pdf(file = "figures/week-model-target-fig4.pdf", width=8, height=6)
 print(f4)

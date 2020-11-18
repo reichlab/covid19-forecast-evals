@@ -27,11 +27,13 @@ inc_scores_calc <- inc_scores %>%
 ## keep only forecasts for eligible model-timezeros 
 cum_scores_eligible <- cum_scores_calc %>%
   right_join(filter(model_eligibility_cum, target_group=="cum")) %>%
-  mutate(target_end_date_1wk_ahead = as.Date(covidHubUtils::calc_target_week_end_date(timezero, horizon=1)))
+  mutate(target_end_date_1wk_ahead = as.Date(covidHubUtils::calc_target_week_end_date(timezero, horizon=1))) %>%
+  filter(truth >= 0)
   
 inc_scores_eligible <- inc_scores_calc %>%
   right_join(filter(model_eligibility_inc, target_group=="inc")) %>%
-  mutate(target_end_date_1wk_ahead = as.Date(covidHubUtils::calc_target_week_end_date(timezero, horizon=1)))
+  mutate(target_end_date_1wk_ahead = as.Date(covidHubUtils::calc_target_week_end_date(timezero, horizon=1))) %>%
+  filter(truth >= 0)
 
 ## write to disk
 write_csv(cum_scores_eligible, file = paste0("paper-inputs/cum-scores.csv"))
