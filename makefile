@@ -25,3 +25,6 @@ figures/inc-loc-heatmap.jpg: code/figure-heatmap-locations.R
 
 figures/long-range.jpg: code/figure-long-term-comparisons.R paper-inputs/inc-calibration.csv paper-inputs/inc-scores.csv
 	Rscript code/figure-long-term-comparisons.R
+
+figures/fig-wis-location.jpg: code/figure-wis_by_location.R paper-inputs/inc-scores.csv
+	Rscript code/figure-wis_by_location.R

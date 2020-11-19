@@ -124,7 +124,7 @@ expected_locs <- inc_scores %>%
 
 
 avg_wis_by_model_target_week <- inc_scores %>%
-    filter(!(location_name %in% c("United States", "American Samoa", "Guam", "Northern Mariana Islands", "Virgin Islands", "Puerto Rico", "District of Columbia"))) %>% 
+    filter(!(location_name %in% locs_to_exclude)) %>% 
     group_by(model, target, target_end_date_1wk_ahead) %>%
     summarize(median_wis = median(wis), mean_wis = mean(wis, na.rm=TRUE), nlocs=n()) %>%
     left_join(expected_locs)%>%
@@ -189,44 +189,131 @@ dev.off()
 
 
 ##Figure 4 [average WIS over time]
+
+## assemble truth data observations for US level
+one_wk_ahead_obs_deaths <- inc_scores %>% 
+  filter(location_name == "United States", model == "YYG-ParamSearch", target == "1 wk ahead inc death") %>%
+  select(target_end_date_1wk_ahead, truth) %>%
+  rename(week_end_date = target_end_date_1wk_ahead,
+    incident_deaths_week = truth)
+
+
+obs_inc_deaths <- inc_scores %>% 
+  filter(location_name == "United States", model == "YYG-ParamSearch", target %in% paste(2:4, "wk ahead inc death"), target_end_date_1wk_ahead == "2020-08-29") %>%
+  mutate(horizon = as.numeric(str_sub(target, 1, 1)),
+    week_end_date = timezero + 7*horizon) %>%
+  rename(incident_deaths_week = truth) %>%
+  select(week_end_date, incident_deaths_week) %>%
+  bind_rows(one_wk_ahead_obs_deaths) %>%
+  arrange(week_end_date)
+  
+f4a <- ggplot(obs_inc_deaths, aes(x=week_end_date, y=incident_deaths_week)) +
+  geom_point() +
+  geom_line() + 
+  scale_x_date(name=NULL) +
+  scale_y_continuous(name = "incident deaths in US") +
+  ggtitle("A: Observed weekly COVID-19 deaths in the US")
+
 avg_scores_byweek <- avg_wis_by_model_target_week %>% 
   ungroup() %>%
   filter(target %in% c("1 wk ahead inc death", "4 wk ahead inc death")) %>%
-  mutate(target_end_date_0wk_ahead = target_end_date_1wk_ahead - 7) %>%
-  group_by(target_end_date_0wk_ahead, target) %>%
+  mutate(horizon = as.numeric(str_sub(target, 1, 1)),
+    target_end_date = target_end_date_1wk_ahead + 7*(horizon-1)) %>%
+  group_by(target_end_date_1wk_ahead, target) %>%
   mutate_at(vars("mean_wis"), funs(relative_wis = (. / .[model=="COVIDhub-baseline"]))) %>%
   ungroup() %>%  group_by(model) %>%
-  mutate(label = if_else(target_end_date_0wk_ahead  == max(target_end_date_0wk_ahead), model, factor(NA_character_))) %>% ungroup()
+  mutate(label = if_else(target_end_date_1wk_ahead  == max(target_end_date_1wk_ahead), model, factor(NA_character_))) %>% ungroup()
 
 avg_scores_byweek$model <- factor(as.character(avg_scores_byweek$model))
 
-f4 <- ggplot(avg_scores_byweek, aes(x= lubridate::ymd(target_end_date_0wk_ahead), y= relative_wis, color = model, group = model)) +
-  scale_x_date(date_labels = "%Y-%m-%d", breaks = c(unique(avg_scores_byweek$target_end_date_0wk_ahead)),name = "Forecast Week",
-               limits = c(min(avg_scores_byweek$target_end_date_0wk_ahead), max(avg_scores_byweek$target_end_date_0wk_ahead) + 20)) +
-  geom_line() + 
-  geom_point(size = 2) + 
-  expand_limits(y=0) +
-  scale_y_log10() + 
-  ylab("Average WIS relative to baseline") + 
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 11)) + 
-  #scale_x_continuous(name = "Forecast Week", breaks= unique(avg_scores_byweek$target_end_date_0wk_ahead)[c(TRUE,FALSE)], limits=c(1, 5)) +
-  facet_wrap(~ target, scales="free_y", ncol = 1) +
-  guides(color=FALSE,  group = FALSE) +
-  geom_text_repel(aes(label = label),
-                  box.padding = .3,
-                  direction = "y",
-                  segment.linetype = 2,
-                  nudge_x = 10,
-                  segment.alpha=.5,
-                  hjust = 0,
-                  size=2.5,
-                  na.rm = TRUE)
+# old f4, saved for now
+# f4 <- ggplot(avg_scores_byweek, aes(x = target_end_date, y= relative_wis, color = model, group = model)) +
+#   #scale_x_date(date_labels = "%Y-%m-%d", breaks = c(unique(avg_scores_byweek$target_end_date_0wk_ahead)),name = "Forecast Week",
+#   #             limits = c(min(avg_scores_byweek$target_end_date_0wk_ahead), max(avg_scores_byweek$target_end_date_0wk_ahead) + 20)) +
+#   geom_line() + 
+#   geom_point(size = 2) + 
+#   expand_limits(y=0) +
+#   scale_y_log10() + 
+#   ylab("Average WIS relative to baseline") + 
+#   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 11)) + 
+#   #scale_x_continuous(name = "Forecast Week", breaks= unique(avg_scores_byweek$target_end_date_0wk_ahead)[c(TRUE,FALSE)], limits=c(1, 5)) +
+#   facet_wrap(~ target, scales="free_y", ncol = 1) +
+#   guides(color=FALSE,  group = FALSE) +
+#   geom_text_repel(aes(label = label),
+#                   box.padding = .3,
+#                   direction = "y",
+#                   segment.linetype = 2,
+#                   nudge_x = 10,
+#                   segment.alpha=.5,
+#                   hjust = 0,
+#                   size=2.5,
+#                   na.rm = TRUE)
 
-pdf(file = "figures/week-model-target-fig4.pdf", width=8, height=6)
-print(f4)
+# relative wis
+# f4 <- ggplot(avg_scores_byweek, aes(x = target_end_date, y = relative_wis)) +
+#   geom_line(aes(group = model), color="darkgray", alpha=.5) +
+#   geom_point(aes(group = model), color="darkgray", alpha=.5, size = 2) +
+#   stat_summary(fun=mean, geom="line", colour="blue") +
+#   stat_summary(fun=mean, geom="point", colour="blue") +
+#   geom_line(data=filter(avg_scores_byweek, model=="COVIDhub-ensemble"), aes(group = model), color="red") +
+#   geom_point(data=filter(avg_scores_byweek, model=="COVIDhub-ensemble"), aes(group = model), color="red") +
+#   expand_limits(y=0) +
+#   scale_y_log10() +
+#   ylab("Average WIS relative to baseline") +
+#   #scale_x_continuous(name = "Forecast Week", breaks= unique(avg_scores_byweek$target_end_date_0wk_ahead)[c(TRUE,FALSE)], limits=c(1, 5)) +
+#   facet_wrap(~ target, scales="free_y", ncol = 1) +
+#   guides(color=FALSE,  group = FALSE)
+
+f4b <- ggplot(filter(avg_scores_byweek, target=="1 wk ahead inc death"), aes(x = target_end_date, y = mean_wis)) +
+  geom_line(aes(group = model), color="darkgray", alpha=.5) +
+  geom_point(aes(group = model), color="darkgray", alpha=.5, size = 2) +
+  stat_summary(fun=mean, geom="line", aes(color="blue")) +
+  stat_summary(fun=mean, geom="point", aes(color="blue")) +
+  geom_line(data=filter(avg_scores_byweek, model=="COVIDhub-ensemble",  target=="1 wk ahead inc death"), aes(group = model, color="red")) +
+  geom_point(data=filter(avg_scores_byweek, model=="COVIDhub-ensemble",  target=="1 wk ahead inc death"), aes(group = model, color="red")) +
+  geom_line(data=filter(avg_scores_byweek, model=="COVIDhub-baseline", target=="1 wk ahead inc death"), aes(group = model, color="green")) +
+  geom_point(data=filter(avg_scores_byweek, model=="COVIDhub-baseline", target=="1 wk ahead inc death"), aes(group = model, color="green")) +
+  expand_limits(y=0) +
+  scale_y_continuous(name = "Average WIS") +
+  scale_x_date(name=NULL, limits=range(obs_inc_deaths$week_end_date)) + 
+  #scale_x_continuous(name = "Forecast Week", breaks= unique(avg_scores_byweek$target_end_date_0wk_ahead)[c(TRUE,FALSE)], limits=c(1, 5)) +
+  # facet_grid(target~.) +
+  scale_color_identity(name = NULL, 
+    breaks = c( "blue", "green", "red"), 
+    labels = c( "Average score of all models", "COVIDhub-baseline","COVIDhub-ensemble")) +
+  guides(color=FALSE, group = FALSE) +
+  ggtitle("B: Average 1-week ahead weighted interval scores by model")
+
+f4c <- ggplot(filter(avg_scores_byweek, target=="4 wk ahead inc death"), aes(x = target_end_date, y = mean_wis)) +
+  geom_line(aes(group = model), color="darkgray", alpha=.5) +
+  geom_point(aes(group = model), color="darkgray", alpha=.5, size = 2) +
+  stat_summary(fun=mean, geom="line", aes(colour="blue")) +
+  stat_summary(fun=mean, geom="point", aes(colour="blue")) +
+  geom_line(data=filter(avg_scores_byweek, model=="COVIDhub-ensemble",  target=="4 wk ahead inc death"), aes(group = model, color="red")) +
+  geom_point(data=filter(avg_scores_byweek, model=="COVIDhub-ensemble",  target=="4 wk ahead inc death"), aes(group = model, color="red")) +
+  geom_line(data=filter(avg_scores_byweek, model=="COVIDhub-baseline", target=="4 wk ahead inc death"), aes(group = model, color="green")) +
+  geom_point(data=filter(avg_scores_byweek, model=="COVIDhub-baseline", target=="4 wk ahead inc death"), aes(group = model, color="green")) +
+  expand_limits(y=0) +
+  ylab("Average WIS") +
+  scale_x_date(name=NULL, limits=range(obs_inc_deaths$week_end_date)) + 
+  scale_y_continuous(name = "Average WIS") +
+  #scale_x_continuous(name = "Forecast Week", breaks= unique(avg_scores_byweek$target_end_date_0wk_ahead)[c(TRUE,FALSE)], limits=c(1, 5)) +
+  # facet_grid(target~.) +
+  guides(group = FALSE) +
+  scale_color_identity(name = NULL, 
+    breaks = c( "blue", "green", "red"), 
+    labels = c( "Average score of all models", "COVIDhub-baseline","COVIDhub-ensemble"),
+    guide = "legend") +
+  theme(legend.position = c(0.05, 0.7), legend.justification = c(0,.5)) +
+  ggtitle("C: Average 4-week ahead weighted interval scores by model")
+
+
+
+pdf(file = "figures/wis-avgs-by-week.pdf", width=8, height=10)
+gridExtra::grid.arrange(f4a, f4b, f4c, layout_matrix = matrix(c(1,2,3), ncol=1))
 dev.off()
 
 
-jpeg(file = "figures/week-model-target-fig4.jpg", width=8, height=6, units="in", res=200)
-print(f4)
+jpeg(file = "figures/wis-avgs-by-week.jpg", width=8, height=10, units="in", res=200)
+gridExtra::grid.arrange(f4a, f4b, f4c, layout_matrix = matrix(c(1,2,3), ncol=1))
 dev.off()
