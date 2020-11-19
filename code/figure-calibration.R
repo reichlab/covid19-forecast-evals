@@ -7,9 +7,9 @@ library(directlabels)
 theme_set(theme_bw())
 data("hub_locations")
 
-## load in inc scores
 inc_scores <- read_csv("paper-inputs/inc-scores.csv") %>%
-  filter(location_name %in% datasets::state.name)
+  filter(location_name %in% (hub_locations %>% filter(geo_type == "state") %>% pull(location_name))) %>%
+  filter(location_name != "United States" & location_name != "American Samoa") 
 
 inc_calibration <-  read_csv("paper-inputs/inc-calibration.csv") %>%
   left_join(hub_locations, by=c("unit" = "fips")) %>%
@@ -24,8 +24,8 @@ inc_scores_merge <- inc_scores %>%
 ## compute nice table
 calibration_scores_inc <- inc_scores_merge %>%
   group_by(model, target) %>%
-  summarise(percent_calib50 = round(sum(calib_50)/ n(),2),
-            percent_calib95 = round(sum(calib_95) / n(),2)) %>% 
+  summarise(percent_calib50 = round(sum(calib_50, na.rm = T)/ n(),2),
+            percent_calib95 = round(sum(calib_95, na.rm = T) / n(),2)) %>% 
   mutate(target = fct_relevel(target, 
                               "1 wk ahead inc death",  "2 wk ahead inc death",  "3 wk ahead inc death",  "4 wk ahead inc death",
                                "5 wk ahead inc death",  "6 wk ahead inc death",  "7 wk ahead inc death",  "8 wk ahead inc death",
@@ -59,7 +59,7 @@ calib95 <-
   geom_hline(yintercept=.95, linetype=5) +
   scale_y_continuous(name = "Empirical prediction interval coverage", limits = c(0,1), breaks=c(0, .25, .5, .75, .95, 1)) +
   scale_x_continuous(name = "Forecast horizon (weeks)", breaks=1:4, limits=c(1, 5)) +
-  guides(color=FALSE) +
+  guides(color= "none") +
   ggtitle("B: 95% prediction interval coverage rates, by model")+
   geom_text_repel(aes(label = label),
     nudge_x = 0.5,
@@ -80,7 +80,7 @@ calib50 <-
   #geom_dl(aes(label=model), method = list(dl.trans(x = x), "left.polygons", cex = 0.8)) +
   scale_y_continuous(name = "Empirical prediction interval coverage", limits = c(0,1), breaks=c(0, .25, .5, .75, 1)) +
   scale_x_continuous(name = "Forecast horizon (weeks)", breaks=1:4, limits=c(1, 5)) +
-  guides(color=FALSE) +
+  guides(color="none") +
   ggtitle("A: 50% prediction interval coverage rates, by model") +
   geom_text_repel(aes(label = label),
     nudge_x = 0.5,
@@ -110,20 +110,14 @@ calib_table <- inc_scores_merge %>%
   summarise(percent_calib50 = round(sum(calib_50)/ n(),2),
             percent_calib95 = round(sum(calib_95) / n(),2))
 
+
+
+inc_scores <- read_csv("paper-inputs/inc-scores.csv") %>%
+  filter(location_name %in% datasets::state.name)
+
 count_forecasts <- inc_scores %>%
   filter(target %in% c("1 wk ahead inc death",  "2 wk ahead inc death",  "3 wk ahead inc death",  "4 wk ahead inc death")) %>%
   group_by(model) %>%
-  summarise(n_forecasts = n())
-
-calib_table <- count_forecasts %>%
-  inner_join(calib_table)
-
-
-
-
-
-
-
-
-
+  summarise(n_forecasts = n()) %>%
+  arrange(-n_forecasts)
 
