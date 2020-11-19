@@ -105,19 +105,13 @@ dev.off()
 
 #Calibration table (table 2)
 calib_table <- inc_scores_merge %>%
+  filter(location_name %in% datasets::state.name) %>%
   filter(target %in% c("1 wk ahead inc death",  "2 wk ahead inc death",  "3 wk ahead inc death",  "4 wk ahead inc death")) %>% 
   group_by(model) %>%
   summarise(percent_calib50 = round(sum(calib_50)/ n(),2),
-            percent_calib95 = round(sum(calib_95) / n(),2))
-
-
-
-inc_scores <- read_csv("paper-inputs/inc-scores.csv") %>%
-  filter(location_name %in% datasets::state.name)
-
-count_forecasts <- inc_scores %>%
-  filter(target %in% c("1 wk ahead inc death",  "2 wk ahead inc death",  "3 wk ahead inc death",  "4 wk ahead inc death")) %>%
-  group_by(model) %>%
-  summarise(n_forecasts = n()) %>%
-  arrange(-n_forecasts)
+            percent_calib95 = round(sum(calib_95) / n(),2),
+            n_forecasts=n()) %>% 
+  select(model, n_forecasts, percent_calib50, percent_calib95) %>%
+  ungroup() %>%
+  arrange(-percent_calib50)
 
