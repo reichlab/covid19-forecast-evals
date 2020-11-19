@@ -16,7 +16,7 @@ scores$timezero <- next_monday(scores$timezero)
 
 # restrict to 1-4 wk ahead state-level (this had been missing previously!)
 scores <- subset(scores, target %in% paste(1:4, "wk ahead inc death") &
-                   unit != "US")
+                   abbreviation %in% datasets::state.abb)
 
 scores <- scores[, c("model", "timezero", "unit", "target", "abs_error", "wis")]
 
@@ -96,3 +96,6 @@ tab <- tab[order(tab$ratios_baseline2), ]
 
 
 tab #final column is theta^*_iB
+
+tab %>% 
+  select(model, ratios_baseline2)
