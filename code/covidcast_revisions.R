@@ -78,7 +78,7 @@ fig_revisions <- ggplot(data = all_data, aes(x = time_value, y = value, color = 
   geom_vline(aes(xintercept = all_data$first_fcast_date_impacted), linetype = "dashed") +
   scale_x_date(date_labels = "%Y-%m-%d", breaks = c(mon_labels), name = "Date") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 9),
-        legend.text = element_text(size = 6),
+        legend.text = element_text(size = 7),
         legend.title = element_text(size = 8)) +
   facet_wrap(~location_name, scales = "free_y") +
   ylab("Incident deaths reported") + labs(color = "Revision Date")
