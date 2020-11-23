@@ -12,20 +12,20 @@ inc_scores <- read_csv("paper-inputs/inc-scores.csv") %>%
 
 average_by_loc <- inc_scores %>%
   group_by(model, location_name) %>%  #aggregate by week of submission
-  summarise(avg_wis = round(mean(wis, na.rm = T),1)) %>% 
+  summarise(avg_wis = round(mean(wis, na.rm = T),1),
+            sum_truth = sum(truth)) %>% 
   group_by(location_name) %>%     
   mutate_at(vars(matches("avg_wis")), funs(relative_wis = (. / .[model=="COVIDhub-baseline"]))) %>% 
   ungroup() %>% 
-  mutate(log_relative_wis = ifelse(relative_wis == 0, 0, log(relative_wis))) 
+  mutate(log_relative_wis = ifelse(relative_wis == 0, 0, log2(relative_wis))) 
 
-average_by_loc$model<- reorder(average_by_loc$model, -average_by_loc$avg_wis) #sort models by WIS for plot
+average_by_loc$model<- reorder(average_by_loc$model, -average_by_loc$sum_truth) #sort models by WIS for plot
 average_by_loc$location_name <- reorder(average_by_loc$location_name, average_by_loc$avg_wis)
-
 
 fig_wis_loc <- ggplot(average_by_loc, aes(x=model, y=location_name,fill= log_relative_wis)) +
   geom_tile() +
   geom_text(aes(label=round(avg_wis)), size = 3) +
-  scale_fill_gradient2(low = "navy", high = "red", midpoint = 0, na.value = "grey50", name = "log(model wis / baseline wis)")+ 
+  scale_fill_gradient2(low = "navy", high = "red", midpoint = 0, na.value = "grey50", name = "Relative WIS", breaks = c(-3,-2,-1,0,1,2,3), labels =c(0.125,0.25, 0.5, 1, 2, 4, 8))+ 
   xlab("Scored Models") + ylab("Location") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
       axis.title.x = element_text(size = 9),

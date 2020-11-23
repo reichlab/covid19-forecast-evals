@@ -5,7 +5,7 @@ library(ggrepel)
 theme_set(theme_bw())
 
 
-models <- c("IHME-CurveFit","LANL-GrowthRate","YYG-ParamSearch", "Covid19Sim-Simulator", "UCLA-SuEIR", "USACE-ERDC_SEIR")
+models <- c("COVIDhub-ensemble", "COVIDhub-baseline", "IHME-CurveFit","LANL-GrowthRate","YYG-ParamSearch", "Covid19Sim-Simulator", "UCLA-SuEIR", "USACE-ERDC_SEIR")
 locs_to_exclude <- c("United States", "American Samoa", "Guam", "Northern Mariana Islands", "Virgin Islands", "Puerto Rico", "District of Columbia")
 
 ## plots
