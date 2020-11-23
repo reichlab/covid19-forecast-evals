@@ -51,10 +51,11 @@ truth_dat <- load_truth(truth_source = "JHU",
 
 
 p2 <- truth_dat %>%
-  filter(abbreviation != "US", !(is.na(value))) %>%
+  filter(abbreviation != "US", !(is.na(value)), target_end_date <= end_date) %>%
   mutate(abbreviation = reorder(abbreviation, X=value, FUN=function(x) max(x, na.rm=TRUE))) %>%
   ggplot(aes(y=abbreviation, x=target_end_date, fill=death_bins))+
   geom_tile() +
+  geom_hline(yintercept=seq(51.5, 6.5, by=-5), color="darkgrey") +
   scale_fill_brewer(palette = "Purples", guide = guide_legend(reverse = TRUE), name="deaths") +
   scale_x_date(limits=c(start_date, end_date), name = element_blank(), expand = c(0,0)) +
   scale_y_discrete(name=NULL) +
@@ -89,12 +90,12 @@ p3 <- ggplot(n_models_per_week, aes(x=forecast_date)) +
   
 
 heights <- c(5/8, 2/8, 1/8)
-jpeg(file = "figures/data-and-forecast.jpg", width=8, height=10, units="in", res=200)
+jpeg(file = "figures/data-and-forecast.jpg", width=8, height=12, units="in", res=200)
 ggdraw(
   plot_grid(
     plot_grid(p2_no_legend, p1_updated_no_legend, p3, ncol=1, align='v', rel_heights = heights),
     plot_grid(p2_legend, p1_legend, NULL, ncol=1, rel_heights = heights),
-    rel_widths=c(1, 0.2)
+    rel_widths=c(1, 0.3)
   ))
 dev.off()
 
