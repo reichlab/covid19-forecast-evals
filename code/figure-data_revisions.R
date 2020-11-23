@@ -25,7 +25,7 @@ weekly_inc_deaths <- plyr::ldply(mondays, load_all_weeks)  #combine revisions in
 weekly_inc_deaths <- weekly_inc_deaths %>% 
   left_join(hub_locations %>% select(location = fips, location_name, abbreviation)) %>% #add location names
   mutate(MMWRweek = MMWRweek(weekly_inc_deaths$date)$MMWRweek) %>% #add epi week
-  filter(MMWRweek >= 20 & MMWRweek <= 35)  #filter to only include epi weeks in evaluation
+  filter(MMWRweek <= 35)  #filter to only include epi weeks in evaluation
 
 
 #Create PDF of revisions in all locations 
@@ -37,10 +37,10 @@ for(i in 1:7) {
     geom_line() +
     geom_point(size = 1) +
     theme_bw() +
-    scale_x_continuous(breaks = unique(weekly_inc_deaths$MMWRweek)) + 
+    scale_x_continuous(breaks = unique(weekly_inc_deaths$MMWRweek)[c(TRUE, FALSE)]) + 
     #geom_vline(aes(xintercept = weekly_counts$first_fcast_date_impacted), linetype = "dashed") +
     #scale_x_date(date_labels = "%Y-%m-%d", breaks = c(mondays), name = "Date") +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 9),
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 7),
           legend.text = element_text(size = 7),
           legend.title = element_text(size = 8)) +
     ggforce::facet_wrap_paginate(~location_name, ncol = 2, nrow = 4,  scales = "free_y", page = i) +
