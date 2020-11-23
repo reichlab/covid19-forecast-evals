@@ -1,5 +1,6 @@
 library(lubridate)
 library(tidyverse)
+library(covidHubUtils)
 
 theme_set(theme_bw())
 data("hub_locations")
