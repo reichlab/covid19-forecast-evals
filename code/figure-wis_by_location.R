@@ -19,8 +19,8 @@ average_by_loc <- inc_scores %>%
   ungroup() %>% 
   mutate(log_relative_wis = ifelse(relative_wis == 0, 0, log2(relative_wis))) 
 
-average_by_loc$model<- reorder(average_by_loc$model, -average_by_loc$sum_truth) #sort models by WIS for plot
-average_by_loc$location_name <- reorder(average_by_loc$location_name, average_by_loc$avg_wis)
+average_by_loc$model<- reorder(average_by_loc$model, -average_by_loc$avg_wis) #sort models by WIS for plot
+average_by_loc$location_name <- reorder(average_by_loc$location_name, average_by_loc$sum_truth)
 
 fig_wis_loc <- ggplot(average_by_loc, aes(x=model, y=location_name,fill= log_relative_wis)) +
   geom_tile() +
