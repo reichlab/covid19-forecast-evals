@@ -26,5 +26,7 @@ inc_scores <- read_csv("paper-inputs/inc-scores.csv") %>%
 #     axis.ticks.y=element_blank())
 
 ggplot(inc_scores, aes(x=model, fill=factor(model_rank))) +
-  geom_bar()
+  geom_bar() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  
 
