@@ -1,5 +1,6 @@
 library(tidyverse)
 library(covidHubUtils)
+library(viridis)
 
 theme_set(theme_bw())
 data("hub_locations")
@@ -25,8 +26,20 @@ inc_scores <- read_csv("paper-inputs/inc-scores.csv") %>%
 #     axis.text.y=element_blank(),
 #     axis.ticks.y=element_blank())
 
-ggplot(inc_scores, aes(x=model, fill=factor(model_rank))) +
+p1 <- ggplot(inc_scores, aes(x=model, fill=factor(model_rank))) +
+  # geom_bar(position="fill") + ## for percentages
   geom_bar() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  scale_y_continuous(expand = expansion(mult=c(0, 0.05))) +
+  scale_fill_viridis(discrete=TRUE, direction = -1, name="model rank") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  xlab(NULL)
   
+
+pdf(file = "figures/fig-model-ranks.pdf", width=8, height=5)
+print(p1)
+dev.off()
+
+jpeg(file = "figures/fig-model-ranks.jpg", width=8, height=5, units="in", res=300)
+print(p1)
+dev.off()
 

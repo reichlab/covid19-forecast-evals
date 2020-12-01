@@ -1,5 +1,5 @@
 # make figures
-figures: figures/data-and-forecast.jpg figures/pi-coverage.jpg figures/model-target-week-wis-avgs.jpg figures/inc-loc-heatmap.jpg figures/long-range.jpg figures/fig-wis-location.jpg
+figures: figures/data-and-forecast.jpg figures/pi-coverage.jpg figures/model-target-week-wis-avgs.jpg figures/inc-loc-heatmap.jpg figures/long-range.jpg figures/fig-wis-location.jpg figures/fig-model-ranks.jpg
 
 # processes scores after updates to anomaly dates, eligibility changes or new scores
 paper-inputs/inc-scores.csv: data-raw/inc-scores-from-zoltar.csv paper-inputs/model-eligibility-inc.csv code/process-zoltar-scores.R
@@ -31,4 +31,7 @@ figures/fig-wis-location.jpg: code/figure-wis_by_location.R paper-inputs/inc-sco
 
 figures/data-and-forecast.jpg: code/figure-data-and-forecast.R
 	Rscript code/figure-data-and-forecast.R
+
+figures/fig-model-ranks.jpg: code/figure-model-ranks.R paper-inputs/inc-scores.csv
+	Rscript code/figure-model-ranks.R
 
