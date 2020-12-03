@@ -65,14 +65,14 @@ sf1 <- ggplot(for_loc_figure, aes(y=model, x=sat_fcast_week, fill= n_loc)) +
             xmin=as.Date("2020-05-23") - 3.5, #color of box, start date 3 days before actual date so rectangle covers entire box
             xmax=as.Date("2020-08-29") + 3.5 ,
             ymax= unique(for_loc_figure$model_numeric[for_loc_figure$model == "UMass-MechBayes"]) + .5,
-            ymin= unique(for_loc_figure$model_numeric[for_loc_figure$model == "LANL-GrowthRate"]) - .5,  
+            ymin= unique(for_loc_figure$model_numeric[for_loc_figure$model == "USACE-ERDC_SEIR"]) - .5,  
             size = 1, fill=alpha("grey",0)) +
-  geom_rect(aes(color="red"),
-            xmin=as.Date("2020-05-23") - 3.5,
-            xmax=as.Date("2020-08-29") + 3.5,
-            ymax= unique(for_loc_figure$model_numeric[for_loc_figure$model == "USACE-ERDC_SEIR"]) + .5,
-            ymin= unique(for_loc_figure$model_numeric[for_loc_figure$model == "USACE-ERDC_SEIR"]) - .5,
-            size = 1,fill=alpha("grey",0)) +
+  # geom_rect(aes(color="red"),
+  #           xmin=as.Date("2020-05-23") - 3.5,
+  #           xmax=as.Date("2020-08-29") + 3.5,
+  #           ymax= unique(for_loc_figure$model_numeric[for_loc_figure$model == "USACE-ERDC_SEIR"]) + .5,
+  #           ymin= unique(for_loc_figure$model_numeric[for_loc_figure$model == "USACE-ERDC_SEIR"]) - .5,
+  #           size = 1,fill=alpha("grey",0)) +
   geom_rect(aes(color="red"),
             xmin=as.Date("2020-05-23") - 3.5,
             xmax=as.Date("2020-08-29") + 3.5,
