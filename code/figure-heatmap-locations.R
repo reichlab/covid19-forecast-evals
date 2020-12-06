@@ -63,25 +63,25 @@ sf1 <- ggplot(for_loc_figure, aes(y=model, x=sat_fcast_week, fill= n_loc)) +
   geom_text(aes(label=n_loc), size = 3.5) +
   geom_rect(aes(color="red"),
             xmin=as.Date("2020-05-23") - 3.5, #color of box, start date 3 days before actual date so rectangle covers entire box
-            xmax=as.Date("2020-08-29") + 3.5 ,
+            xmax=as.Date("2020-10-17") + 3.5 ,
             ymax= unique(for_loc_figure$model_numeric[for_loc_figure$model == "UMass-MechBayes"]) + .5,
-            ymin= unique(for_loc_figure$model_numeric[for_loc_figure$model == "USACE-ERDC_SEIR"]) - .5,  
+            ymin= unique(for_loc_figure$model_numeric[for_loc_figure$model == "UCLA-SuEIR"]) - .5,  
             size = 1, fill=alpha("grey",0)) +
-  # geom_rect(aes(color="red"),
-  #           xmin=as.Date("2020-05-23") - 3.5,
-  #           xmax=as.Date("2020-08-29") + 3.5,
-  #           ymax= unique(for_loc_figure$model_numeric[for_loc_figure$model == "USACE-ERDC_SEIR"]) + .5,
-  #           ymin= unique(for_loc_figure$model_numeric[for_loc_figure$model == "USACE-ERDC_SEIR"]) - .5,
-  #           size = 1,fill=alpha("grey",0)) +
   geom_rect(aes(color="red"),
             xmin=as.Date("2020-05-23") - 3.5,
-            xmax=as.Date("2020-08-29") + 3.5,
-            ymax= unique(for_loc_figure$model_numeric[for_loc_figure$model == "YYG-ParamSearch"]) + .5,
+            xmax=as.Date("2020-10-17") + 3.5,
+            ymax= unique(for_loc_figure$model_numeric[for_loc_figure$model == "UA-EpiCovDA"]) + .5,
+            ymin= unique(for_loc_figure$model_numeric[for_loc_figure$model == "USACE-ERDC_SEIR"]) - .5,
+            size = 1,fill=alpha("grey",0)) +
+  geom_rect(aes(color="red"),
+            xmin=as.Date("2020-05-23") - 3.5,
+            xmax=as.Date("2020-10-17") + 3.5,
+            ymax= unique(for_loc_figure$model_numeric[for_loc_figure$model == "RobertWalraven-ESG"]) + .5,
             ymin= unique(for_loc_figure$model_numeric[for_loc_figure$model == "YYG-ParamSearch"]) - .5,
             size = 1,fill=alpha("grey",0)) +
   geom_rect(aes(color="red"),
             xmin=as.Date("2020-05-23") - 3.5,
-            xmax=as.Date("2020-08-29") + 3.5,
+            xmax=as.Date("2020-10-17") + 3.5,
             ymax= unique(for_loc_figure$model_numeric[for_loc_figure$model == "IHME-CurveFit"]) + .5,
             ymin= unique(for_loc_figure$model_numeric[for_loc_figure$model == "IHME-CurveFit"]) - .5,
             size = 1,fill=alpha("grey",0)) +
@@ -92,9 +92,9 @@ sf1 <- ggplot(for_loc_figure, aes(y=model, x=sat_fcast_week, fill= n_loc)) +
         axis.title.x = element_text(size = 10),
         axis.text.y = element_text(size = 10),
         title = element_text(size = 10)) +
-  guides(fill=FALSE, size = FALSE, color = FALSE, alpha = FALSE) +
+  guides(fill= "none", size = "none", color = "none", alpha = "none") +
   ggtitle("Number of locations submitted for incidence death forecasts weekly")  
-# 
+
 # ggsave("../figures/inc_loc_heatmap.jpg", width=3, height=5)
 # ggsave("../figures/incidence_loc_heatmap.png", width=3, height=5)
 
@@ -105,3 +105,4 @@ dev.off()
 jpeg(file = "figures/inc-loc-heatmap.jpg", width=8, height=5, units="in", res=300)
 print(sf1)
 dev.off()
+
