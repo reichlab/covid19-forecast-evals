@@ -48,7 +48,7 @@ num_loc <- inc_tmp_unique %>%
 for_loc_figure <- num_loc %>%
   group_by(model) %>%
   filter(max(n_loc) >= 25) %>% #remove models with fewer than 25 locations at all times
-  filter(min(sat_fcast_week) <= as.Date("2020-08-29")) %>% #filter models that have start date before end of scored period
+  filter(min(sat_fcast_week) <= as.Date("2020-10-17")) %>% #filter models that have start date before end of scored period
   filter(!(model %in% c( "CU-nochange", "CU-scenario_high", "CU-scenario_low", "CU-scenario_mid"))) %>% #remove models that aren't secondary or primary 
   ungroup() 
 
@@ -105,4 +105,25 @@ dev.off()
 jpeg(file = "figures/inc-loc-heatmap.jpg", width=8, height=5, units="in", res=300)
 print(sf1)
 dev.off()
+
+
+#Count number of models
+length(unique(for_loc_figure$model))
+
+#Count number of submissions for scored models
+submission_count <- for_loc_figure %>% filter(model %in% c("IHME-CurveFit", "YYG-ParamSearch", "PSI-DRAFT", "RobertWalraven-ESG", 
+ "USACE-ERDC_SEIR", "CU-select", "NotreDame-mobility", 
+"UA-EpiCovDA", "UCLA-SuEIR", "Covid19Sim-Simulator", 
+"COVIDhub-ensemble", "LANL-GrowthRate", "OliverWyman-Navigator", 
+"UT-Mobility", "COVIDhub-baseline", "GT-DeepCOVID", "JHU_IDD-CovidSP", 
+"MOBS-GLEAM_COVID", "UMass-MechBayes"))
+
+#Count number of forecasts
+sum(submission_count$n_loc) *4
+
+
+
+
+
+
 
