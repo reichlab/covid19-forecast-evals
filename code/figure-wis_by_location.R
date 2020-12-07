@@ -37,7 +37,7 @@ pdf(file = "figures/fig-wis-location.pdf",width=8, height=8)
 print(fig_wis_loc)
 dev.off()
 
-jpeg(file = "figures/fig-wis-location.jpg", width=8, height=6, units="in", res=300)
+jpeg(file = "figures/fig-wis-location.jpg", width=8, height=8, units="in", res=300)
 print(fig_wis_loc)
 dev.off()
 
