@@ -3,8 +3,9 @@ library(MMWRweek)
 library(covidData) 
 library(covidHubUtils)
 
+source("code/load-global-analysis-dates.R")
 
-mondays <- seq(from = as.Date("2020-06-01"), to = Sys.Date(), by = "week")
+mondays <- seq(from = first_timezero - 1, to = Sys.Date(), by = "week")
 
 
 #load revisions as of each monday 
@@ -82,5 +83,5 @@ dev.off()
 anomaly_table <- weekly_inc_deaths %>%
   filter(abbreviation %in% c("MI", "OR", "DE", "NJ", "NY", "TX", "MS")) %>%
   filter(MMWRweek > 21 & MMWRweek <= 31) %>%
-  filter(date >= as.Date("2020-05-25")) %>%
-  filter(revision_date < as.Date("2020-10-13"))
+  filter(date >= first_1wk_target_end_date) %>%
+  filter(revision_date < Sys.Date())

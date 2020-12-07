@@ -1,20 +1,19 @@
 library(tidyverse)
 library(ggrepel)
 
+source("code/load-global-analysis-dates.R")
+
 theme_set(theme_bw())
 
 inc_score_models <- read_csv("paper-inputs/inc-scores.csv") %>%
     pull(model) %>%
     unique()
 
-start_target_end_date <- as.Date("2020-05-23")
-end_target_end_date <- as.Date("2020-09-05")
-
 inc_scores <- read_csv("paper-inputs/inc-scores.csv") %>%
     filter(target %in% paste(1:4, "wk ahead inc death"),
         model %in% inc_score_models,
-        target_end_date_1wk_ahead >= start_target_end_date,
-        target_end_date_1wk_ahead <= end_target_end_date)
+        target_end_date_1wk_ahead >= first_1wk_target_end_date,
+        target_end_date_1wk_ahead <= last_1wk_target_end_date)
         #!(location_name %in% c("United States", "American Samoa", "Guam", "Northern Mariana Islands", "Virgin Islands", "Puerto Rico", "District of Columbia")),
         #!(location_name=="New Jersey" & target_end_date_1wk_ahead=="2020-07-04"))
 

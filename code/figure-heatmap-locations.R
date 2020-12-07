@@ -2,13 +2,13 @@
 library(covidHubUtils) ## devtools::install_github("reichlab/covidHubUtils")
 library(tidyverse)
 
+source("code/load-global-analysis-dates.R")
 
 #the_scores <- c("interval_50")
 the_models <- c() 
 the_locations <- hub_locations %>% filter(geo_type == "state") %>% pull(fips)
 the_targets_inc <- c("4 wk ahead inc death")
-the_timezeros_inc <- seq(from = as.Date("2020-05-13"), to = Sys.Date(), by="days")
-                       
+
 
 inc_tmp <- load_forecasts(
   forecast_dates = the_timezeros_inc,
@@ -47,7 +47,7 @@ num_loc <- inc_tmp_unique %>%
 #Filter out teams that have fewer than 25 locations at every time point
 for_loc_figure <- num_loc %>%
   group_by(model) %>%
-  filter(max(n_loc) >= 25) %>% #remove models with fewer than 25 locations at all times
+  filter(max(n_loc) >= NUM_UNITS) %>% #remove models with fewer than 25 locations at all times
   filter(min(sat_fcast_week) <= as.Date("2020-10-17")) %>% #filter models that have start date before end of scored period
   filter(!(model %in% c( "CU-nochange", "CU-scenario_high", "CU-scenario_low", "CU-scenario_mid"))) %>% #remove models that aren't secondary or primary 
   ungroup() 

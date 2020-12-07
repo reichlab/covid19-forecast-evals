@@ -47,7 +47,7 @@ project_url <- the_projects[the_projects$name == "COVID-19 Forecasts", "url"]
 
 inc_calibration1 <- do_zoltar_query(zoltar_connection,
   project_url =  "https://zoltardata.com/api/project/44/",
-  is_forecast_query = TRUE,
+  query_type = "forecasts",
   models = the_models_inc1,
   units = the_locations,
   targets = the_targets_inc,
@@ -57,7 +57,7 @@ inc_calibration1 <- do_zoltar_query(zoltar_connection,
 
 inc_calibration2 <- do_zoltar_query(zoltar_connection,
   project_url =  "https://zoltardata.com/api/project/44/",
-  is_forecast_query = TRUE,
+  query_type = "forecasts",
   models = the_models_inc2,
   units = the_locations,
   targets = the_targets_inc,

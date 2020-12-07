@@ -3,11 +3,13 @@ library(tidyverse)
 library(covidHubUtils)
 library(cowplot)
 
+source("code/load-global-analysis-dates.R")
+
 theme_set(theme_bw())
 
 eval_dates <- c(
-  as.Date("2020-05-23") - 3.5, ## first one-week-ahead target end date 
-  as.Date("2020-09-19") + 3.5) ## last four week ahead target end date
+  first_1wk_target_end_date - 3.5, ## first one-week-ahead target end date 
+  last_4wk_target_end_date + 3.5) ## last four week ahead target end date
 
 start_date <- as.Date("2020-02-22")
 end_date <- as.Date("2020-10-01")
@@ -29,7 +31,7 @@ p1 <- plot_forecast(forecast_data = fcast_data,
   truth_source = "JHU",
   intervals = c(0.2, 0.5, 0.8, 0.95, 0.98),
   title="B: ensemble forecast for incident deaths at the national level from July 20, 2020",
-  show.caption = FALSE, 
+  show_caption = FALSE, 
   plot=FALSE) 
 
 p1_updated <- p1 + 
@@ -44,7 +46,6 @@ truth_dat <- load_truth(truth_source = "JHU",
   target_variable = "inc death",
   data_location = "local_hub_repo",
   local_repo_path = "../covid19-forecast-hub/") %>%
-  left_join(hub_locations, by=c("location" = "fips")) %>%
   filter(geo_type == "state") %>%
   mutate(death_rate_per_100k = value/population*100000,
     death_bins = cut(value, breaks = c(-Inf, 0, 1, 10, 100, 500, 1000, Inf), right = FALSE, labels=c("<0", "0", "1-9", "10-99", "100-499", "500-999", "1000+")))

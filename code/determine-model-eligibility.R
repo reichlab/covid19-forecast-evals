@@ -6,6 +6,8 @@ library(lubridate)
 # source("../covid19-forecast-hub/code/processing-fxns/get_next_saturday.R")
 source("code/unit_timezero_forecast_complete.R")
 
+stop("this file has not been updated to read in load-global-analysis-dates.R")
+
 ## maximum number of weeks missing that we allow before disqualifying a model
 MAXIMUM_MISSING_WEEKS <- 3
 UNITS_FOR_ELIGIBILITY <- read_csv("../covid19-forecast-hub/data-locations/locations.csv") %>%
