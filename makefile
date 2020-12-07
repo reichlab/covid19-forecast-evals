@@ -5,7 +5,7 @@ figures: figures/data-and-forecast.jpg figures/pi-coverage.jpg figures/model-tar
 paper-inputs/inc-scores.csv: data-raw/inc-scores-from-zoltar.csv paper-inputs/model-eligibility-inc.csv code/process-zoltar-scores.R
 	Rscript code/process-zoltar-scores.R
 
-paper-inputs/model-eligibility-inc.csv: code/determine-model-eligibility-inc.R code/load-global-analysis-dates.R
+paper-inputs/model-eligibility-inc.csv: code/determine-model-eligibility-inc.R code/load-global-analysis-dates.R 
 	Rscript code/determine-model-eligibility-inc.R
 
 # individual figures
