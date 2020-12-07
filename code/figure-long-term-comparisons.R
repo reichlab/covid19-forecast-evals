@@ -10,7 +10,7 @@ locs_to_exclude <- c("United States", "American Samoa", "Guam", "Northern Marian
 
 ## plots
 
-longterm_dat <- load_latest_forecasts(models = models,
+longterm_dat <- load_latest_forecasts(models = "IHME-CurveFit",
   last_forecast_date = as.Date("2020-06-29"), forecast_date_window_size = 6,
   locations = "US", 
   types = c("quantile", "point"), 
@@ -22,7 +22,7 @@ truth_dat <- load_truth(truth_source = "JHU", target_variable = "inc death", loc
 
 f1 <- plot_forecast(longterm_dat, truth_data = truth_dat, model = "IHME-CurveFit", 
   target_variable = "inc death", intervals = c(.5, .95), 
-  title = "A: example long-term forecast from IHME", show.caption=FALSE, plot = FALSE)
+  title = "A: example long-term forecast from IHME", show_caption=FALSE, plot = FALSE)
 # f2 <- plot_forecast(longterm_dat, truth_data = truth_dat, model = "YYG-ParamSearch", target_variable = "inc death", intervals = c(.5, .95), title = "none", show.caption=FALSE)
 # f3 <- plot_forecast(longterm_dat, truth_data = truth_dat, model = "LANL-GrowthRate", target_variable = "inc death", intervals = c(.5, .95), title = "none", show.caption=FALSE)
 # f4 <- plot_forecast(longterm_dat, truth_data = truth_dat, model = "Covid19Sim-Simulator", target_variable = "inc death", intervals = c(.5, .95), title = "none", show.caption=FALSE)

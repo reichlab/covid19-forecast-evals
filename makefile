@@ -5,7 +5,7 @@ figures: figures/data-and-forecast.jpg figures/pi-coverage.jpg figures/model-tar
 paper-inputs/inc-scores.csv: data-raw/inc-scores-from-zoltar.csv paper-inputs/model-eligibility-inc.csv code/process-zoltar-scores.R
 	Rscript code/process-zoltar-scores.R
 
-paper-inputs/model-eligibility-inc.csv: code/determine-model-eligibility-inc.R
+paper-inputs/model-eligibility-inc.csv: code/determine-model-eligibility-inc.R code/load-global-analysis-dates.R
 	Rscript code/determine-model-eligibility-inc.R
 
 # individual figures
@@ -17,21 +17,23 @@ paper-inputs/inc-calibration.csv: paper-inputs/model-eligibility-inc.csv paper-i
 	Rscript code/get-calibration-scores-inc.R
 
 ## this script builds 3 figures: model-target-week-wis-avgs, week-model-target-fig4, overall-wis-boxplot
-figures/model-target-week-wis-avgs.jpg: code/figure-model-week-target-wis-avgs.R paper-inputs/inc-scores.csv
+figures/model-target-week-wis-avgs.jpg: code/figure-model-week-target-wis-avgs.R paper-inputs/inc-scores.csv 
 	Rscript code/figure-model-week-target-wis-avgs.R
 
-figures/inc-loc-heatmap.jpg: code/figure-heatmap-locations.R
+figures/inc-loc-heatmap.jpg: code/figure-heatmap-locations.R code/load-global-analysis-dates.R
 	Rscript code/figure-heatmap-locations.R
 
-figures/long-range.jpg: code/figure-long-term-comparisons.R paper-inputs/inc-calibration.csv paper-inputs/inc-scores.csv
+figures/long-range.jpg: code/figure-long-term-comparisons.R paper-inputs/inc-calibration.csv paper-inputs/inc-scores.csv 
 	Rscript code/figure-long-term-comparisons.R
 
 figures/fig-wis-location.jpg: code/figure-wis_by_location.R paper-inputs/inc-scores.csv
 	Rscript code/figure-wis_by_location.R
 
-figures/data-and-forecast.jpg: code/figure-data-and-forecast.R
+figures/data-and-forecast.jpg: code/figure-data-and-forecast.R code/load-global-analysis-dates.R
 	Rscript code/figure-data-and-forecast.R
 
 figures/fig-model-ranks.jpg: code/figure-model-ranks.R paper-inputs/inc-scores.csv
 	Rscript code/figure-model-ranks.R
 
+network-graph: 
+	make -Bnd |  ~/Applications/makefile2graph/make2graph | dot -Tpng -o make-network-graph.png

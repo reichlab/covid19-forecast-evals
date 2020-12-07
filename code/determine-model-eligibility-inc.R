@@ -5,24 +5,8 @@ library(tidyverse)
 library(lubridate)
 source("code/unit_timezero_forecast_complete.R")
 
-## maximum number of weeks missing that we allow before disqualifying a model
-MAXIMUM_MISSING_WEEKS <- 3
-UNITS_FOR_ELIGIBILITY <- covidHubUtils::hub_locations %>%
-    mutate(for_scoring = abbreviation %in% c("US", datasets::state.abb)) %>%
-    filter(for_scoring) %>%
-    pull(fips)
-
-## minimum number of weeks for eligibility
-NUM_WEEKS_INC <- 11
-
-## minumum number of models in a week to be considered eligible in a given week
-NUM_UNITS <- 25
-
-
-## All possible dates considered forecasts could have been made
-## these include start/end dates for each inc targets 
-the_timezeros_inc <- seq(from = as.Date("2020-05-13"), to = as.Date("2020-08-24"), by="days")
-
+## loads in important dates about analysis including a the_timezeros_inc vector
+source("code/load-global-analysis-dates.R")
 
 ## connect to Zoltar
 zoltar_connection <- new_connection()
@@ -93,7 +77,7 @@ for(this_model in date_eligible_models){
     
     fcasts <- do_zoltar_query(zoltar_connection, 
         project_url =  project_url,
-        is_forecast_query = TRUE,
+        query_type = "forecasts",
         models = this_model, 
         targets = the_targets,
         units = UNITS_FOR_ELIGIBILITY,
