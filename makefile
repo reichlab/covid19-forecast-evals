@@ -36,4 +36,4 @@ figures/fig-model-ranks.jpg: code/figure-model-ranks.R paper-inputs/inc-scores.c
 	Rscript code/figure-model-ranks.R
 
 network-graph: 
-	make -Bnd |  ~/Applications/makefile2graph/make2graph | dot -Tpng -o make-network-graph.png
+	make -Bnd |  ~/Applications/makefile2graph/make2graph | dot -Tpng -o makefile-network-graph.png
