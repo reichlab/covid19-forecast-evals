@@ -299,7 +299,7 @@ f4c <- ggplot(filter(avg_scores_byweek, target=="4 wk ahead inc death"), aes(x =
     guide = "legend") +
   theme(legend.position = c(0.05, 0.7), legend.justification = c(0,.5), 
     axis.ticks.length.x = unit(0.5, "cm"),
-    axis.text.x = element_text(vjust = 7, hjust = -0.2))
+    axis.text.x = element_text(vjust = 7, hjust = -0.2))+
   ggtitle("C: Average 4-week ahead weighted interval scores by model")
 
 
