@@ -20,15 +20,13 @@ dates_with_issues <- read_csv("paper-inputs/anomaly-reporting-dates.csv", col_ty
 ## models to pull forecasts for
 the_models_inc <- model_eligibility %>% filter(target_group=="inc") %>% pull(model) %>% unique()
 n_inc_models <- length(the_models_inc)
-the_models_inc1 <- the_models_inc[1:(round(n_inc_models/2))]
-the_models_inc2 <- the_models_inc[(round(n_inc_models/2)+1):n_inc_models]
+#the_models_inc1 <- the_models_inc[1:(round(n_inc_models/2))]
+#the_models_inc2 <- the_models_inc[(round(n_inc_models/2)+1):n_inc_models]
 
 #Locations to pull forecasts for
 the_locations <- hub_locations %>% filter(geo_type == "state") %>% 
   filter(location_name != "United States" & location_name != "American Samoa") %>% 
   pull(fips)
-  
-  
   
 ## the targets to pull forecasts for
 the_targets_inc <- paste(1:20, "wk ahead inc death")
@@ -45,28 +43,43 @@ project_url <- the_projects[the_projects$name == "COVID-19 Forecasts", "url"]
 
 #Query incidence forecasts 
 
-inc_calibration1 <- do_zoltar_query(zoltar_connection,
-  project_url =  "https://zoltardata.com/api/project/44/",
-  query_type = "forecasts",
-  models = the_models_inc1,
-  units = the_locations,
-  targets = the_targets_inc,
-  timezeros = the_timezeros_inc,
-  types = c("quantile")) %>%
-  filter(quantile == .025 | quantile == .25 | quantile == .75 | quantile == .975)
+inc_calibration <- map_dfr(
+  the_models_inc,
+  function(the_model) {
+    do_zoltar_query(zoltar_connection,
+      project_url =  project_url,
+      query_type = "forecasts",
+      models = the_model,
+      units = the_locations,
+      targets = the_targets_inc,
+      timezeros = the_timezeros_inc,
+      types = c("quantile")) %>%
+      filter(quantile == .025 | quantile == .25 | quantile == .75 | quantile == .975)
+  }
+)
 
-inc_calibration2 <- do_zoltar_query(zoltar_connection,
-  project_url =  "https://zoltardata.com/api/project/44/",
-  query_type = "forecasts",
-  models = the_models_inc2,
-  units = the_locations,
-  targets = the_targets_inc,
-  timezeros = the_timezeros_inc,
-  types = c("quantile")) %>%
-  filter(quantile == .025 | quantile == .25 | quantile == .75 | quantile == .975)
-
-
-inc_calibration <- bind_rows(inc_calibration1, inc_calibration2) 
+# inc_calibration1 <- do_zoltar_query(zoltar_connection,
+#   project_url =  "https://zoltardata.com/api/project/44/",
+#   query_type = "forecasts",
+#   models = the_models_inc1,
+#   units = the_locations,
+#   targets = the_targets_inc,
+#   timezeros = the_timezeros_inc,
+#   types = c("quantile")) %>%
+#   filter(quantile == .025 | quantile == .25 | quantile == .75 | quantile == .975)
+# 
+# inc_calibration2 <- do_zoltar_query(zoltar_connection,
+#   project_url =  "https://zoltardata.com/api/project/44/",
+#   query_type = "forecasts",
+#   models = the_models_inc2,
+#   units = the_locations,
+#   targets = the_targets_inc,
+#   timezeros = the_timezeros_inc,
+#   types = c("quantile")) %>%
+#   filter(quantile == .025 | quantile == .25 | quantile == .75 | quantile == .975)
+# 
+# 
+# inc_calibration <- bind_rows(inc_calibration1, inc_calibration2) 
 
 
 #Write csv files with zoltar data 
