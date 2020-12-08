@@ -12,7 +12,7 @@ eval_dates <- c(
   last_4wk_target_end_date + 3.5) ## last four week ahead target end date
 
 start_date <- as.Date("2020-02-22")
-end_date <- as.Date("2020-10-01")
+end_date <- as.Date("2020-12-06")
 
 data("hub_locations")
 
@@ -34,9 +34,18 @@ p1 <- plot_forecast(forecast_data = fcast_data,
   show_caption = FALSE, 
   plot=FALSE) 
 
+month_midpoints <- 
+
 p1_updated <- p1 + 
-  scale_x_date(limits=c(start_date, end_date), name=element_blank(), expand=c(0,0)) +
-  geom_vline(xintercept=eval_dates, linetype=2)
+  scale_x_date(
+    limits=c(start_date, end_date), 
+    date_breaks = "1 month",
+    date_labels = "%b",
+    name=element_blank(), 
+    expand=c(0,0)) +
+  geom_vline(xintercept=eval_dates, linetype=2) +
+  theme(axis.ticks.length.x = unit(0.5, "cm"),
+    axis.text.x = element_text(vjust = 5.5, hjust = -0.2))
 
 p1_legend <- get_legend(p1_updated)
 p1_updated_no_legend <- p1_updated + theme(legend.position='none')
@@ -58,9 +67,16 @@ p2 <- truth_dat %>%
   geom_tile() +
   geom_hline(yintercept=seq(51.5, 6.5, by=-5), color="darkgrey") +
   scale_fill_brewer(palette = "Purples", guide = guide_legend(reverse = TRUE), name="deaths") +
-  scale_x_date(limits=c(start_date, end_date), name = element_blank(), expand = c(0,0)) +
+  scale_x_date(
+    limits=c(start_date, end_date), 
+    date_breaks = "1 month",
+    date_labels = "%b",
+    name=element_blank(), 
+    expand=c(0,0)) +
   scale_y_discrete(name=NULL) +
   geom_vline(xintercept=eval_dates, linetype=2) +
+  theme(axis.ticks.length.x = unit(0.5, "cm"),
+    axis.text.x = element_text(vjust = 5.5, hjust = -0.2)) +
   ggtitle("A: reported number of incident weekly COVID-19 deaths by state/territory")
 
 p2_legend <- get_legend(p2)
@@ -84,9 +100,16 @@ p3 <- ggplot(n_models_per_week, aes(x=forecast_date)) +
   geom_point(data=filter(n_models_per_week, ensemble_week), aes(y=5), shape=8, color="red") +
   #geom_text(aes(y=.5)) +
   scale_y_continuous(name="# models")+
-  scale_x_date(limits=c(start_date, end_date), name = element_blank(), expand = c(0,0)) +
+  scale_x_date(
+    limits=c(start_date, end_date), 
+    date_breaks = "1 month",
+    date_labels = "%b",
+    name=element_blank(), 
+    expand=c(0,0)) +
   geom_vline(xintercept=eval_dates, linetype=2) +
-  theme(legend.position='none') +
+  theme(legend.position='none',  
+    axis.ticks.length.x = unit(0.5, "cm"),
+    axis.text.x = element_text(vjust = 5.5, hjust = -0.2)) +
   ggtitle("C: number of models submitting forecasts of incident deaths")
   
 

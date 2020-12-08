@@ -17,7 +17,8 @@ average_by_loc <- inc_scores %>%
   group_by(location_name) %>%     
   mutate_at(vars(matches("avg_wis")), funs(relative_wis = (. / .[model=="COVIDhub-baseline"]))) %>% 
   ungroup() %>% 
-  mutate(log_relative_wis = ifelse(relative_wis == 0, 0, log2(relative_wis))) 
+  mutate(log_relative_wis = ifelse(relative_wis == 0, 0, log2(relative_wis)),
+    log_relative_wis = ifelse(log_relative_wis > 3, 3, log_relative_wis)) ## remove visual outliers
 
 average_by_loc$model<- reorder(average_by_loc$model, -average_by_loc$avg_wis) #sort models by WIS for plot
 average_by_loc$location_name <- reorder(average_by_loc$location_name, average_by_loc$sum_truth)
