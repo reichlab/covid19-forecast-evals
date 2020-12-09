@@ -23,6 +23,19 @@ average_by_loc <- inc_scores %>%
 average_by_loc$model<- reorder(average_by_loc$model, -average_by_loc$avg_wis) #sort models by WIS for plot
 average_by_loc$location_name <- reorder(average_by_loc$location_name, average_by_loc$sum_truth)
 
+## summaries by model
+average_by_loc %>%
+  group_by(model) %>%
+  summarize(total_n = n(), n_better_than_baseline = sum(relative_wis<1), pct_better = n_better_than_baseline/total_n)%>%
+  arrange(pct_better)
+
+## largest relative for ensemble
+average_by_loc %>%
+  filter(model=="COVIDhub-ensemble") %>%
+  arrange(relative_wis) %>%
+  print(n=Inf)
+
+
 fig_wis_loc <- ggplot(average_by_loc, aes(x=model, y=location_name,fill= log_relative_wis)) +
   geom_tile() +
   geom_text(aes(label=round(avg_wis)), size = 3) +
