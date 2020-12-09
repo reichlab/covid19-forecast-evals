@@ -3,6 +3,7 @@ library(MMWRweek)
 library(covidData)
 library(covidHubUtils)
 
+source("code/load-global-analysis-dates.R")
 
 mondays <- seq(from = as.Date("2020-06-01"), to = version_date-1, by = "week")  #currently subtracting 1 b/c 12/07 isn't a submitted forecast revision date
 
