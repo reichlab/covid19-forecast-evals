@@ -27,3 +27,5 @@ NUM_WEEKS_INC <- num_weeks_forecasted - MAXIMUM_MISSING_WEEKS
 ## minumum number of models in a week to be considered eligible in a given week
 NUM_UNITS <- 25
 
+#Data issue Date
+version_date <- as.Date("2020-12-07")

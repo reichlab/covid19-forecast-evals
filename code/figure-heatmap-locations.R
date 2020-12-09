@@ -48,7 +48,7 @@ num_loc <- inc_tmp_unique %>%
 for_loc_figure <- num_loc %>%
   group_by(model) %>%
   filter(max(n_loc) >= NUM_UNITS) %>% #remove models with fewer than 25 locations at all times
-  filter(min(sat_fcast_week) <= as.Date("2020-10-17")) %>% #filter models that have start date before end of scored period
+  filter(min(sat_fcast_week) <= last_1wk_target_end_date) %>% #filter models that have start date before end of scored period
   filter(!(model %in% c( "CU-nochange", "CU-scenario_high", "CU-scenario_low", "CU-scenario_mid"))) %>% #remove models that aren't secondary or primary 
   ungroup() 
 
@@ -62,43 +62,43 @@ sf1 <- ggplot(for_loc_figure, aes(y=model, x=sat_fcast_week, fill= n_loc)) +
   theme_bw() +
   geom_text(aes(label=n_loc), size = 3.5) +
   geom_rect(aes(color="red"),
-            xmin=as.Date("2020-05-23") - 3.5, #color of box, start date 3 days before actual date so rectangle covers entire box
-            xmax=as.Date("2020-10-17") + 3.5 ,
+            xmin= (first_1wk_target_end_date -7) - 3.5, #color of box, start date 3 days before actual date so rectangle covers entire box
+            xmax= (last_1wk_target_end_date -7) + 3.5 ,
             ymax= unique(for_loc_figure$model_numeric[for_loc_figure$model == "UMass-MechBayes"]) + .5,
-            ymin= unique(for_loc_figure$model_numeric[for_loc_figure$model == "UCLA-SuEIR"]) - .5,  
-            size = 1, fill=alpha("grey",0)) +
+            ymin= unique(for_loc_figure$model_numeric[for_loc_figure$model == "LANL-GrowthRate"]) - .5,  
+            size = .75, fill=alpha("grey",0)) +
   geom_rect(aes(color="red"),
-            xmin=as.Date("2020-05-23") - 3.5,
-            xmax=as.Date("2020-10-17") + 3.5,
+            xmin= (first_1wk_target_end_date -7) - 3.5, #color of box, start date 3 days before actual date so rectangle covers entire box
+            xmax= (last_1wk_target_end_date -7) + 3.5 ,
             ymax= unique(for_loc_figure$model_numeric[for_loc_figure$model == "UA-EpiCovDA"]) + .5,
-            ymin= unique(for_loc_figure$model_numeric[for_loc_figure$model == "USACE-ERDC_SEIR"]) - .5,
-            size = 1,fill=alpha("grey",0)) +
-  geom_rect(aes(color="red"),
-            xmin=as.Date("2020-05-23") - 3.5,
-            xmax=as.Date("2020-10-17") + 3.5,
-            ymax= unique(for_loc_figure$model_numeric[for_loc_figure$model == "RobertWalraven-ESG"]) + .5,
-            ymin= unique(for_loc_figure$model_numeric[for_loc_figure$model == "YYG-ParamSearch"]) - .5,
-            size = 1,fill=alpha("grey",0)) +
-  geom_rect(aes(color="red"),
-            xmin=as.Date("2020-05-23") - 3.5,
-            xmax=as.Date("2020-10-17") + 3.5,
-            ymax= unique(for_loc_figure$model_numeric[for_loc_figure$model == "IHME-CurveFit"]) + .5,
             ymin= unique(for_loc_figure$model_numeric[for_loc_figure$model == "IHME-CurveFit"]) - .5,
-            size = 1,fill=alpha("grey",0)) +
+            size = .75, fill=alpha("grey",0)) +
+  # geom_rect(aes(color="red"),
+  #           xmin= (first_1wk_target_end_date -7) - 3.5, #color of box, start date 3 days before actual date so rectangle covers entire box
+  #           xmax= (last_1wk_target_end_date -7) + 3.5 ,
+  #           ymax= unique(for_loc_figure$model_numeric[for_loc_figure$model == "RobertWalraven-ESG"]) + .5,
+  #           ymin= unique(for_loc_figure$model_numeric[for_loc_figure$model == "YYG-ParamSearch"]) - .5,
+  #           size = 1,fill=alpha("grey",0)) +
+  # geom_rect(aes(color="red"),
+  #           xmin= (first_1wk_target_end_date -7) - 3.5, #color of box, start date 3 days before actual date so rectangle covers entire box
+  #           xmax= (last_1wk_target_end_date -7) + 3.5 ,
+  #           ymax= unique(for_loc_figure$model_numeric[for_loc_figure$model == "IHME-CurveFit"]) + .5,
+  #           ymin= unique(for_loc_figure$model_numeric[for_loc_figure$model == "IHME-CurveFit"]) - .5,
+  #           size = 1,fill=alpha("grey",0)) +
   scale_fill_steps(low="white", high="blue", name = "Number of Locations") +
   xlab("Saturday of Forecast Submission Week") + ylab(NULL) +
   scale_x_date(date_labels = "%Y-%m-%d", breaks = c(for_loc_figure$sat_fcast_week)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
-        axis.title.x = element_text(size = 10),
-        axis.text.y = element_text(size = 10),
-        title = element_text(size = 10)) +
+        axis.title.x = element_text(size = 9),
+        axis.text.y = element_text(size = 9),
+        title = element_text(size = 9)) +
   guides(fill= "none", size = "none", color = "none", alpha = "none") +
   ggtitle("Number of locations submitted for incidence death forecasts weekly")  
 
 # ggsave("../figures/inc_loc_heatmap.jpg", width=3, height=5)
 # ggsave("../figures/incidence_loc_heatmap.png", width=3, height=5)
 
-pdf(file = "figures/inc-loc-heatmap.pdf",width=8, height=5)
+pdf(file = "figures/inc-loc-heatmap.pdf",width=8, height=6)
 print(sf1)
 dev.off()
 
