@@ -1,6 +1,8 @@
 library(readr)
 library(tidyverse)
 
+source("code/load-global-analysis-dates.R")
+
 files <- list.files(path = "../covid19-forecast-hub/ensemble-metadata", pattern = "*-inc_death-model-eligibility.csv", full.names = T) #load inc eligiblity files 
 
 filesDATE <- as.double(sub('..',"", gsub('[^0-9]', '', files))) #keep dates from filenames
