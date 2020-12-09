@@ -4,7 +4,7 @@ library(covidData)
 library(covidHubUtils)
 
 
-mondays <- seq(from = as.Date("2020-06-01"), to = as.Date("2020-10-12"), by = "week")
+mondays <- seq(from = as.Date("2020-06-01"), to = version_date-1, by = "week")  #currently subtracting 1 b/c 12/07 isn't a submitted forecast revision date
 
 
 #load revisions as of each monday 
@@ -18,15 +18,13 @@ load_all_weeks <- function(x)
     mutate(revision_date = x) #add column listing Monday date 
 }
 
-
 weekly_inc_deaths <- plyr::ldply(mondays, load_all_weeks)  #combine revisions into 1 dataframe
 
 
 weekly_inc_deaths <- weekly_inc_deaths %>% 
   left_join(hub_locations %>% select(location = fips, location_name, abbreviation)) %>% #add location names
   mutate(MMWRweek = MMWRweek(weekly_inc_deaths$date)$MMWRweek) %>% #add epi week
-  filter(MMWRweek <= 35)  #filter to only include epi weeks in evaluation
-
+  filter(MMWRweek <= MMWRweek(last_timezero)$MMWRweek)  #filter to only include epi weeks in evaluation
 
 #Create PDF of revisions in all locations 
 
