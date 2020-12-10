@@ -5,7 +5,7 @@ library(covidHubUtils)
 
 source("code/load-global-analysis-dates.R")
 
-mondays <- seq(from = as.Date("2020-06-01"), to = version_date-1, by = "week")  #currently subtracting 1 b/c 12/07 isn't a submitted forecast revision date
+mondays <- seq(from = as.Date("2020-06-01"), to = version_date, by = "week")  #currently subtracting 1 b/c 12/07 isn't a submitted forecast revision date
 
 
 #load revisions as of each monday 
@@ -48,3 +48,11 @@ for(i in 1:7) {
   print(fig_revisions)
 }
 dev.off()
+
+
+#Number of weeks with a negative incidence per final revision
+
+#Currently NJ is only state with negative revision. Occured during EW 35
+weekly_inc_deaths %>%
+  filter(issue_date == max(issue_date)) %>%
+  filter(inc < 0)
