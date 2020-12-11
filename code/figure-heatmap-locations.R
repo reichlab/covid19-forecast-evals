@@ -102,7 +102,7 @@ pdf(file = "figures/inc-loc-heatmap.pdf",width=8, height=6)
 print(sf1)
 dev.off()
 
-jpeg(file = "figures/inc-loc-heatmap.jpg", width=8, height=5, units="in", res=300)
+jpeg(file = "figures/inc-loc-heatmap.jpg", width=8, height=6, units="in", res=300)
 print(sf1)
 dev.off()
 
