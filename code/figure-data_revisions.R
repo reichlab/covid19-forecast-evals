@@ -44,7 +44,7 @@ for(i in 1:5) {
           legend.title = element_text(size = 7), legend.position="bottom", legend.box = "horizontal")+
     ggforce::facet_wrap_paginate(~location_name, ncol = 3, nrow = 4,  scales = "free_y", page = i) +
     #facet_wrap(~abbreviation, scales = "free_y") +
-    ylab("Incident deaths reported") + labs(color = "Revision Date") + xlab("Epi Week") + ggtitle("Observed incident Deaths in each location over multiple weeks of data revisions")
+    ylab("Incident deaths reported") + labs(color = "Revision Date") + xlab("Epi Week") + ggtitle("Observed incident deaths in states and territories over multiple revision dates")
   print(fig_revisions)
 }
 dev.off()
