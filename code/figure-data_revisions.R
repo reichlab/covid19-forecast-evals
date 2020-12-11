@@ -5,7 +5,7 @@ library(covidHubUtils)
 
 source("code/load-global-analysis-dates.R")
 
-mondays <- seq(from = as.Date("2020-06-01"), to = version_date, by = "week")  #currently subtracting 1 b/c 12/07 isn't a submitted forecast revision date
+mondays <- c(seq(from = as.Date("2020-06-01"), to = version_date, by = "week"), as.Date(version_date - 1))  #currently subtracting 1 b/c 12/07 isn't a submitted forecast revision date
 
 
 #load revisions as of each monday 
