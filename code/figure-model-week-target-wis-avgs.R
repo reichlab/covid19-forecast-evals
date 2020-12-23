@@ -147,7 +147,7 @@ p <- ggplot(avg_wis_by_model_target_week, aes(x=model, y=mean_wis)) +
     ##geom_point(aes(color=obs_exp_locs, fill=target_end_date_1wk_ahead), shape=21, position=position_jitter(width=.2, height=0), alpha=.8) +
     geom_point(data=avg_wis_by_model_target, shape=4, color="#d95f02", size=2, stroke=1)+
     theme_bw() +
-    theme(axis.text.x = element_text(angle=45, vjust=1, hjust=1), legend.position = c(.75, .9), legend.direction = "horizontal") +
+    theme(axis.text.x = element_text(angle=45, vjust=1, hjust=1), legend.position = c(.75, .9), legend.direction = "horizontal", plot.margin = margin(10, 10, 20, 20)) +
     facet_wrap(.~target) + #, scales="free_y") +
     ylab("Average WIS") + xlab(NULL) +
     expand_limits(y=0) +
