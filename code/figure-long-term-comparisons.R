@@ -22,7 +22,11 @@ truth_dat <- load_truth(truth_source = "JHU", target_variable = "inc death", loc
 
 f1 <- plot_forecast(longterm_dat, truth_data = truth_dat, model = "IHME-CurveFit", 
   target_variable = "inc death", intervals = c(.5, .95), 
-  title = "A: example long-term forecast from IHME", show_caption=FALSE, plot = FALSE)
+  title = "A: example long-term forecast from IHME", 
+  subtitle = "none",
+  show_caption=FALSE, plot = FALSE) +
+  theme(legend.position = c(.01,.999), legend.justification = c(0,1), legend.box = "horizontal", legend.key.size = unit(0.15, "cm"),
+        plot.margin = margin(10, 15, 10, 10))
 # f2 <- plot_forecast(longterm_dat, truth_data = truth_dat, model = "YYG-ParamSearch", target_variable = "inc death", intervals = c(.5, .95), title = "none", show.caption=FALSE)
 # f3 <- plot_forecast(longterm_dat, truth_data = truth_dat, model = "LANL-GrowthRate", target_variable = "inc death", intervals = c(.5, .95), title = "none", show.caption=FALSE)
 # f4 <- plot_forecast(longterm_dat, truth_data = truth_dat, model = "Covid19Sim-Simulator", target_variable = "inc death", intervals = c(.5, .95), title = "none", show.caption=FALSE)
