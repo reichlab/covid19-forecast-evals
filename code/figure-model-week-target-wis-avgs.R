@@ -174,7 +174,7 @@ p1 <- inc_scores %>%
     geom_boxplot() +
     scale_y_log10() +
     theme_bw() +
-    ylab("WIS") + xlab(NULL) +
+    ylab("WIS (log scale)") + xlab(NULL) +
     theme(axis.text.x = element_text(angle=45, vjust=1, hjust=1)) +
     facet_wrap(.~target)
 
@@ -312,3 +312,8 @@ dev.off()
 jpeg(file = "figures/wis-avgs-by-week.jpg", width=8, height=10, units="in", res=200)
 gridExtra::grid.arrange(f4a, f4b, f4c, layout_matrix = matrix(c(1,2,3), ncol=1))
 dev.off()
+
+
+#Assess difference in WIS for figure caption: 
+avg_wis_by_model_target %>% filter(target == "1 wk ahead inc death") %>% arrange(mean_wis)
+avg_wis_by_model_target %>% filter(target == "4 wk ahead inc death") %>% arrange(mean_wis)
