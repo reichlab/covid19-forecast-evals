@@ -147,7 +147,7 @@ p <- ggplot(avg_wis_by_model_target_week, aes(x=model, y=mean_wis)) +
     ##geom_point(aes(color=obs_exp_locs, fill=target_end_date_1wk_ahead), shape=21, position=position_jitter(width=.2, height=0), alpha=.8) +
     geom_point(data=avg_wis_by_model_target, shape=4, color="#d95f02", size=2, stroke=1)+
     theme_bw() +
-    theme(axis.text.x = element_text(angle=45, vjust=1, hjust=1), legend.position = c(.75, .9), legend.direction = "horizontal") +
+    theme(axis.text.x = element_text(angle=45, vjust=1, hjust=1), legend.position = c(.75, .9), legend.direction = "horizontal", plot.margin = margin(10, 10, 20, 20)) +
     facet_wrap(.~target) + #, scales="free_y") +
     ylab("Average WIS") + xlab(NULL) +
     expand_limits(y=0) +
@@ -174,7 +174,7 @@ p1 <- inc_scores %>%
     geom_boxplot() +
     scale_y_log10() +
     theme_bw() +
-    ylab("WIS") + xlab(NULL) +
+    ylab("WIS (log scale)") + xlab(NULL) +
     theme(axis.text.x = element_text(angle=45, vjust=1, hjust=1)) +
     facet_wrap(.~target)
 
@@ -312,3 +312,8 @@ dev.off()
 jpeg(file = "figures/wis-avgs-by-week.jpg", width=8, height=10, units="in", res=200)
 gridExtra::grid.arrange(f4a, f4b, f4c, layout_matrix = matrix(c(1,2,3), ncol=1))
 dev.off()
+
+
+#Assess difference in WIS for figure caption: 
+avg_wis_by_model_target %>% filter(target == "1 wk ahead inc death") %>% arrange(mean_wis)
+avg_wis_by_model_target %>% filter(target == "4 wk ahead inc death") %>% arrange(mean_wis)
