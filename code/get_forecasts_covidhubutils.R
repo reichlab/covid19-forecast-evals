@@ -25,7 +25,6 @@ truth <- load_truth(
   temporal_resolution = "weekly",
   locations = hub_locations %>% filter(geo_type == "state") %>% pull(fips))
 
-
 ## load models and corresponding timezeroes 
 inc_scores_covidhub_utils <- map_dfr(
 1:length(model_eligibility_inc),
@@ -40,3 +39,6 @@ inc_scores_covidhub_utils <- map_dfr(
     return(score_forecasts(forecasts, truth))
   }
 )
+
+
+write.csv(inc_scores_covidhub_utils, "paper-inputs/inc_scores_covidhubutils.csv", row.names = FALSE)
