@@ -30,11 +30,10 @@ p1 <- plot_forecast(forecast_data = fcast_data,
   target_variable = "inc death", 
   truth_source = "JHU",
   intervals = c(0.2, 0.5, 0.8, 0.95, 0.98),
-  title="B: ensemble forecast for incident deaths at the national level from July 20, 2020",
   show_caption = FALSE, 
-  plot=FALSE) 
+  plot=FALSE) +
+  ggtitle("B: ensemble forecast for incident deaths at the national level from July 20, 2020")
 
-month_midpoints <- 
 
 p1_updated <- p1 + 
   scale_x_date(
