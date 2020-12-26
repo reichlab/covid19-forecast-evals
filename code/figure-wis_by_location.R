@@ -40,11 +40,12 @@ fig_wis_loc <- ggplot(average_by_loc, aes(x=model, y=location_name,fill= log_rel
   geom_tile() +
   geom_text(aes(label=round(avg_wis)), size = 3) +
   scale_fill_gradient2(low = "navy", high = "red", midpoint = 0, na.value = "grey50", name = "Relative WIS", breaks = c(-3,-2,-1,0,1,2,3), labels =c(0.125,0.25, 0.5, 1, 2, 4, 8))+ 
-  xlab("Scored Models") + ylab("Location") +
+  xlab(NULL) + ylab(NULL) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
       axis.title.x = element_text(size = 9),
       axis.text.y = element_text(size = 9),
-      title = element_text(size = 9)) 
+      title = element_text(size = 9),
+    ) 
 
 
 pdf(file = "figures/fig-wis-location.pdf",width=8, height=8)
