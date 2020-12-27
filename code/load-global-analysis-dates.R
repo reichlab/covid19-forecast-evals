@@ -14,6 +14,8 @@ last_4wk_target_end_date <- as.Date(calc_target_week_end_date(last_timezero4wk, 
 ## these include start/end dates for each inc targets 
 the_timezeros_inc <- seq(from = first_timezero, to = last_timezero, by="days")
 
+the_timezeros_eligibility <- seq(from = first_timezero, to = last_timezero4wk, by="days")
+
 ## maximum number of weeks missing that we allow before disqualifying a model
 MAXIMUM_MISSING_WEEKS <- 6 # formerly 3
 UNITS_FOR_ELIGIBILITY <- covidHubUtils::hub_locations %>% 
