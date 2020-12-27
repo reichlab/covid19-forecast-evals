@@ -43,9 +43,7 @@ inc_scores_covidhub_utils <- map_dfr(
 inc_scores_covidhub_utils <- inc_scores_covidhub_utils %>%
   filter(target_end_date <= last_date_evaluated) %>%
   left_join(hub_locations %>% select(location = fips, location_name)) %>%
-  mutate(wk_ahead = as.Date(calc_target_week_end_date(forecast_date, 1)))
-
-
+  mutate(last_1wk_target_end_date = as.Date(calc_target_week_end_date(forecast_date, 1)))
 
   
 write.csv(inc_scores_covidhub_utils, "paper-inputs/inc-scores_CHU.csv", row.names = FALSE)
