@@ -17,17 +17,26 @@ longterm_dat <- load_latest_forecasts(models = "IHME-CurveFit",
   targets = paste(1:20, "wk ahead inc death"),
   source = "zoltar")
 
+truth_dat <- load_truth(truth_source = "JHU", target_variable = "inc death", locations = "US")
+
 f1 <- plot_forecast(longterm_dat, 
-  models = "IHME-CurveFit", 
+  truth_data = truth_dat, 
+  model = "IHME-CurveFit", 
   target_variable = "inc death", 
   intervals = c(.5, .95), 
+  title = "A: example long-term forecast from IHME", 
+  subtitle = "none",
   show_caption=FALSE, 
-  plot = FALSE) + 
+  plot = FALSE) +
   scale_x_date(name=NULL, date_breaks = "1 month", date_labels = "%b") + 
-  theme(axis.ticks.length.x = unit(0.5, "cm"),
-    axis.text.x = element_text(vjust = 7, hjust = -0.2)) +
-  ggtitle("A: example long-term forecast from IHME", subtitle = NULL)
-  
+  theme(legend.position = c(.01,.999), 
+    legend.justification = c(0,1), 
+    legend.box = "horizontal", 
+    legend.key.size = unit(0.15, "cm"),
+    plot.margin = margin(10, 15, 10, 10),axis.ticks.length.x = unit(0.5, "cm"),
+    axis.text.x = element_text(vjust = 7, hjust = -0.2)
+  )
+
 # f2 <- plot_forecast(longterm_dat, truth_data = truth_dat, model = "YYG-ParamSearch", target_variable = "inc death", intervals = c(.5, .95), title = "none", show.caption=FALSE)
 # f3 <- plot_forecast(longterm_dat, truth_data = truth_dat, model = "LANL-GrowthRate", target_variable = "inc death", intervals = c(.5, .95), title = "none", show.caption=FALSE)
 # f4 <- plot_forecast(longterm_dat, truth_data = truth_dat, model = "Covid19Sim-Simulator", target_variable = "inc death", intervals = c(.5, .95), title = "none", show.caption=FALSE)
