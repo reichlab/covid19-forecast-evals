@@ -5,7 +5,7 @@ library(tidyverse)
 library(lubridate)
 source("code/unit_timezero_forecast_complete.R")
 
-## loads in important dates about analysis including a the_timezeros_inc vector
+## loads in important dates about analysis including a the_timezeros_eligibility vector
 source("code/load-global-analysis-dates.R")
 
 ## connect to Zoltar
@@ -18,7 +18,7 @@ project_url <- the_projects[the_projects$name == "COVID-19 Forecasts", "url"]
 ## table to help organize and choose forecasts
 timezero_weeks <- tibble(
     ## every possible timezero
-    forecast_date = the_timezeros_inc, 
+    forecast_date = the_timezeros_eligibility, 
     ## the associated target_end_date for 1-week ahead targets
     target_end_date_1wk_ahead = as.Date(covidHubUtils::calc_target_week_end_date(forecast_date, horizon=1)))
 
@@ -28,9 +28,10 @@ timezero_weeks <- tibble(
 primary_models <- models(zoltar_connection, project_url) %>%
     filter(notes %in% c("primary", "secondary"))
 
-# 2. obtain forecast_datees for remaining models, eliminate ones that don't have the right dates
+# 2. obtain timezeroes for remaining models, eliminate ones that don't have the right dates
 date_filtered_models <- tibble(model=character(), forecast_date=Date(), target_end_date_1wk_ahead=Date())
 for(i in 1:nrow(primary_models)) {
+  
     message(paste("** starting model", primary_models[i,"model_abbr"]))
     this_model_forecasts <- forecasts(zoltar_connection, primary_models[i,"url"]) 
 
@@ -69,38 +70,41 @@ date_eligible_models <- unique(date_filtered_models$model)
 
 
 model_completes <- tibble(model=character(), forecast_date=Date(), target_end_date_1wk_ahead=Date(),
-    target_variable=character(), num_units_eligible=numeric())
+    target_group=character(), num_units_eligible=numeric())
 
 for(this_model in date_eligible_models){
     
     fcasts_to_query <- filter(date_filtered_models, model==this_model)
     
-    fcasts <- load_forecasts(
+    fcasts <- load_forecasts( 
         models = this_model, 
         forecast_dates = fcasts_to_query$forecast_date,
         locations = UNITS_FOR_ELIGIBILITY,
         types = c("quantile"),
-        targets = the_targets)
+        targets = inc_targets
+        ) %>%
+        mutate(target_group = "inc")
+    
     
     
     if(nrow(fcasts)==0) 
         next()
-    ## disqualifying omissions for a forecast_date
+    ## disqualifying omissions for a timezero
     ##  - not all 4 targets for inc or cum
     ##  - less than 25 locations forecasted for inc or cum targets
     ##  - not all the quantiles for every prediction
     
-    ## for each unit-forecast_date pair, compute a binary "was this prediction complete"
+    ## for each unit-timezero pair, compute a binary "was this prediction complete"
     preds_to_eval <- fcasts %>%
-        group_by(model, location, forecast_date, target_variable) %>%
+        group_by(model, location, forecast_date, target_group) %>%
         summarize(complete=FALSE)
     
     for(j in 1:nrow(preds_to_eval)){
-        preds_to_eval$complete[j] <- unit_timezero_forecast_complete(filter(fcasts, forecast_date==preds_to_eval$forecast_date[j]), type=preds_to_eval$target_variable[j])
+        preds_to_eval$complete[j] <- unit_timezero_forecast_complete(filter(fcasts, forecast_date==preds_to_eval$forecast_date[j]), type=preds_to_eval$target_group[j])
     }
     
     this_model_completes <- preds_to_eval %>% 
-        group_by(model, forecast_date, target_variable) %>%
+        group_by(model, forecast_date, target_group) %>%
         summarize(num_units_eligible = sum(complete)) %>%
         mutate(target_end_date_1wk_ahead = as.Date(covidHubUtils::calc_target_week_end_date(forecast_date, horizon=1)))
 
@@ -109,7 +113,7 @@ for(this_model in date_eligible_models){
 }
 
 inc_model_completes <- model_completes %>%
-    filter(target_variable=="inc death", forecast_date %in% the_timezeros_inc) %>%
+    filter(target_group=="inc", forecast_date %in% the_timezeros_eligibility) %>%
     ## calculate how many weeks had the eligible number of units
     group_by(model) %>%
     mutate(num_eligible_weeks = sum(num_units_eligible >= NUM_UNITS)) %>%
@@ -117,9 +121,9 @@ inc_model_completes <- model_completes %>%
     ## filter so that we only have models with eligible number of weeks
     filter(num_eligible_weeks >= NUM_WEEKS_INC, num_units_eligible >= NUM_UNITS) %>%
     select(-num_eligible_weeks)
-    ## complete(model, target_end_date_1wk_ahead, fill = list(timezero=NA, num_units_eligible=0, target_variable="inc"))
+    ## complete(model, target_end_date_1wk_ahead, fill = list(timezero=NA, num_units_eligible=0, target_group="inc"))
 
 
-write_csv(inc_model_completes, file="paper-inputs/model-eligibility-inc_CHU.csv")
+write_csv(inc_model_completes, file="paper-inputs/model-eligibility-inc.csv")
 
 ## output data.frame with list of models and eligibility
