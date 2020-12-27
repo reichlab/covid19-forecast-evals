@@ -8,12 +8,16 @@ data("hub_locations")
 inc_scores <- read_csv("paper-inputs/inc-scores.csv") %>%
   filter(location_name %in% (hub_locations %>% filter(geo_type == "state") %>% pull(location_name))) %>%
   filter(location_name != "American Samoa") %>%
-  mutate(wis = (.01*interval_2+.025*interval_5+.05*interval_10+.1*interval_20+.15*interval_30+.2*interval_40+.25*interval_50+.3*interval_60+.35*interval_70+.40*interval_80+.45*interval_90+.5*interval_100)/12)
+  filter(horizon %in% c(1:4)) %>%
+  filter(forecast_date <= last_timezero4wk) 
 
+inc_scores <- inc_scores %>%
+  left_join(truth %>% select(location, target_end_date, location_name, value))
+  
 average_by_loc <- inc_scores %>%
   group_by(model, location_name) %>%  #aggregate by week of submission
   summarise(avg_wis = round(mean(wis, na.rm = T),1),
-            sum_truth = sum(truth)) %>% 
+            sum_truth = sum(value)) %>% 
   group_by(location_name) %>%     
   mutate_at(vars(matches("avg_wis")), funs(relative_wis = (. / .[model=="COVIDhub-baseline"]))) %>% 
   ungroup() %>% 
