@@ -31,3 +31,5 @@ NUM_UNITS <- 25
 
 #Data issue Date
 version_date <- as.Date("2020-12-07")
+
+last_date_evaluated <- as.Date(calc_target_week_end_date(version_date, -2)) #last date evaluated
