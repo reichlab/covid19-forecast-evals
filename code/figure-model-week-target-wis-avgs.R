@@ -13,7 +13,7 @@ inc_scores <- read_csv("paper-inputs/inc-scores.csv") %>%
     filter(target %in% paste(1:4, "wk ahead inc death"),
         model %in% inc_score_models,
         target_end_date_1wk_ahead >= first_1wk_target_end_date,
-        target_end_date_1wk_ahead <= last_1wk_target_end_date)
+        target_end_date_1wk_ahead <= last_4wk_target_end_date) #remove forecasts made later than last 4 week ahead
         #!(location_name %in% c("United States", "American Samoa", "Guam", "Northern Mariana Islands", "Virgin Islands", "Puerto Rico", "District of Columbia")),
         #!(location_name=="New Jersey" & target_end_date_1wk_ahead=="2020-07-04"))
 
