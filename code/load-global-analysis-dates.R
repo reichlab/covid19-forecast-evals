@@ -13,7 +13,6 @@ last_4wk_target_end_date <- as.Date(calc_target_week_end_date(last_timezero4wk, 
 ## All possible dates considered forecasts could have been made
 ## these include start/end dates for each inc targets 
 the_timezeros_inc <- seq(from = first_timezero, to = last_timezero, by="days")
-
 the_timezeros_eligibility <- seq(from = first_timezero, to = last_timezero4wk, by="days")
 
 ## maximum number of weeks missing that we allow before disqualifying a model
@@ -34,4 +33,7 @@ NUM_UNITS <- 25
 #Data issue Date
 version_date <- as.Date("2020-12-07")
 
+#Important dates
 last_date_evaluated <- as.Date(calc_target_week_end_date(version_date, -2)) #last date evaluated
+must_submit_prior_to_this_date <- as.Date("2020-06-22")
+
