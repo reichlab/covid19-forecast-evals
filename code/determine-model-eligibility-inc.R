@@ -116,15 +116,12 @@ inc_model_completes <- model_completes %>%
     filter(target_group=="inc", forecast_date %in% the_timezeros_inc) %>%
     ## calculate how many weeks had the eligible number of units
     group_by(model) %>%
-    mutate(num_eligible_weeks = sum(num_units_eligible >= NUM_UNITS)) %>%
+    ## sum number of weeks with minimum locations and in core evaluation period 
+    mutate(num_eligible_weeks = sum(num_units_eligible >= NUM_UNITS & forecast_date <= last_timezero4wk)) %>%
     ungroup() %>%
     ## filter so that we only have models with eligible number of weeks
     filter(num_eligible_weeks >= NUM_WEEKS_INC, num_units_eligible >= NUM_UNITS) %>%
-    select(-num_eligible_weeks) %>%
-    group_by(model) %>%
-    mutate(min_forecast_date = min(forecast_date)) %>%
-    filter(min_forecast_date <= must_submit_prior_to_this_date) #added to remove extra models 
-    ## complete(model, target_end_date_1wk_ahead, fill = list(timezero=NA, num_units_eligible=0, target_group="inc"))
+    select(-num_eligible_weeks) 
 
 
 write_csv(inc_model_completes, file="paper-inputs/model-eligibility-inc.csv")
