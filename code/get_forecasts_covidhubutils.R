@@ -7,8 +7,8 @@ source("code/load-global-analysis-dates.R")
 data("hub_locations")
 
 ##Read in eligible data 
-model_eligibility_inc <- read.csv("paper-inputs/model-eligibility-inc_CHU.csv") %>%
-  filter(target_variable == "inc death") %>%
+model_eligibility_inc <- read.csv("paper-inputs/model-eligibility-inc.csv") %>%
+  filter(target_group == "inc") %>%
   select(model, forecast_date) %>% 
   mutate(forecast_date = as.Date(forecast_date)) %>%
   group_by(model) %>%
