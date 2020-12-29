@@ -9,19 +9,19 @@ data("hub_locations")
 ##Read in eligible data 
 model_eligibility_inc <- read.csv("paper-inputs/model-eligibility-inc.csv") %>%
   filter(target_group == "inc") %>%
-  select(model, timezero) %>% 
-  mutate(timezero = as.Date(timezero)) %>%
+  select(model, forecast_date) %>% 
+  mutate(forecast_date = as.Date(forecast_date)) %>%
   group_by(model) %>%
-  mutate(timezero_count = paste("timezero", row_number())) %>% #Create column of timezeros
+  mutate(timezero_count = paste("timezero", row_number())) %>% #Create column of forecast_dates
   ungroup() %>%
-  pivot_wider(id_cols = timezero_count, names_from =  model, values_from = timezero)  %>% #Create df with models column names
+  pivot_wider(id_cols = timezero_count, names_from =  model, values_from = forecast_date)  %>% #Create df with models column names
   column_to_rownames(var= "timezero_count") #rownames as count of timezeros
 
 #download truth data
 truth <- load_truth(
   truth_source = "JHU",
   target_variable = "inc death",
-  truth_end_date = last_4wk_target_end_date, 
+  truth_end_date = today(), 
   temporal_resolution = "weekly",
   locations = hub_locations %>% filter(geo_type == "state") %>% pull(fips))
 
@@ -40,5 +40,9 @@ inc_scores_covidhub_utils <- map_dfr(
   }
 )
 
+inc_scores_covidhub_utils <- inc_scores_covidhub_utils %>%
+  filter(target_end_date <= last_date_evaluated) %>%
+  left_join(hub_locations %>% select(location = fips, location_name)) %>%
+  mutate(target_1wk = as.Date(calc_target_week_end_date(forecast_date, 1)))
 
-write.csv(inc_scores_covidhub_utils, "paper-inputs/inc_scores_covidhubutils.csv", row.names = FALSE)
+write.csv(inc_scores_covidhub_utils, "paper-inputs/inc-scores_CHU.csv", row.names = FALSE)
