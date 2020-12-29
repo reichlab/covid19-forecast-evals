@@ -13,7 +13,7 @@ figures/pi-coverage.jpg: code/figure-calibration.R paper-inputs/inc-calibration.
 	Rscript code/figure-calibration.R
 
 ## update calibration scores
-paper-inputs/inc-calibration.csv: paper-inputs/model-eligibility-inc.csv paper-inputs/anomaly-reporting-dates.csv code/get-calibration-scores-inc.R
+paper-inputs/inc-calibration.csv: paper-inputs/model-eligibility-inc.csv paper-inputs/anomaly-reporting-dates.csv code/get-calibration-scores-inc.R code/load-global-analysis-dates.
 	Rscript code/get-calibration-scores-inc.R
 
 ## this script builds 3 figures: model-target-week-wis-avgs, week-model-target-fig4, overall-wis-boxplot
