@@ -18,14 +18,38 @@ model_eligibility_inc <- read.csv("paper-inputs/model-eligibility-inc.csv") %>%
   column_to_rownames(var= "timezero_count") #rownames as count of timezeros
 
 #download truth data
-truth <- load_truth(
+###To download truth data, need to use both covidhubutils and covidData in order to have data in proper format and data revision date. 
+
+# load data from covidData (to get versioned truths)
+truth_CD <-
+  covidData::load_jhu_data(
+    issue_date = as.Date("2020-12-07"),
+    spatial_resolution = c("state", "national"),
+    temporal_resolution = "weekly",
+    measure = "deaths") %>%
+  tidyr::pivot_longer(
+    cols = c("inc", "cum"),
+    names_to = "target_variable",
+    values_to = "value") %>%
+  filter(target_variable == "inc") %>%
+  select(-target_variable) %>%
+  rename(target_end_date = date)
+
+#load data from covidhubutils (to get proper formatting)
+truth_CHU <- load_truth(
   truth_source = "JHU",
   target_variable = "inc death",
-  truth_end_date = today(), 
+  truth_end_date = last_1wk_target_end_date, 
   temporal_resolution = "weekly",
-  locations = hub_locations %>% filter(geo_type == "state") %>% pull(fips))
+  locations = hub_locations %>% filter(geo_type == "state") %>% pull(fips)) %>%
+  select(-value)
 
-## load models and corresponding timezeroes 
+#Merge to get updated values with proper format and values 
+truth <- truth_CD %>%
+  right_join(truth_CHU) %>%
+  filter(truth >= 0)
+
+## load scores
 inc_scores_covidhub_utils <- map_dfr(
 1:length(model_eligibility_inc),
   function(x){
