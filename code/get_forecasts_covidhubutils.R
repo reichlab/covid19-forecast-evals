@@ -46,8 +46,8 @@ truth_CHU <- load_truth(
 
 #Merge to get updated values with proper format and values 
 truth <- truth_CD %>%
-  right_join(truth_CHU)
-
+  right_join(truth_CHU) %>%
+  filter(truth >= 0)
 
 ## load scores
 inc_scores_covidhub_utils <- map_dfr(
