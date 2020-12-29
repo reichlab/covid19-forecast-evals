@@ -45,4 +45,4 @@ inc_scores_covidhub_utils <- inc_scores_covidhub_utils %>%
   left_join(hub_locations %>% select(location = fips, location_name)) %>%
   mutate(target_1wk = as.Date(calc_target_week_end_date(forecast_date, 1)))
 
-write.csv(inc_scores_covidhub_utils, "paper-inputs/inc-scores_CHU.csv", row.names = FALSE)
+write.csv(inc_scores_covidhub_utils, "paper-inputs/inc-scores.csv", row.names = FALSE)
