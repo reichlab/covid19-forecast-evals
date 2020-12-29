@@ -35,5 +35,5 @@ version_date <- as.Date("2020-12-07")
 
 #Important dates
 last_date_evaluated <- as.Date(calc_target_week_end_date(version_date, -2)) #last date evaluated
-must_submit_prior_to_this_date <- as.Date("2020-06-22")
+
 
