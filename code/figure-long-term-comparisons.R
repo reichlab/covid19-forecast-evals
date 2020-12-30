@@ -78,20 +78,10 @@ mae_plot <- inc_scores %>%
 
 ## coverage evaluation
 
-inc_calibration <-  read_csv("paper-inputs/inc-calibration.csv") %>%
-  left_join(hub_locations, by=c("unit" = "fips")) %>%
-  filter(!(location_name %in% locs_to_exclude))
-
-inc_scores_merge <- inc_scores %>%
-  left_join(inc_calibration) %>%
-  pivot_wider(names_from = "quantile", values_from = "value") %>%
-  mutate(calib_95 = ifelse(truth >= `0.025` & truth <= `0.975`, 1, 0),
-    calib_50 = ifelse(truth >= `0.25` & truth <= `0.75`, 1, 0))
-
-calibration_scores_inc <- inc_scores_merge %>%
+calibration_scores_inc <- inc_scores %>%
   group_by(model, target) %>%
-  summarise(percent_calib50 = round(sum(calib_50)/ n(),2),
-    percent_calib95 = round(sum(calib_95) / n(),2)) %>% 
+  summarise(percent_calib50 = round(mean(coverage_50, na.rm = T), 2),
+    percent_calib95 = round(mean(coverage_95, na.rm = T), 2) %>% 
   mutate(horizon = str_split(target, " ", simplify = TRUE),
     horizon = as.numeric(horizon[,1])) %>%
   ungroup() %>%

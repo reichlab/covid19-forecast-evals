@@ -23,7 +23,7 @@ model_eligibility_inc <- read.csv("paper-inputs/model-eligibility-inc.csv") %>%
 # load data from covidData (to get versioned truths)
 truth_CD <-
   covidData::load_jhu_data(
-    issue_date = as.Date("2020-12-07"),
+    issue_date = truth_date,
     spatial_resolution = c("state", "national"),
     temporal_resolution = "weekly",
     measure = "deaths") %>%
@@ -67,6 +67,8 @@ inc_scores_covidhub_utils <- map_dfr(
 inc_scores_covidhub_utils <- inc_scores_covidhub_utils %>%
   filter(target_end_date <= last_date_evaluated) %>%
   left_join(hub_locations %>% select(location = fips, location_name)) %>%
-  mutate(target_1wk = as.Date(calc_target_week_end_date(forecast_date, 1)))
+  mutate(target_1wk = as.Date(calc_target_week_end_date(forecast_date, 1))) %>%
+  mutate(target = paste(horizon, temporal_resolution, "ahead", target_variable))
+  
 
 write.csv(inc_scores_covidhub_utils, "paper-inputs/inc-scores.csv", row.names = FALSE)
