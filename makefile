@@ -27,14 +27,14 @@ figures/inc-loc-heatmap.jpg: code/figure-heatmap-locations.R code/load-global-an
 figures/long-range.jpg: code/figure-long-term-comparisons.R paper-inputs/inc-scores.csv 
 	Rscript code/figure-long-term-comparisons.R
 
-figures/fig-wis-location.jpg: code/figure-wis_by_location.R paper-inputs/inc-scores.csv code/load-global-analysis-dates.R
-	Rscript code/figure-wis_by_location.R
-
 figures/data-and-forecast.jpg: code/figure-data-and-forecast.R code/load-global-analysis-dates.R
 	Rscript code/figure-data-and-forecast.R
 
 figures/fig-model-ranks.jpg: code/figure-model-ranks.R paper-inputs/inc-scores.csv
 	Rscript code/figure-model-ranks.R
+
+figures/fig-wis-location.jpg: code/figure-wis_by_location.R paper-inputs/inc-scores.csv code/load-global-analysis-dates.R
+	Rscript code/figure-wis_by_location.R
 
 network-graph: 
 	make -Bnd |  ~/Applications/makefile2graph/make2graph | dot -Tpng -o makefile-network-graph.png

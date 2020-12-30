@@ -29,7 +29,7 @@ f1 <- plot_forecast(longterm_dat,
   show_caption=FALSE, 
   plot = FALSE) +
   scale_x_date(name=NULL, date_breaks = "1 month", date_labels = "%b") + 
-  theme(legend.position = c(.01,.999), 
+  theme(legend.position = c(.01,.95), 
     legend.justification = c(0,1), 
     legend.box = "horizontal", 
     legend.key.size = unit(0.15, "cm"),
@@ -59,12 +59,13 @@ mae_plot <- inc_scores %>%
   ungroup() %>%
   group_by(model) %>%
   mutate(label = if_else(horizon == max(horizon), model, NA_character_)) %>%
-  ggplot(aes(x=horizon, y=mae, color=model)) +
+  #ggplot(aes(x=horizon, y=mae, color=model)) +
+  ggplot(aes(x=horizon, y=mean_wis, color=model)) +
   geom_point() + geom_line() +
-  scale_y_continuous(name = "Mean absolute error") +
+  scale_y_continuous(name = "Mean WIS") +
   scale_x_continuous(name = NULL) +
   guides(color=FALSE) +
-  ggtitle("B: Mean absolute error")+
+  ggtitle("B: Mean weighted interval score")+
   geom_label_repel(aes(label = label),
     #nudge_x = 0.5,
     nudge_y = -.05,
