@@ -2,6 +2,7 @@ library(lubridate)
 library(zoltr) ## devtools::install_github("reichlab/zoltr")
 library(covidHubUtils)
 library(tidyverse)
+library(covidData)
 
 source("code/load-global-analysis-dates.R")
 data("hub_locations")
@@ -22,7 +23,7 @@ model_eligibility_inc <- read.csv("paper-inputs/model-eligibility-inc.csv") %>%
 
 # load data from covidData (to get versioned truths)
 truth_CD <-
-  covidData::load_jhu_data(
+  load_jhu_data(
     issue_date = truth_date,
     spatial_resolution = c("state", "national"),
     temporal_resolution = "weekly",
@@ -47,7 +48,7 @@ truth_CHU <- load_truth(
 #Merge to get updated values with proper format and values 
 truth <- truth_CD %>%
   right_join(truth_CHU) %>%
-  filter(truth >= 0)
+  filter(value >= 0)
 
 ## load scores
 inc_scores_covidhub_utils <- map_dfr(
