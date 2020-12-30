@@ -2,6 +2,8 @@ library(lubridate)
 library(tidyverse)
 library(covidHubUtils)
 
+source("code/load-global-analysis-dates.R")
+
 theme_set(theme_bw())
 data("hub_locations")
 
