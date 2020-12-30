@@ -49,11 +49,9 @@ f1 <- plot_forecast(longterm_dat,
 ## score evaluation
 
 inc_scores <- read_csv("paper-inputs/inc-scores.csv") %>%
-  filter(model %in% models, timezero <= as.Date("2020-07-13"), !(location_name %in% locs_to_exclude)) %>%
-  mutate(horizon = str_split(target, " ", simplify = TRUE),
-    horizon = as.numeric(horizon[,1])) %>%
+  filter(model %in% models, forecast_date <= as.Date("2020-07-13"), !(location_name %in% locs_to_exclude)) %>%
   group_by(model, horizon) %>%
-  mutate(nobs=n(), nlocs = length(unique(unit)))
+  mutate(nobs=n(), nlocs = length(unique(location_name)))
 
 mae_plot <- inc_scores %>%
   group_by(model, horizon) %>%
@@ -81,7 +79,7 @@ mae_plot <- inc_scores %>%
 calibration_scores_inc <- inc_scores %>%
   group_by(model, target) %>%
   summarise(percent_calib50 = round(mean(coverage_50, na.rm = T), 2),
-    percent_calib95 = round(mean(coverage_95, na.rm = T), 2) %>% 
+    percent_calib95 = round(mean(coverage_95, na.rm = T), 2)) %>% 
   mutate(horizon = str_split(target, " ", simplify = TRUE),
     horizon = as.numeric(horizon[,1])) %>%
   ungroup() %>%
