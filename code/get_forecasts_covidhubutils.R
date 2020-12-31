@@ -69,7 +69,9 @@ inc_scores_covidhub_utils <- inc_scores_covidhub_utils %>%
   filter(target_end_date <= last_date_evaluated) %>%
   left_join(hub_locations %>% select(location = fips, location_name)) %>%
   mutate(target_end_date_1wk_ahead = as.Date(calc_target_week_end_date(forecast_date, 1))) %>%
-  mutate(target = paste(horizon, temporal_resolution, "ahead", target_variable))
-  
+  mutate(target = paste(horizon, temporal_resolution, "ahead", target_variable)) %>%
+  left_join(truth %>% select(location, target_end_date, value)) %>%
+  rename(truth_value = value)
+
 
 write.csv(inc_scores_covidhub_utils, "paper-inputs/inc-scores.csv", row.names = FALSE)
