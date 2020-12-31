@@ -1,5 +1,8 @@
 require(covidHubUtils)
 
+## retrieval date for truth data used in score calculation
+truth_date <- as.Date("2020-12-07")
+
 ## important dates for score calculations
 first_timezero <- as.Date("2020-05-12") ## earliest forecast_date in an eligible file 
 last_timezero4wk <- as.Date("2020-10-26") ## latest forecast_date in an eligible file, formerly was as.Date("2020-08-24")

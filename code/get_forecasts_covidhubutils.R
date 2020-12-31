@@ -2,6 +2,7 @@ library(lubridate)
 library(zoltr) ## devtools::install_github("reichlab/zoltr")
 library(covidHubUtils)
 library(tidyverse)
+library(covidData)
 
 source("code/load-global-analysis-dates.R")
 data("hub_locations")
@@ -22,8 +23,8 @@ model_eligibility_inc <- read.csv("paper-inputs/model-eligibility-inc.csv") %>%
 
 # load data from covidData (to get versioned truths)
 truth_CD <-
-  covidData::load_jhu_data(
-    issue_date = as.Date("2020-12-07"),
+  load_jhu_data(
+    issue_date = truth_date,
     spatial_resolution = c("state", "national"),
     temporal_resolution = "weekly",
     measure = "deaths") %>%
@@ -47,7 +48,7 @@ truth_CHU <- load_truth(
 #Merge to get updated values with proper format and values 
 truth <- truth_CD %>%
   right_join(truth_CHU) %>%
-  filter(truth >= 0)
+  filter(value >= 0)
 
 ## load scores
 inc_scores_covidhub_utils <- map_dfr(
@@ -67,6 +68,10 @@ inc_scores_covidhub_utils <- map_dfr(
 inc_scores_covidhub_utils <- inc_scores_covidhub_utils %>%
   filter(target_end_date <= last_date_evaluated) %>%
   left_join(hub_locations %>% select(location = fips, location_name)) %>%
-  mutate(target_1wk = as.Date(calc_target_week_end_date(forecast_date, 1)))
+  mutate(target_end_date_1wk_ahead = as.Date(calc_target_week_end_date(forecast_date, 1))) %>%
+  mutate(target = paste(horizon, temporal_resolution, "ahead", target_variable)) %>%
+  left_join(truth %>% select(location, target_end_date, value)) %>%
+  rename(truth_value = value)
+
 
 write.csv(inc_scores_covidhub_utils, "paper-inputs/inc-scores.csv", row.names = FALSE)
