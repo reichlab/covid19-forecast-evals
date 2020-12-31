@@ -47,7 +47,7 @@ the_locations <- hub_locations %>% filter(geo_type == "state") %>% pull(fips)
 
 US_fips <- hub_locations %>%  filter(geo_type == "state") %>% filter(abbreviation %in% datasets::state.abb) %>% pull(fips)
 
-n_weeks_eval <- 5
+n_weeks_eval <- 8
 ```
 
 ```{r get-date-boundaries}
@@ -569,7 +569,6 @@ meanwis_1wk <- byweek_case %>%
   group_by(horizon0) %>%
   summarise(mean_wis = mean(mean_wis, na.rm = TRUE)) 
 
-
 by_week_wis_1wk <- ggplot(data =  byweek_case %>% filter(horizon == "1"), aes(x = horizon0, y = mean_wis, color = model)) +
   geom_line(aes(group = model), alpha=.5) +
   geom_point(aes(group = model), alpha=.5, size = 2) +
@@ -599,7 +598,7 @@ by_week_wis_4wk <- ggplot(data =  byweek_case %>% filter(horizon == "4"), aes(x 
   guides(color=FALSE, group = FALSE) +
   ggtitle("Average 4-week ahead weighted interval scores by model") +
   theme(axis.ticks.length.x = unit(0.5, "cm"),
-    axis.text.x = element_text(vjust = 7, hjust = -0.2)) + 
+  axis.text.x = element_text(vjust = 7, hjust = -0.2)) + 
   geom_line(data = meanwis_1wk, aes(x = horizon0, y = mean_wis), alpha=.5, color = "black", linetype = 2) +
   geom_point(data = meanwis_1wk, aes(x = horizon0, y = mean_wis), alpha=.5, size = 2, color = "black") 
 
@@ -946,7 +945,7 @@ To view a specific team, double click on the team name in the legend. To view a 
 
 
 ###1 Week Horizon
-```{r,fig.width=5, fig.height=5}
+```{r,fig.width=10, fig.height=6}
 
 byweek_inc <- score_inc_edit %>%
   filter(score_name == "wis") %>%
@@ -980,7 +979,7 @@ ggplotly(by_week_wis_1wk)
 
 
 ###4 Week Horizon
-```{r,fig.width=5, fig.height=5}
+```{r,fig.width=10, fig.height=6}
 by_week_wis_4wk <- ggplot(data =  byweek_inc %>% filter(horizon == "4"), aes(x = horizon0, y = mean_wis)) +
   geom_line(aes(group = model, color = model), alpha=.5) +
   geom_point(aes(group = model, color = model), alpha=.5, size = 2) +
@@ -1311,7 +1310,7 @@ DT::datatable(leaderboard_table, colnames = c("", "Model", "n_forecasts", "50% C
 ##Evaluation by Week  {.tabset .tabset-fade}
 
 ###1 Week Horizon
-```{r,fig.width=5, fig.height=5}
+```{r,fig.width=10, fig.height=6}
 
 byweek_cum <- score_cum_edit %>%
   filter(score_name == "wis") %>%
@@ -1344,7 +1343,7 @@ ggplotly(by_week_wis_1wk)
 
 
 ###4 Week Horizon
-```{r,fig.width=5, fig.height=5}
+```{r,fig.width=10, fig.height=6}
 by_week_wis_4wk <- ggplot(data =  byweek_cum %>% filter(horizon == "4"), aes(x = horizon0, y = mean_wis, color = model)) +
   geom_line(aes(group = model), alpha=.5) +
   geom_point(aes(group = model), alpha=.5, size = 2) +
