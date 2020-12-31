@@ -13,7 +13,7 @@ inc_scores <- read_csv("paper-inputs/inc-scores.csv") %>%
     filter(target %in% paste(1:4, "wk ahead inc death"),
         model %in% inc_score_models,
         target_end_date_1wk_ahead >= first_1wk_target_end_date,
-        target_end_date_1wk_ahead <= last_4wk_target_end_date) #remove forecasts made later than last 4 week ahead
+        target_end_date_1wk_ahead <= last_1wk_target_end_date)
         #!(location_name %in% c("United States", "American Samoa", "Guam", "Northern Mariana Islands", "Virgin Islands", "Puerto Rico", "District of Columbia")),
         #!(location_name=="New Jersey" & target_end_date_1wk_ahead=="2020-07-04"))
 
@@ -317,3 +317,43 @@ dev.off()
 #Assess difference in WIS for figure caption: 
 avg_wis_by_model_target %>% filter(target == "1 wk ahead inc death") %>% arrange(mean_wis)
 avg_wis_by_model_target %>% filter(target == "4 wk ahead inc death") %>% arrange(mean_wis)
+
+
+obs_inc_deaths_wdiff <- load_truth("JHU", "inc death", locations="US") %>%
+  select(target_end_date, value) %>%
+  rename(obs_deaths_on_fcast_date = value, 
+    forecast_date = target_end_date) %>%
+  arrange(forecast_date) %>%
+  mutate(death_diff_on_fcast_date = (lag(obs_deaths_on_fcast_date)- lag(obs_deaths_on_fcast_date,2))/lag(obs_deaths_on_fcast_date,2),
+    target_end_date_1wk_ahead = forecast_date+7)
+
+## exploration of association
+score_comparison_dat <- avg_scores_byweek %>%
+  left_join(obs_inc_deaths_wdiff) %>%
+  mutate(model = relevel(model, "COVIDhub-baseline")) 
+  
+
+score_comparison_dat %>%
+  filter(model %in% c("COVIDhub-ensemble", "UMass-MechBayes", "YYG-ParamSearch", "OliverWyman-Navigator")) %>%
+  ggplot(aes(x=obs_deaths_on_fcast_date, y=mean_wis, color=model, group=model)) +
+  geom_point() +
+  geom_smooth(se=FALSE, span=1) +
+  facet_grid(.~target)
+
+score_comparison_dat %>%
+  filter(model %in% c("COVIDhub-ensemble", "UMass-MechBayes", "YYG-ParamSearch", "OliverWyman-Navigator")) %>%
+  ggplot(aes(x=death_diff_on_fcast_date, y=mean_wis, color=model, group=model)) +
+  geom_point() +
+  geom_smooth(se=FALSE, span=1) +
+  facet_grid(.~target)
+
+tmp <- lm(mean_wis ~ I(obs_deaths_on_fcast_date/sd(obs_deaths_on_fcast_date)) + I(death_diff_on_fcast_date/sd(death_diff_on_fcast_date, na.rm=TRUE)) + model + target + I(target_end_date_1wk_ahead=="2020-07-11"), data=score_comparison_dat)
+summary(tmp)
+
+tmp1 <- mgcv::gam(mean_wis ~ s(obs_deaths_on_fcast_date, k=5) + s(death_diff_on_fcast_date, k=5) + model + target + I(target_end_date_1wk_ahead=="2020-07-11"), 
+  data=filter(score_comparison_dat, model %in% c("COVIDhub-ensemble", "UMass-MechBayes", "YYG-ParamSearch", "OliverWyman-Navigator")))
+summary(tmp1)
+
+par(mfrow=c(1,2))
+plot(tmp1, 1)
+plot(tmp1, 2)

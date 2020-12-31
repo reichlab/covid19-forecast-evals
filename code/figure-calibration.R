@@ -9,31 +9,19 @@ data("hub_locations")
 
 inc_scores <- read_csv("paper-inputs/inc-scores.csv") %>%
   filter(location_name %in% (hub_locations %>% filter(geo_type == "state") %>% pull(location_name))) %>%
-  filter(location_name != "United States" & location_name != "American Samoa") 
-
-inc_calibration <-  read_csv("paper-inputs/inc-calibration.csv") %>%
-  left_join(hub_locations, by=c("unit" = "fips")) %>%
-  filter(location_name %in% datasets::state.name)
-
-inc_scores_merge <- inc_scores %>%
-  left_join(inc_calibration) %>%
-  pivot_wider(names_from = "quantile", values_from = "value") %>%
-  mutate(calib_95 = ifelse(truth >= `0.025` & truth <= `0.975`, 1, 0),
-         calib_50 = ifelse(truth >= `0.25` & truth <= `0.75`, 1, 0))
+  filter(location_name != "United States" & location_name != "American Samoa") %>%
+  mutate(target = fct_relevel(target, 
+    "1 wk ahead inc death",  "2 wk ahead inc death",  "3 wk ahead inc death",  "4 wk ahead inc death",
+    "5 wk ahead inc death",  "6 wk ahead inc death",  "7 wk ahead inc death",  "8 wk ahead inc death",
+    "9 wk ahead inc death",  "10 wk ahead inc death",  "11 wk ahead inc death",  "12 wk ahead inc death",
+    "13 wk ahead inc death",  "14 wk ahead inc death",  "15 wk ahead inc death",  "16 wk ahead inc death",
+    "17 wk ahead inc death",  "18 wk ahead inc death")) 
 
 ## compute nice table
-calibration_scores_inc <- inc_scores_merge %>%
-  group_by(model, target) %>%
-  summarise(percent_calib50 = round(sum(calib_50, na.rm = T)/ n(),2),
-            percent_calib95 = round(sum(calib_95, na.rm = T) / n(),2)) %>% 
-  mutate(target = fct_relevel(target, 
-                              "1 wk ahead inc death",  "2 wk ahead inc death",  "3 wk ahead inc death",  "4 wk ahead inc death",
-                               "5 wk ahead inc death",  "6 wk ahead inc death",  "7 wk ahead inc death",  "8 wk ahead inc death",
-                               "9 wk ahead inc death",  "10 wk ahead inc death",  "11 wk ahead inc death",  "12 wk ahead inc death",
-                              "13 wk ahead inc death",  "14 wk ahead inc death",  "15 wk ahead inc death",  "16 wk ahead inc death",
-                              "17 wk ahead inc death",  "18 wk ahead inc death"),
-    horizon = str_split(target, " ", simplify = TRUE),
-    horizon = as.numeric(horizon[,1])) %>%
+calibration_scores_inc <- inc_scores %>%
+  group_by(model, target, horizon) %>%
+  summarise(percent_calib50 = mean(coverage_50, na.rm = T),
+            percent_calib95 = mean(coverage_95, na.rm = T)) %>% 
   ungroup() %>%
   group_by(model) %>%
   mutate(label = if_else(horizon == 4, model, NA_character_))
@@ -104,12 +92,12 @@ dev.off()
 
 
 #Calibration table (table 2)
-calib_table <- inc_scores_merge %>%
+calib_table <- inc_scores %>%
   filter(location_name %in% datasets::state.name) %>%
   filter(target %in% c("1 wk ahead inc death",  "2 wk ahead inc death",  "3 wk ahead inc death",  "4 wk ahead inc death")) %>% 
   group_by(model) %>%
-  summarise(percent_calib50 = round(sum(calib_50)/ n(),2),
-            percent_calib95 = round(sum(calib_95) / n(),2),
+  summarise(percent_calib50 = round(mean(coverage_50, na.rm = T), 2),
+            percent_calib95 = round(mean(coverage_95, na.rm = T), 2),
             n_forecasts=n()) %>% 
   select(model, n_forecasts, percent_calib50, percent_calib95) %>%
   ungroup() %>%

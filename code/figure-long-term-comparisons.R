@@ -29,7 +29,7 @@ f1 <- plot_forecast(longterm_dat,
   show_caption=FALSE, 
   plot = FALSE) +
   scale_x_date(name=NULL, date_breaks = "1 month", date_labels = "%b") + 
-  theme(legend.position = c(.01,.999), 
+  theme(legend.position = c(.01,.95), 
     legend.justification = c(0,1), 
     legend.box = "horizontal", 
     legend.key.size = unit(0.15, "cm"),
@@ -49,11 +49,9 @@ f1 <- plot_forecast(longterm_dat,
 ## score evaluation
 
 inc_scores <- read_csv("paper-inputs/inc-scores.csv") %>%
-  filter(model %in% models, timezero <= as.Date("2020-07-13"), !(location_name %in% locs_to_exclude)) %>%
-  mutate(horizon = str_split(target, " ", simplify = TRUE),
-    horizon = as.numeric(horizon[,1])) %>%
+  filter(model %in% models, forecast_date <= as.Date("2020-07-13"), !(location_name %in% locs_to_exclude)) %>%
   group_by(model, horizon) %>%
-  mutate(nobs=n(), nlocs = length(unique(unit)))
+  mutate(nobs=n(), nlocs = length(unique(location_name)))
 
 mae_plot <- inc_scores %>%
   group_by(model, horizon) %>%
@@ -61,12 +59,13 @@ mae_plot <- inc_scores %>%
   ungroup() %>%
   group_by(model) %>%
   mutate(label = if_else(horizon == max(horizon), model, NA_character_)) %>%
-  ggplot(aes(x=horizon, y=mae, color=model)) +
+  #ggplot(aes(x=horizon, y=mae, color=model)) +
+  ggplot(aes(x=horizon, y=mean_wis, color=model)) +
   geom_point() + geom_line() +
-  scale_y_continuous(name = "Mean absolute error") +
+  scale_y_continuous(name = "Mean WIS") +
   scale_x_continuous(name = NULL) +
   guides(color=FALSE) +
-  ggtitle("B: Mean absolute error")+
+  ggtitle("B: Mean weighted interval score")+
   geom_label_repel(aes(label = label),
     #nudge_x = 0.5,
     nudge_y = -.05,
@@ -78,20 +77,10 @@ mae_plot <- inc_scores %>%
 
 ## coverage evaluation
 
-inc_calibration <-  read_csv("paper-inputs/inc-calibration.csv") %>%
-  left_join(hub_locations, by=c("unit" = "fips")) %>%
-  filter(!(location_name %in% locs_to_exclude))
-
-inc_scores_merge <- inc_scores %>%
-  left_join(inc_calibration) %>%
-  pivot_wider(names_from = "quantile", values_from = "value") %>%
-  mutate(calib_95 = ifelse(truth >= `0.025` & truth <= `0.975`, 1, 0),
-    calib_50 = ifelse(truth >= `0.25` & truth <= `0.75`, 1, 0))
-
-calibration_scores_inc <- inc_scores_merge %>%
+calibration_scores_inc <- inc_scores %>%
   group_by(model, target) %>%
-  summarise(percent_calib50 = round(sum(calib_50)/ n(),2),
-    percent_calib95 = round(sum(calib_95) / n(),2)) %>% 
+  summarise(percent_calib50 = round(mean(coverage_50, na.rm = T), 2),
+    percent_calib95 = round(mean(coverage_95, na.rm = T), 2)) %>% 
   mutate(horizon = str_split(target, " ", simplify = TRUE),
     horizon = as.numeric(horizon[,1])) %>%
   ungroup() %>%
