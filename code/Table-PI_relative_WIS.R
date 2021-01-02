@@ -10,30 +10,14 @@ theme_set(theme_bw())
 data("hub_locations")
 
 inc_scores <- read_csv("paper-inputs/inc-scores.csv") %>%
-  filter(location_name %in% (hub_locations %>% filter(geo_type == "state") %>% pull(location_name))) %>%
-  filter(location_name != "United States" & location_name != "American Samoa") 
-
-inc_calibration <-  read_csv("paper-inputs/inc-calibration.csv") %>%
-  left_join(hub_locations, by=c("unit" = "fips")) %>%
-  filter(location_name %in% datasets::state.name)
-
-inc_scores_merge <- inc_scores %>%
-  left_join(inc_calibration) %>%
-  pivot_wider(names_from = "quantile", values_from = "value") %>%
-  mutate(calib_95 = ifelse(truth >= `0.025` & truth <= `0.975`, 1, 0),
-         calib_50 = ifelse(truth >= `0.25` & truth <= `0.75`, 1, 0))
-
-#Calibration table (table 2)
-calib_table <- inc_scores_merge %>%
   filter(location_name %in% datasets::state.name) %>%
-  filter(target %in% c("1 wk ahead inc death",  "2 wk ahead inc death",  "3 wk ahead inc death",  "4 wk ahead inc death")) %>% 
+  filter(horizon %in% c(1:4)) 
+
+calib_table <- inc_scores %>%
   group_by(model) %>%
-  summarise(percent_calib50 = round(sum(calib_50)/ n(), digits = 2),
-            percent_calib95 = round(sum(calib_95) / n(), digits  = 2),
-            n_forecasts=n()) %>% 
-  select(model, n_forecasts, percent_calib50, percent_calib95) %>%
-  ungroup() %>%
-  arrange(-percent_calib50)
+  summarise(n_forecasts = n(),
+            calib_95 = round(sum(coverage_95)/ n(), digits = 2),
+            calib_50 = round(sum(coverage_50)/ n(), digits = 2))  
 
 
 #Calculate pairwise WIS
@@ -47,14 +31,11 @@ next_monday <- function(date){
 }
 
 
-# bring all timezeros to Monday:
-inc_scores$timezero <- next_monday(inc_scores$timezero)
 
-# restrict to 1-4 wk ahead state-level 
-scores <- subset(inc_scores, target %in% paste(1:4, "wk ahead inc death") &
-                   abbreviation %in% datasets::state.abb)
+# bring all forecast_dates to Monday:
+inc_scores$forecast_date <- next_monday(inc_scores$forecast_date)
 
-scores <- scores[, c("model", "timezero", "unit", "target", "abs_error", "wis")]
+scores <- inc_scores %>% select("model", "forecast_date", "location", "horizon", "abs_error", "wis")
 
 # the included models:
 models <- unique(scores$model)
@@ -65,15 +46,14 @@ invisible(library(surveillance)) # contains permutation test
 # function for pairwise comparison of models
 pairwise_comparison <- function(scores, mx, my, subset = rep(TRUE, nrow(scores)),
                                 permutation_test = FALSE){
-  # apply subset:
-  scores <- scores[subset, ]
+  
   
   # subsets of available scores for both models:
   subx <- subset(scores, model == mx)
   suby <- subset(scores, model == my)
   
   # merge together and restrict to overlap:
-  sub <- merge(subx, suby, by = c("timezero", "unit", "target"),
+  sub <- merge(subx, suby, by = c("forecast_date", "location", "horizon"),
                all.x = FALSE, all.y = FALSE)
   
   # compute ratio:
@@ -85,8 +65,86 @@ pairwise_comparison <- function(scores, mx, my, subset = rep(TRUE, nrow(scores))
                             nPermutation = 999)$pVal.permut
     
     # aggregate by forecast date:
-    sub_fcd <- aggregate(cbind(wis.x, wis.y) ~ timezero, data = sub, FUN = mean)
+    sub_fcd <- aggregate(cbind(wis.x, wis.y) ~ forecast_date, data = sub, FUN = mean)
     pval_fcd <- permutationTest(sub_fcd$wis.x, sub_fcd$wis.y,
+                                nPermutation = 999)$pVal.permut
+  }else{
+    pval <- NULL
+    pval_fcd <- NULL
+  }
+  
+  return(list(ratio = ratio, pval = pval, pval_fcd = pval_fcd, mx = mx, my = my))
+}
+
+# matrices to store:
+results_ratio <- results_pval <- results_pval_fcd <- matrix(ncol = length(models),
+                                                            nrow = length(models),
+                                                            dimnames = list(models, models))
+
+set.seed(123) # set seed for permutation tests
+
+for(mx in seq_along(models)){
+  for(my in 1:mx){
+    pwc <- pairwise_comparison(scores = scores, mx = models[mx], my = models[my],
+                               permutation_test = TRUE)
+    results_ratio[mx, my] <- pwc$ratio
+    results_ratio[my, mx] <- 1/pwc$ratio
+    results_pval[mx, my] <-
+      results_pval[my, mx] <- pwc$pval
+    results_pval_fcd[mx, my] <-
+      results_pval_fcd[my, mx] <- pwc$pval_fcd
+  }
+}
+
+
+ind_baseline <- which(rownames(results_ratio) == "COVIDhub-baseline")
+geom_mean_ratios <- exp(rowMeans(log(results_ratio[, -ind_baseline]), na.rm = TRUE))
+ratios_baseline <- results_ratio[, "COVIDhub-baseline"]
+ratios_baseline2 <- geom_mean_ratios/geom_mean_ratios["COVIDhub-baseline"]
+
+tab <- data.frame(model = names(geom_mean_ratios),
+                  geom_mean_ratios = geom_mean_ratios,
+                  ratios_baseline = ratios_baseline,
+                  ratios_baseline2 = ratios_baseline2)
+
+tab <- tab[order(tab$ratios_baseline2), ]
+
+
+tab #final column is theta^*_iB
+
+pairwise_scores <- tab %>%
+  mutate(relative_wis = round(ratios_baseline2, 2)) %>%
+  select(model, relative_wis) 
+
+
+
+#Calculate Relative MAE
+
+# function for pairwise comparison of models
+pairwise_comparison <- function(scores, mx, my, subset = rep(TRUE, nrow(scores)),
+                                permutation_test = FALSE){
+
+  
+  # subsets of available scores for both models:
+  subx <- subset(scores, model == mx)
+  suby <- subset(scores, model == my)
+  
+  
+  # merge together and restrict to overlap:
+  sub <- merge(subx, suby, by = c("forecast_date", "location", "horizon"),
+               all.x = FALSE, all.y = FALSE)
+  
+  # compute ratio:
+  ratio <- sum(sub$abs_error.x) / sum(sub$abs_error.y)
+  
+  # perform permutation tests:
+  if(permutation_test){
+    pval <- permutationTest(sub$abs_error.x, sub$abs_error.y,
+                            nPermutation = 999)$pVal.permut
+    
+    # aggregate by forecast date:
+    sub_fcd <- aggregate(cbind(abs_error.x, abs_error.y) ~ forecast_date, data = sub, FUN = mean)
+    pval_fcd <- permutationTest(sub_fcd$abs_error.x, sub_fcd$abs_error.y,
                                 nPermutation = 999)$pVal.permut
   }else{
     pval <- NULL
@@ -133,86 +191,7 @@ tab <- tab[order(tab$ratios_baseline2), ]
 
 tab #final column is theta^*_iB
 
-pairwise_scores <- tab %>%
-  mutate(relative_wis = round(ratios_baseline2, 2)) %>%
-  select(model, relative_wis) 
-
-
-
-#Calculate Relative MAE
-
-# function for pairwise comparison of models
-pairwise_comparison <- function(scores, mx, my, subset = rep(TRUE, nrow(scores)),
-                                permutation_test = FALSE){
-  # apply subset:
-  scores <- scores[subset, ]
-  
-  # subsets of available scores for both models:
-  subx <- subset(scores, model == mx)
-  suby <- subset(scores, model == my)
-  
-  # merge together and restrict to overlap:
-  sub <- merge(subx, suby, by = c("timezero", "unit", "target"),
-               all.x = FALSE, all.y = FALSE)
-  
-  # compute ratio:
-  ratio <- sum(sub$abs_error.x) / sum(sub$abs_error.y)
-  
-  # perform permutation tests:
-  if(permutation_test){
-    pval <- permutationTest(sub$abs_error.x, sub$abs_error.y,
-                            nPermutation = 999)$pVal.permut
-    
-    # aggregate by forecast date:
-    sub_fcd <- aggregate(cbind(abs_error.x, abs_error.y) ~ timezero, data = sub, FUN = mean)
-    pval_fcd <- permutationTest(sub_fcd$abs_error.x, sub_fcd$abs_error.y,
-                                nPermutation = 999)$pVal.permut
-  }else{
-    pval <- NULL
-    pval_fcd <- NULL
-  }
-  
-  return(list(ratio = ratio, pval = pval, pval_fcd = pval_fcd, mx = mx, my = my))
-}
-
-# matrices to store:
-results_ratio <- results_pval <- results_pval_fcd <- matrix(ncol = length(models),
-                                                            nrow = length(models),
-                                                            dimnames = list(models, models))
-
-set.seed(123) # set seed for permutation tests
-
-for(mx in seq_along(models)){
-  for(my in 1:mx){
-    pwc <- pairwise_comparison(scores = scores, mx = models[mx], my = models[my],
-                               permutation_test = TRUE)
-    results_ratio[mx, my] <- pwc$ratio
-    results_ratio[my, mx] <- 1/pwc$ratio
-    results_pval[mx, my] <-
-      results_pval[my, mx] <- pwc$pval
-    results_pval_fcd[mx, my] <-
-      results_pval_fcd[my, mx] <- pwc$pval_fcd
-  }
-}
-
-
-
-ind_baseline <- which(rownames(results_ratio) == "COVIDhub-baseline")
-geom_mean_ratios <- exp(rowMeans(log(results_ratio[, -ind_baseline]), na.rm = TRUE))
-ratios_baseline <- results_ratio[, "COVIDhub-baseline"]
-ratios_baseline2 <- geom_mean_ratios/geom_mean_ratios["COVIDhub-baseline"]
-
-tab_MAE <- data.frame(model = names(geom_mean_ratios),
-                  geom_mean_ratios = geom_mean_ratios,
-                  ratios_baseline = ratios_baseline,
-                  ratios_baseline2 = ratios_baseline2)
-
-tab_MAE <- tab_MAE[order(tab_MAE$ratios_baseline2), ]
-
-
-tab #final column is theta^*_iB
-
-pairwise_scores_MAE <- tab_MAE %>%
+pairwise_scores_MAE <- tab %>%
   mutate(relative_abs_error = round(ratios_baseline2, 2)) %>%
   select(model, relative_abs_error) 
 
@@ -222,6 +201,5 @@ pairwise_scores_MAE <- tab_MAE %>%
 calib_pairwise <- merge(calib_table, pairwise_scores)
 
 #merge with MAE
-calib_pairwise <- merge(calib_pairwise, pairwise_scores_MAE)  %>% arrange(relative_wis)
+calib_pairwise <- merge(calib_pairwise, pairwise_scores_MAE) %>% arrange(model)
 
-calib_pairwise$relative_abs_error
