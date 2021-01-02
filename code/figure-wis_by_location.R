@@ -12,14 +12,11 @@ inc_scores <- read_csv("paper-inputs/inc-scores.csv") %>%
   filter(location_name != "American Samoa") %>%
   filter(horizon %in% c(1:4)) %>%
   filter(forecast_date <= last_timezero4wk) 
-
-inc_scores <- inc_scores %>%
-  left_join(truth %>% select(location, target_end_date, location_name, value))
   
 average_by_loc <- inc_scores %>%
   group_by(model, location_name) %>%  #aggregate by week of submission
   summarise(avg_wis = round(mean(wis, na.rm = T),1),
-            sum_truth = sum(value)) %>% 
+            sum_truth = sum(truth_value)) %>% 
   group_by(location_name) %>%     
   mutate_at(vars(matches("avg_wis")), funs(relative_wis = (. / .[model=="COVIDhub-baseline"]))) %>% 
   ungroup() %>% 
@@ -50,7 +47,7 @@ fig_wis_loc <- ggplot(average_by_loc, aes(x=model, y=location_name,fill= log_rel
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
       axis.title.x = element_text(size = 9),
       axis.text.y = element_text(size = 9),
-      title = element_text(size = 9),
+      title = element_text(size = 9)
     ) 
 
 
