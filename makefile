@@ -9,6 +9,10 @@ paper-inputs/inc-scores.csv: paper-inputs/model-eligibility-inc.csv code/load-gl
 paper-inputs/model-eligibility-inc.csv: code/determine-model-eligibility-inc.R code/load-global-analysis-dates.R code/unit_timezero_forecast_complete.R
 	Rscript code/determine-model-eligibility-inc.R
 
+# update table for model ranking
+paper-inputs/table-overall-performance.csv: paper-inputs/inc-scores.csv code/Table-PI_relative_WIS.R
+	Rscript code/Table-PI_relative_WIS.R
+
 # update calibration scores, after score_forecasts transition, this may not be needed anymore.
 # paper-inputs/inc-calibration.csv: paper-inputs/model-eligibility-inc.csv code/get-calibration-scores-inc.R code/load-global-analysis-dates.R
 #	Rscript code/get-calibration-scores-inc.R
@@ -18,7 +22,7 @@ figures/pi-coverage.jpg: code/figure-calibration.R paper-inputs/inc-scores.csv
 	Rscript code/figure-calibration.R
 
 ## this script builds 3 figures: model-target-week-wis-avgs, week-model-target-fig4, overall-wis-boxplot
-figures/model-target-week-wis-avgs.jpg: code/figure-model-week-target-wis-avgs.R paper-inputs/inc-scores.csv 
+figures/model-target-week-wis-avgs.jpg: code/figure-model-week-target-wis-avgs.R paper-inputs/inc-scores.csv paper-inputs/table-overall-performance.csv
 	Rscript code/figure-model-week-target-wis-avgs.R
 
 figures/inc-loc-heatmap.jpg: code/figure-heatmap-locations.R code/load-global-analysis-dates.R
@@ -33,7 +37,7 @@ figures/data-and-forecast.jpg: code/figure-data-and-forecast.R code/load-global-
 figures/fig-model-ranks.jpg: code/figure-model-ranks.R paper-inputs/inc-scores.csv
 	Rscript code/figure-model-ranks.R
 
-figures/fig-wis-location.jpg: code/figure-wis_by_location.R paper-inputs/inc-scores.csv code/load-global-analysis-dates.R
+figures/fig-wis-location.jpg: code/figure-wis_by_location.R paper-inputs/inc-scores.csv code/load-global-analysis-dates.R paper-inputs/table-overall-performance.csv
 	Rscript code/figure-wis_by_location.R
 
 network-graph: 

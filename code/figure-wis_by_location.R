@@ -4,6 +4,10 @@ library(covidHubUtils)
 
 source("code/load-global-analysis-dates.R")
 
+model_levels <- read_csv("paper-inputs/table-overall-performance.csv") %>%
+  arrange(desc(relative_wis)) %>%
+  pull(model)
+
 theme_set(theme_bw())
 data("hub_locations")
 
@@ -11,7 +15,8 @@ inc_scores <- read_csv("paper-inputs/inc-scores.csv") %>%
   filter(location_name %in% (hub_locations %>% filter(geo_type == "state") %>% pull(location_name))) %>%
   filter(location_name != "American Samoa") %>%
   filter(horizon %in% c(1:4)) %>%
-  filter(forecast_date <= last_timezero4wk) 
+  filter(forecast_date <= last_timezero4wk) %>%
+  mutate(model = factor(model, levels=model_levels, ordered = TRUE))
   
 average_by_loc <- inc_scores %>%
   group_by(model, location_name) %>%  #aggregate by week of submission
@@ -23,7 +28,6 @@ average_by_loc <- inc_scores %>%
   mutate(log_relative_wis = ifelse(relative_wis == 0, 0, log2(relative_wis)),
     log_relative_wis = ifelse(log_relative_wis > 3, 3, log_relative_wis)) ## remove visual outliers
 
-average_by_loc$model<- reorder(average_by_loc$model, -average_by_loc$avg_wis) #sort models by WIS for plot
 average_by_loc$location_name <- reorder(average_by_loc$location_name, average_by_loc$sum_truth)
 
 ## summaries by model
@@ -41,7 +45,7 @@ average_by_loc %>%
 
 fig_wis_loc <- ggplot(average_by_loc, aes(x=model, y=location_name,fill= log_relative_wis)) +
   geom_tile() +
-  geom_text(aes(label=round(avg_wis)), size = 3) +
+  geom_text(aes(label=round(avg_wis)), size = 2.5) +
   scale_fill_gradient2(low = "navy", high = "red", midpoint = 0, na.value = "grey50", name = "Relative WIS", breaks = c(-3,-2,-1,0,1,2,3), labels =c(0.125,0.25, 0.5, 1, 2, 4, 8))+ 
   xlab(NULL) + ylab(NULL) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),

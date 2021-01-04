@@ -3,17 +3,27 @@ library(ggrepel)
 
 source("code/load-global-analysis-dates.R")
 
+model_levels <- read_csv("paper-inputs/table-overall-performance.csv") %>%
+  arrange(desc(relative_wis)) %>%
+  pull(model)
+
 theme_set(theme_bw())
 
-inc_score_models <- read_csv("paper-inputs/inc-scores.csv") %>%
-    pull(model) %>%
-    unique()
+# simple summary calculations for paper
+tmp <- read_csv("paper-inputs/inc-scores.csv") 
+## number of unique submissions
+tmp %>%
+  group_by(model, forecast_date) %>%
+  summarize(submitted=TRUE)
+## number of evaluation opportunities
+nrow(tmp)
 
 inc_scores <- read_csv("paper-inputs/inc-scores.csv") %>%
-    filter(target %in% paste(1:4, "wk ahead inc death"),
+  filter(target %in% paste(1:4, "wk ahead inc death"),
         model %in% inc_score_models,
         target_end_date_1wk_ahead >= first_1wk_target_end_date,
-        target_end_date_1wk_ahead <= last_1wk_target_end_date)
+        target_end_date_1wk_ahead <= last_1wk_target_end_date) %>%
+  mutate(model = factor(model, levels=model_levels, ordered = TRUE))
         #!(location_name %in% c("United States", "American Samoa", "Guam", "Northern Mariana Islands", "Virgin Islands", "Puerto Rico", "District of Columbia")),
         #!(location_name=="New Jersey" & target_end_date_1wk_ahead=="2020-07-04"))
 
@@ -66,7 +76,6 @@ tmp <- inc_scores %>%
 #     theme(axis.text.x = element_text(angle=45, vjust=1, hjust=1))
 #     
 
-tmp$model <- reorder(tmp$model, -tmp$mean_wis, FUN = function(x) mean(x, na.rm=TRUE))
 
 # ggplot(tmp, aes(x=model, y=mean_wis, color=target_end_date_1wk_ahead)) +
 #     geom_point() +
@@ -129,8 +138,6 @@ avg_wis_by_model_target_week <- inc_scores %>%
     left_join(expected_locs)%>%
     mutate(obs_exp_locs = nlocs == nlocs_expected)
 
-avg_wis_by_model_target_week$model <- reorder(avg_wis_by_model_target_week$model, -avg_wis_by_model_target_week$mean_wis, FUN=function(x) mean(x, na.rm=TRUE))
-
 ensemble_1wk_avg <- avg_wis_by_model_target %>%
     filter(model=="COVIDhub-ensemble", target=="1 wk ahead inc death") %>%
     .$mean_wis
@@ -169,7 +176,6 @@ dev.off()
 
 p1 <- inc_scores %>%
     filter(!(location_name %in% c("United States", "American Samoa", "Guam", "Northern Mariana Islands", "Virgin Islands", "Puerto Rico", "District of Columbia"))) %>% 
-    mutate(model = reorder(model, -wis, FUN=function(x) mean(x, na.rm=TRUE))) %>%
     ggplot(aes(x=model, y=wis, color=target_end_date_1wk_ahead)) +
     geom_boxplot() +
     scale_y_log10() +
@@ -192,7 +198,7 @@ dev.off()
 ## assemble truth data observations for US level
 obs_inc_deaths <- load_truth("JHU", "inc death", locations="US") %>%
   filter(target_end_date >= first_1wk_target_end_date, 
-    target_end_date <= last_4wk_target_end_date)
+    target_end_date <= last_1wk_target_end_date)
 
 f4a <- ggplot(obs_inc_deaths, aes(x=target_end_date, y=value)) +
   geom_point() +
@@ -212,7 +218,7 @@ avg_scores_byweek <- avg_wis_by_model_target_week %>%
   group_by(target_end_date_1wk_ahead, target) %>%
   mutate_at(vars("mean_wis"), funs(relative_wis = (. / .[model=="COVIDhub-baseline"]))) %>%
   ungroup() %>%  group_by(model) %>%
-  mutate(label = if_else(target_end_date_1wk_ahead  == max(target_end_date_1wk_ahead), model, factor(NA_character_))) %>% ungroup()
+  mutate(label = if_else(target_end_date_1wk_ahead  == max(target_end_date_1wk_ahead), model, factor(NA_character_, ordered = TRUE))) %>% ungroup()
 
 avg_scores_byweek$model <- factor(as.character(avg_scores_byweek$model))
 
@@ -264,6 +270,7 @@ f4b <- ggplot(filter(avg_scores_byweek, target=="1 wk ahead inc death"), aes(x =
   geom_line(data=filter(avg_scores_byweek, model=="COVIDhub-baseline", target=="1 wk ahead inc death"), aes(group = model, color="green")) +
   geom_point(data=filter(avg_scores_byweek, model=="COVIDhub-baseline", target=="1 wk ahead inc death"), aes(group = model, color="green")) +
   expand_limits(y=0) +
+  coord_cartesian(ylim=c(0,200)) +
   scale_y_continuous(name = "Average WIS") +
   scale_x_date(name=NULL, limits=range(obs_inc_deaths$target_end_date), date_breaks = "1 month", date_labels = "%b") + 
   #scale_x_continuous(name = "Forecast Week", breaks= unique(avg_scores_byweek$target_end_date_0wk_ahead)[c(TRUE,FALSE)], limits=c(1, 5)) +
@@ -335,14 +342,14 @@ score_comparison_dat <- avg_scores_byweek %>%
 
 score_comparison_dat %>%
   filter(model %in% c("COVIDhub-ensemble", "UMass-MechBayes", "YYG-ParamSearch", "OliverWyman-Navigator")) %>%
-  ggplot(aes(x=obs_deaths_on_fcast_date, y=mean_wis, color=model, group=model)) +
+  ggplot(aes(x=obs_deaths_on_fcast_date, y=log(relative_wis), color=model, group=model)) +
   geom_point() +
   geom_smooth(se=FALSE, span=1) +
   facet_grid(.~target)
 
 score_comparison_dat %>%
   filter(model %in% c("COVIDhub-ensemble", "UMass-MechBayes", "YYG-ParamSearch", "OliverWyman-Navigator")) %>%
-  ggplot(aes(x=death_diff_on_fcast_date, y=mean_wis, color=model, group=model)) +
+  ggplot(aes(x=death_diff_on_fcast_date, y=log(relative_wis), color=model, group=model)) +
   geom_point() +
   geom_smooth(se=FALSE, span=1) +
   facet_grid(.~target)
@@ -352,8 +359,17 @@ summary(tmp)
 
 tmp1 <- mgcv::gam(mean_wis ~ s(obs_deaths_on_fcast_date, k=5) + s(death_diff_on_fcast_date, k=5) + model + target + I(target_end_date_1wk_ahead=="2020-07-11"), 
   data=filter(score_comparison_dat, model %in% c("COVIDhub-ensemble", "UMass-MechBayes", "YYG-ParamSearch", "OliverWyman-Navigator")))
-summary(tmp1)
+tmp1 <- mgcv::gam(log(relative_wis) ~ s(obs_deaths_on_fcast_date, k=5) + s(death_diff_on_fcast_date, k=5) + model + target + I(target_end_date_1wk_ahead=="2020-07-11"), 
+  data=score_comparison_dat)
 
+summary(tmp1)
+ 
 par(mfrow=c(1,2))
 plot(tmp1, 1)
 plot(tmp1, 2)
+
+library(mgcViz)
+tmp2 <- mgcv::gam(log(relative_wis) ~ te(obs_deaths_on_fcast_date, death_diff_on_fcast_date, bs="tp") + model + target + I(target_end_date_1wk_ahead=="2020-07-11"), 
+  bs="cs", k=list(2,2), data=score_comparison_dat)
+plot(sm(getViz(tmp2),1))
+
