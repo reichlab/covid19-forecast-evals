@@ -203,3 +203,4 @@ calib_pairwise <- merge(calib_table, pairwise_scores)
 #merge with MAE
 calib_pairwise <- merge(calib_pairwise, pairwise_scores_MAE) %>% arrange(model)
 
+write_csv(calib_pairwise, file = "paper-inputs/table-overall-performance.csv")

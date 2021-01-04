@@ -73,5 +73,5 @@ inc_scores_covidhub_utils <- inc_scores_covidhub_utils %>%
   left_join(truth %>% select(location, target_end_date, value)) %>%
   rename(truth_value = value)
 
-
+  
 write.csv(inc_scores_covidhub_utils, "paper-inputs/inc-scores.csv", row.names = FALSE)

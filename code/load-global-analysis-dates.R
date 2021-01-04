@@ -1,4 +1,5 @@
 require(covidHubUtils)
+require(tidyverse)
 
 ## retrieval date for truth data used in score calculation
 truth_date <- as.Date("2021-01-03")
