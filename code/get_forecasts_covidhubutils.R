@@ -4,7 +4,7 @@ library(covidHubUtils)
 library(tidyverse)
 library(covidData)
 
-source("code/load-global-analysis-dates.R")
+source("code/load-global-analysis-dates.R") 
 data("hub_locations")
 
 ##Read in eligible data 
