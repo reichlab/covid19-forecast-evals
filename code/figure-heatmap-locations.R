@@ -49,11 +49,13 @@ for_loc_figure <- num_loc %>%
   group_by(model) %>%
   filter(max(n_loc) >= NUM_UNITS) %>% #remove models with fewer than 25 locations at all times
   filter(min(sat_fcast_week) <= last_1wk_target_end_date) %>% #filter models that have start date before end of scored period
-  filter(!(model %in% c( "CU-nochange", "CU-scenario_high", "CU-scenario_low", "CU-scenario_mid"))) %>% #remove models that aren't secondary or primary 
+  filter(!(model %in% c( "CU-nochange", "CU-scenario_high", "CU-scenario_low", "CU-scenario_mid"))) %>% #remove models that aren't secondary or primary
+  mutate(sum_loc = sum(n_loc)) %>%
   ungroup() 
 
 
-for_loc_figure$model <- fct_reorder(for_loc_figure$model, for_loc_figure$n_weeks_submit_forecast) #reorder factors by number of submission weeks
+
+for_loc_figure$model <- fct_reorder(for_loc_figure$model, for_loc_figure$sum_loc) #reorder factors by number of submission weeks
 for_loc_figure$model_numeric <- as.numeric(for_loc_figure$model)  #create numeric value for model names
 
 #Plot of locations each model submitted to each week
@@ -64,15 +66,15 @@ sf1 <- ggplot(for_loc_figure, aes(y=model, x=sat_fcast_week, fill= n_loc)) +
   geom_rect(aes(color="red"),
             xmin= (first_1wk_target_end_date -7) - 3.5, #color of box, start date 3 days before actual date so rectangle covers entire box
             xmax= (last_1wk_target_end_date -7) + 3.5 ,
-            ymax= unique(for_loc_figure$model_numeric[for_loc_figure$model == "UMass-MechBayes"]) + .5,
-            ymin= unique(for_loc_figure$model_numeric[for_loc_figure$model == "LANL-GrowthRate"]) - .5,  
+            ymax= unique(for_loc_figure$model_numeric[for_loc_figure$model == "COVIDhub-baseline"]) + .5,
+            ymin= unique(for_loc_figure$model_numeric[for_loc_figure$model == "IHME-CurveFit"]) - .5,  
             size = .75, fill=alpha("grey",0)) +
-  geom_rect(aes(color="red"),
-            xmin= (first_1wk_target_end_date -7) - 3.5, #color of box, start date 3 days before actual date so rectangle covers entire box
-            xmax= (last_1wk_target_end_date -7) + 3.5 ,
-            ymax= unique(for_loc_figure$model_numeric[for_loc_figure$model == "UA-EpiCovDA"]) + .5,
-            ymin= unique(for_loc_figure$model_numeric[for_loc_figure$model == "IHME-CurveFit"]) - .5,
-            size = .75, fill=alpha("grey",0)) +
+  # geom_rect(aes(color="red"),
+  #           xmin= (first_1wk_target_end_date -7) - 3.5, #color of box, start date 3 days before actual date so rectangle covers entire box
+  #           xmax= (last_1wk_target_end_date -7) + 3.5 ,
+  #           ymax= unique(for_loc_figure$model_numeric[for_loc_figure$model == "UA-EpiCovDA"]) + .5,
+  #           ymin= unique(for_loc_figure$model_numeric[for_loc_figure$model == "IHME-CurveFit"]) - .5,
+  #           size = .75, fill=alpha("grey",0)) +
   # geom_rect(aes(color="red"),
   #           xmin= (first_1wk_target_end_date -7) - 3.5, #color of box, start date 3 days before actual date so rectangle covers entire box
   #           xmax= (last_1wk_target_end_date -7) + 3.5 ,
