@@ -90,7 +90,7 @@ p2_no_legend <- p2 + theme(legend.position='none')
 ## sequence of mondays starting with mid March near first time-zero
 weekly_forecast_dates <- seq.Date(as.Date("2020-03-16"), end_date, by="7 days")
 
-all_primary_models <- get_model_designations(all_models, source="local_hub_repo", hub_repo_path = "../covid19-forecast-hub/") %>%
+all_primary_models <- get_model_designations(source="local_hub_repo", hub_repo_path = "../covid19-forecast-hub/") %>%
   filter(designation != "other") %>%
   pull(model)
 

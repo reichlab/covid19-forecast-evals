@@ -20,7 +20,6 @@ nrow(tmp)
 
 inc_scores <- read_csv("paper-inputs/inc-scores.csv") %>%
   filter(target %in% paste(1:4, "wk ahead inc death"),
-        model %in% inc_score_models,
         target_end_date_1wk_ahead >= first_1wk_target_end_date,
         target_end_date_1wk_ahead <= last_1wk_target_end_date) %>%
   mutate(model = factor(model, levels=model_levels, ordered = TRUE))
