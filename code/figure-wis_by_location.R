@@ -3,6 +3,9 @@ library(tidyverse)
 library(covidHubUtils)
 library(surveillance)
 
+
+source("code/load-global-analysis-dates.R")
+
 theme_set(theme_bw())
 data("hub_locations")
 
@@ -10,7 +13,8 @@ model_levels <- read_csv("paper-inputs/table-overall-performance.csv") %>%
   arrange(desc(relative_wis)) %>%
   pull(model)
 
-source("code/load-global-analysis-dates.R")
+end_date <- truth_date
+
 
 theme_set(theme_bw())
 data("hub_locations")
@@ -52,7 +56,7 @@ next_monday <- function(date){
 inc_scores$forecast_date <- next_monday(inc_scores$forecast_date)
 
 # select relevant columns:
-scores <- inc_scores %>% select("model", "forecast_date", "location", "location_name", "horizon", "abs_error", "wis")
+scores <- inc_scores %>% select("model", "forecast_date", "location", "location_name", "horizon", "abs_error", "wis") %>% droplevels()
 
 # the included models and locations:
 models <- unique(scores$model)
@@ -144,19 +148,29 @@ for(i in seq_along(locations)){
 }
 
 
-truth <- inc_scores %>%
-  filter(model == "COVIDhub-baseline") %>%
-  group_by(model, location_name) %>%  #aggregate by week of submission
-  summarise(sum_truth = sum(truth_value))  %>% ungroup() %>%
-  select(location_name, sum_truth)
+
+## plot of true data by state, tiled
+truth_dat <- load_truth(truth_source = "JHU",
+                        target_variable = "inc death") %>%
+  filter(geo_type == "state") %>%
+  filter(!is.na(value), target_end_date <= end_date) %>%
+  select(target_end_date, value, location_name, abbreviation) %>%
+  filter(location_name != "American Samoa" & location_name != "Northern Mariana Islands") %>%
+  mutate(location_name = reorder(location_name, X=value, FUN=function(x) max(x, na.rm=TRUE))) %>% 
+  select(location_name) %>%
+  unique() %>%
+  pull(location_name)
+
+
 
 average_by_loc <- average_by_loc %>%
-  left_join(truth) %>%
-  mutate(location_name = fct_reorder(location_name, sum_truth),
-        relative_wis = round(relative_wis,2),
-        log_relative_wis = log2(relative_wis)) %>%
-  filter(!is.na(relative_wis)) %>%
-  mutate(model = fct_relevel(model, model_levels))
+  filter(location_name != "American Samoa" & location_name != "Northern Mariana Islands") %>%
+  mutate(location_name = fct_relevel(location_name, levels(truth_dat)),
+         relative_wis = round(relative_wis,2),
+         log_relative_wis = log2(relative_wis),
+         model = fct_relevel(model, model_levels)) %>%
+  filter(!is.na(relative_wis)) 
+
 
 
 # plot:
