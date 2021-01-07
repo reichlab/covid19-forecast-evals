@@ -21,6 +21,20 @@ inc_scores <- read_csv("paper-inputs/inc-scores.csv") %>%
   filter(horizon %in% c(1:4)) %>%
   filter(forecast_date <= last_timezero4wk) 
 
+
+#Count number of weeks a model has submitted 
+models_to_highlight <- inc_scores %>%
+group_by(model, target_end_date_1wk_ahead, horizon) %>%
+  mutate(first_per_week = row_number() == 1) %>% ungroup() %>%
+  group_by(model) %>% 
+  mutate(n_weeks = sum(horizon == 4 & first_per_week)) %>% #count number of weeks that have a horizon of 4 (includes only core)
+  ungroup() %>%
+  mutate(highlight = ifelse(n_weeks > max(n_weeks - 5), "all", "missing5weeks")) %>%
+  select(model, highlight) %>% unique()
+
+models_missing_weeks <- models_to_highlight %>%
+  filter(highlight == "missing5weeks") %>% pull(model)
+
 ###################################################################################################
 # Calculate pairwise WIS
 
@@ -140,24 +154,27 @@ average_by_loc <- average_by_loc %>%
   left_join(truth) %>%
   mutate(location_name = fct_reorder(location_name, sum_truth),
         relative_wis = round(relative_wis,2),
-        log_relative_wis = log2(relative_wis),
-        model = fct_reorder(model, desc(relative_wis))) %>%
-  filter(!is.na(relative_wis)) 
+        log_relative_wis = log2(relative_wis)) %>%
+  filter(!is.na(relative_wis)) %>%
+  mutate(model = fct_relevel(model, model_levels))
 
 
 # plot:
 fig_wis_loc <- ggplot(average_by_loc, aes(x=model, y=location_name, 
                                           fill= scales::oob_squish(log_relative_wis, 
-                                                                   range = c(- 2, 2)))) +
+                                                                   range = c(- 2.584963, 2.584963)))) +
   geom_tile() +
-  geom_text(aes(label=round(relative_wis, 1)), size = 3) + # I adapted the rounding
-  scale_fill_gradient2(low = "navy", high = "red", midpoint = 0, na.value = "grey50", 
+  geom_text(aes(label=round(relative_wis, 1)), size = 2.5) + # I adapted the rounding
+  scale_fill_gradient2(low = "steelblue", high = "red", midpoint = 0, na.value = "grey50", 
                        name = "Relative WIS", 
                        breaks = c(-2,-1,0,1,2), 
-                       labels =c("\u2264  0.25", 0.5, 1, 2, "\u2265  4")) + 
+                       labels =c("0.25", 0.5, 1, 2, 4)) + 
   xlab(NULL) + ylab(NULL) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
-        axis.title.x = element_text(size = 9),
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 9, 
+                                   color=ifelse(
+                                     levels(average_by_loc$model) %in% models_missing_weeks,
+                                            "red", "black")),
+      axis.title.x = element_text(size = 9),
         axis.text.y = element_text(size = 9),
         title = element_text(size = 9))
 
@@ -169,8 +186,5 @@ dev.off()
 jpeg(file = "figures/fig-wis-location.jpg", width=8, height=8, units="in", res=300)
 print(fig_wis_loc)
 dev.off()
-
-
-
 
 
