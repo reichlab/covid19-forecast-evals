@@ -18,11 +18,11 @@ project_url <- the_projects[the_projects$name == "COVID-19 Forecasts", "url"]
 ## table to help organize and choose forecasts
 timezero_weeks <- tibble(
     ## every possible timezero
-    forecast_date = the_timezeros_eligibility, 
+    forecast_date = the_timezeros_inc, 
     ## the associated target_end_date for 1-week ahead targets
     target_end_date_1wk_ahead = as.Date(covidHubUtils::calc_target_week_end_date(forecast_date, horizon=1)))
 
-## lots of code here to determine eligible models based on elibility criteria
+##determine eligible models based on elibility criteria
 
 # 1. subset models to "primary" and "secondary" designated models
 primary_models <- models(zoltar_connection, project_url) %>%
@@ -72,12 +72,13 @@ model_completes <- tibble(model=character(), forecast_date=Date(), target_end_da
 
 for(this_model in date_eligible_models){
     
-    fcasts_to_query <- filter(date_filtered_models, model==this_model)
+    fcasts_to_query <- filter(date_filtered_models, model==as.factor(this_model))
     
     fcasts <- load_forecasts( 
         models = this_model, 
         forecast_dates = fcasts_to_query$forecast_date,
-        locations = hub_locations %>% filter(geo_type == "state") %>% pull(fips),
+        locations = hub_locations %>% filter(geo_type == "state") %>%
+        filter(location_name != "American Samoa" & location_name != "Northern Mariana Islands") %>% pull(fips),
         types = c("quantile"),
         targets = inc_targets
         ) %>%
