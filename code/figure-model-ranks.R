@@ -7,7 +7,8 @@ theme_set(theme_bw())
 data("hub_locations")
 
 inc_scores <- read_csv("paper-inputs/inc-scores.csv") %>%
-  filter(location_name != "American Samoa", target %in% paste(1:4, "wk ahead inc death")) %>%
+  filter(!(location_name %in%  c("American Samoa", "Northern Mariana Islands")), 
+    target %in% paste(1:4, "wk ahead inc death")) %>%
   mutate(id = paste(target_end_date_1wk_ahead, target, location_name)) %>%
   group_by(target_end_date_1wk_ahead, target, location_name) %>%
   mutate(n_models = n()) %>%
@@ -35,7 +36,8 @@ table(inc_scores$n_models)
 ## average rank
 inc_scores %>%
   group_by(model) %>%
-  summarize(average_rank = mean(model_rank), total_n = n(), n_top_rank = sum(model_rank==1), pct_top = n_top_rank/total_n*100)
+  summarize(average_rank = mean(model_rank), total_n = n(), n_top_rank = sum(model_rank==1), pct_top = n_top_rank/total_n*100) %>%
+  print(n=Inf)
 
 
 # ggplot(inc_scores, aes(y=id, x=model, fill=model_rank)) +

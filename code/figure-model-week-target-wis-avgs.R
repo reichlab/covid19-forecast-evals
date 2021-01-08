@@ -60,7 +60,7 @@ avg_wis_by_model <- inc_scores %>%
 avg_wis_by_model_target <- inc_scores %>%
     filter(!(location_name %in% locs_to_exclude)) %>%
     group_by(model, target) %>%
-    summarize(median_wis = median(wis), mean_wis = mean(wis, na.rm=TRUE))
+    summarize(nweeks = length(unique(target_end_date)), median_wis = median(wis), mean_wis = mean(wis, na.rm=TRUE))
 
 
 ## by model and week
@@ -220,6 +220,11 @@ avg_scores_byweek <- avg_wis_by_model_target_week %>%
   mutate(label = if_else(target_end_date_1wk_ahead  == max(target_end_date_1wk_ahead), model, factor(NA_character_, ordered = TRUE))) %>% ungroup()
 
 avg_scores_byweek$model <- factor(as.character(avg_scores_byweek$model))
+
+## 
+filter(avg_scores_byweek, target_end_date=="2020-12-05", nlocs==50) %>%
+  arrange(target, mean_wis) %>%
+  print(n=Inf)
 
 # old f4, saved for now
 # f4 <- ggplot(avg_scores_byweek, aes(x = target_end_date, y= relative_wis, color = model, group = model)) +
