@@ -34,9 +34,7 @@ models_to_highlight <- inc_scores %>%
   mutate(n_weeks = sum(horizon == 4 & first_per_week)) %>% #count number of weeks that have a horizon of 4 (includes only core)
   ungroup() %>%
   mutate(highlight = ifelse(n_weeks > max(n_weeks - 5), "all", "missing5weeks")) %>%
-  select(model, highlight) %>% unique()
-
-models_missing_weeks <- models_to_highlight %>%
+  select(model, highlight) %>% unique() %>%
   filter(highlight == "missing5weeks") %>% pull(model)
 
 ###################################################################################################
@@ -185,7 +183,7 @@ fig_wis_loc <- ggplot(average_by_loc_to_plot,
   xlab(NULL) + ylab(NULL) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 9, 
                                    color=ifelse(
-                                     levels(average_by_loc_to_plot$model) %in% models_missing_weeks,
+                                       levels(average_by_loc_to_plot$model) %in% models_to_highlight,
                                             "red", "black")),
       axis.title.x = element_text(size = 9),
       axis.text.y = element_text(size = 9),
