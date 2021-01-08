@@ -26,7 +26,6 @@ figures/model-target-week-wis-avgs.jpg: code/figure-model-week-target-wis-avgs.R
 	Rscript code/figure-model-week-target-wis-avgs.R
 
 figures/inc-loc-heatmap.jpg: code/figure-heatmap-locations.R code/load-global-analysis-dates.R paper-inputs/heatmap_data.csv
-
 	Rscript code/figure-heatmap-locations.R
 
 figures/long-range.jpg: code/figure-long-term-comparisons.R paper-inputs/inc-scores.csv 

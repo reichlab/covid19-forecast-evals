@@ -1,0 +1,25 @@
+,full comparison from Table 2 (9/28 weeks allowed missing),,,comparison from mid-July through mid-Dec (all models),,,comparison from mid-July through mid-Dec (only 3 weeks allowed missing),,,Data Sources
+model,n_forecasts.x,relative_wis.x,relative_abs_error.x,n_forecasts.y,relative_wis.y,relative_abs_error.y,n_forecasts,relative_wis,relative_abs_error,
+CMU-TimeSeries,68.72,0.76,0.78,98.93,0.80,0.82,98.93,0.81,0.82,
+Covid19Sim-Simulator,86.47,0.94,0.79,85.40,1.04,0.85,85.40,1.04,0.85,"C,H,D"
+COVIDhub-baseline,100.00,1.00,1.00,100.00,1.00,1.00,100.00,1.00,1.00,D
+COVIDhub-ensemble,89.82,0.63,0.70,100.00,0.65,0.72,100.00,0.66,0.72,none
+CU-select,83.04,1.00,1.08,100.00,0.94,1.01,100.00,0.92,0.99,"C,H,D,Dem,M"
+GT-DeepCOVID,84.63,0.83,0.90,90.72,0.84,0.90,90.72,0.84,0.89,"C,H,D,Dem,M"
+IHME-CurveFit,66.94,0.90,0.95,62.18,1.00,1.05,NA,NA,NA,"C,D"
+IowaStateLW-STEM,69.96,1.05,0.96,91.33,1.08,0.99,91.33,1.09,0.99,
+JHU_IDD-CovidSP,100.00,1.11,1.23,100.00,1.10,1.22,100.00,1.11,1.22,"C,D,Dem,M"
+Karlen-pypm,69.47,0.86,0.91,100.00,0.91,0.95,100.00,0.88,0.92,"H,C,D,Dem,M"
+LANL-GrowthRate,86.43,0.90,1.03,100.00,0.95,1.09,100.00,0.94,1.07,"C,D"
+MOBS-GLEAM_COVID,100.00,1.01,0.99,100.00,1.06,1.03,100.00,1.04,1.01,"C,D,Dem,M"
+NotreDame-mobility,83.04,1.42,1.25,100.00,1.51,1.30,100.00,1.52,1.29,"C,H,D,M"
+OliverWyman-Navigator,89.55,0.69,0.73,100.00,0.71,0.74,100.00,0.71,0.74,"C,D,dem"
+PSI-DRAFT,76.19,1.74,1.48,99.90,1.84,1.54,99.90,1.81,1.51,
+RobertWalraven-ESG,75.81,1.92,1.51,99.37,1.97,1.54,99.37,1.93,1.51,"C,D"
+UA-EpiCovDA,83.04,0.92,0.97,100.00,0.91,0.99,100.00,0.91,0.98,"C,D"
+UCLA-SuEIR,86.43,1.21,0.99,100.00,1.30,1.05,100.00,1.32,1.06,"C,H,D"
+UMass-MechBayes,100.00,0.67,0.73,100.00,0.69,0.75,100.00,0.69,0.74,"C,D"
+UMich-RidgeTfReg,58.26,1.50,1.35,83.86,1.57,1.40,83.86,1.55,1.37,
+USACE-ERDC_SEIR,78.80,2.46,1.96,79.25,3.01,2.35,NA,NA,NA,"C,D"
+UT-Mobility,89.84,1.41,1.43,85.38,1.64,1.66,85.38,1.60,1.61,"D,M"
+YYG-ParamSearch,71.17,0.65,0.68,58.50,0.65,0.69,NA,NA,NA,D

@@ -28,7 +28,7 @@ inc_scores <- read_csv("paper-inputs/inc-scores.csv") %>%
 
 #Count number of weeks a model has submitted 
 models_to_highlight <- inc_scores %>%
-group_by(model, target_end_date_1wk_ahead, horizon) %>%
+  group_by(model, target_end_date_1wk_ahead, horizon) %>%
   mutate(first_per_week = row_number() == 1) %>% ungroup() %>%
   group_by(model) %>% 
   mutate(n_weeks = sum(horizon == 4 & first_per_week)) %>% #count number of weeks that have a horizon of 4 (includes only core)
@@ -163,22 +163,21 @@ truth_dat <- load_truth(truth_source = "JHU",
 
 
 
-average_by_loc <- average_by_loc %>%
+average_by_loc_to_plot <- average_by_loc %>%
   filter(location_name != "American Samoa" & location_name != "Northern Mariana Islands") %>%
   mutate(location_name = fct_relevel(location_name, levels(truth_dat)),
-         relative_wis = round(relative_wis,2),
+         relative_wis_text = sprintf("%.1f", round(relative_wis, 1)),
          log_relative_wis = log2(relative_wis),
          model = fct_relevel(model, model_levels)) %>%
   filter(!is.na(relative_wis)) 
 
 
-
 # plot:
-fig_wis_loc <- ggplot(average_by_loc, aes(x=model, y=location_name, 
-                                          fill= scales::oob_squish(log_relative_wis, 
-                                                                   range = c(- 2.584963, 2.584963)))) +
+fig_wis_loc <- ggplot(average_by_loc_to_plot, 
+  aes(x=model, y=location_name, 
+    fill= scales::oob_squish(log_relative_wis, range = c(- 2.584963, 2.584963)))) +
   geom_tile() +
-  geom_text(aes(label=round(relative_wis, 1)), size = 2.5) + # I adapted the rounding
+  geom_text(aes(label = relative_wis_text), size = 2.5) + # I adapted the rounding
   scale_fill_gradient2(low = "steelblue", high = "red", midpoint = 0, na.value = "grey50", 
                        name = "Relative WIS", 
                        breaks = c(-2,-1,0,1,2), 
@@ -186,14 +185,14 @@ fig_wis_loc <- ggplot(average_by_loc, aes(x=model, y=location_name,
   xlab(NULL) + ylab(NULL) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 9, 
                                    color=ifelse(
-                                     levels(average_by_loc$model) %in% models_missing_weeks,
+                                     levels(average_by_loc_to_plot$model) %in% models_missing_weeks,
                                             "red", "black")),
       axis.title.x = element_text(size = 9),
-        axis.text.y = element_text(size = 9),
-        title = element_text(size = 9))
+      axis.text.y = element_text(size = 9),
+      title = element_text(size = 9))
 
 
-pdf(file = "figures/fig-wis-location.pdf",width=8, height=6)
+pdf(file = "figures/fig-wis-location.pdf",width=8, height=8)
 print(fig_wis_loc)
 dev.off()
 

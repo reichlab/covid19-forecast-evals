@@ -4,8 +4,10 @@ library(covidHubUtils)
 library(ggrepel)
 theme_set(theme_bw())
 
+source("code/load-global-analysis-dates.R")
+first_date_for_longterm_eval <- as.Date("2020-10-03")
 
-models <- c("COVIDhub-ensemble", "COVIDhub-baseline", "IHME-CurveFit","LANL-GrowthRate","YYG-ParamSearch", "Covid19Sim-Simulator", "UCLA-SuEIR", "USACE-ERDC_SEIR")
+models <- c("COVIDhub-ensemble", "COVIDhub-baseline", "IHME-CurveFit","LANL-GrowthRate", "Covid19Sim-Simulator", "UCLA-SuEIR", "USACE-ERDC_SEIR")
 locs_to_exclude <- c("United States", "American Samoa", "Guam", "Northern Mariana Islands", "Virgin Islands", "Puerto Rico", "District of Columbia")
 
 ## plots
@@ -24,7 +26,7 @@ f1 <- plot_forecast(longterm_dat,
   model = "IHME-CurveFit", 
   target_variable = "inc death", 
   intervals = c(.5, .95), 
-  title = "A: example long-term forecast from IHME", 
+  title = "A: example long-term forecast for the US from IHME", 
   subtitle = "none",
   show_caption=FALSE, 
   plot = FALSE) +
@@ -35,7 +37,9 @@ f1 <- plot_forecast(longterm_dat,
     legend.key.size = unit(0.15, "cm"),
     plot.margin = margin(10, 15, 10, 10),axis.ticks.length.x = unit(0.5, "cm"),
     axis.text.x = element_text(vjust = 7, hjust = -0.2)
-  )
+  ) +
+  geom_vline(xintercept = c(first_date_for_longterm_eval+3.5, last_1wk_target_end_date-3.5), 
+    linetype=2)
 
 # f2 <- plot_forecast(longterm_dat, truth_data = truth_dat, model = "YYG-ParamSearch", target_variable = "inc death", intervals = c(.5, .95), title = "none", show.caption=FALSE)
 # f3 <- plot_forecast(longterm_dat, truth_data = truth_dat, model = "LANL-GrowthRate", target_variable = "inc death", intervals = c(.5, .95), title = "none", show.caption=FALSE)
@@ -49,18 +53,36 @@ f1 <- plot_forecast(longterm_dat,
 ## score evaluation
 
 inc_scores <- read_csv("paper-inputs/inc-scores.csv") %>%
-  filter(model %in% models, forecast_date <= as.Date("2020-07-13"), !(location_name %in% locs_to_exclude)) %>%
+  filter(model %in% models, ## only include models that have been going long for a while
+    !(location_name %in% locs_to_exclude), ## only include states
+    !(model == "COVIDhub-baseline" & horizon>4), ## exclude 5+ horizons from baseline b/c they started late
+    target_end_date >= first_date_for_longterm_eval ## when long forecasts start coming due
+    ) %>%
   group_by(model, horizon) %>%
   mutate(nobs=n(), nlocs = length(unique(location_name)))
 
-mae_plot <- inc_scores %>%
+## useful for seeing which horizons available when
+# inc_scores %>%
+#   group_by(model, target_end_date) %>%
+#   summarize(max_horizon = max(horizon)) %>%
+#   ungroup() %>%
+#   mutate(model = reorder(model, max_horizon, FUN = max)) %>%
+#   ggplot(aes(x=factor(target_end_date), y=model, fill=max_horizon)) +
+#   geom_tile()
+
+
+avg_scores <- inc_scores %>%
   group_by(model, horizon) %>%
-  summarize(mean_wis = mean(wis), mae = mean(abs_error)) %>%
+  summarize(mean_wis = mean(wis), mae = mean(abs_error), nobs=n()) %>%
   ungroup() %>%
   group_by(model) %>%
-  mutate(label = if_else(horizon == max(horizon), model, NA_character_)) %>%
+  mutate(label = if_else(horizon == max(horizon), model, NA_character_))
   #ggplot(aes(x=horizon, y=mae, color=model)) +
-  ggplot(aes(x=horizon, y=mean_wis, color=model)) +
+
+avg_scores %>%
+  filter(model %in% c("IHME-CurveFit", "Covid19Sim-Simulator"), horizon %in% c(1,4,20))
+
+mae_plot <- ggplot(avg_scores, aes(x=horizon, y=mean_wis, color=model)) +
   geom_point() + geom_line() +
   scale_y_continuous(name = "Mean WIS") +
   scale_x_continuous(name = NULL) +
