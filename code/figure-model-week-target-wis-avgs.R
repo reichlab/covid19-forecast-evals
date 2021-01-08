@@ -30,6 +30,17 @@ locs_to_exclude <- c("United States", "American Samoa", "Guam", "Northern Marian
 
 
 
+#Count number of weeks a model has submitted 
+models_to_highlight <- inc_scores %>%
+  group_by(model, target_end_date_1wk_ahead, horizon) %>%
+  mutate(first_per_week = row_number() == 1) %>% ungroup() %>%
+  group_by(model) %>% 
+  mutate(n_weeks = sum(horizon == 4 & first_per_week)) %>% #count number of weeks that have a horizon of 4 (includes only core)
+  ungroup() %>%
+  mutate(highlight = ifelse(n_weeks > max(n_weeks - 5), "all", "missing5weeks")) %>%
+  select(model, highlight) %>% unique() %>%
+  filter(highlight == "missing5weeks") %>% pull(model)
+
 # ## figure: heat map of which models forecasted when
 # 
 # nforecasts_by_model_week <- inc_scores %>%
@@ -153,7 +164,10 @@ p <- ggplot(avg_wis_by_model_target_week, aes(x=model, y=mean_wis)) +
     ##geom_point(aes(color=obs_exp_locs, fill=target_end_date_1wk_ahead), shape=21, position=position_jitter(width=.2, height=0), alpha=.8) +
     geom_point(data=avg_wis_by_model_target, shape=4, color="#d95f02", size=2, stroke=1)+
     theme_bw() +
-    theme(axis.text.x = element_text(angle=45, vjust=1, hjust=1), legend.position = c(.75, .9), legend.direction = "horizontal", plot.margin = margin(10, 10, 20, 20)) +
+    theme(axis.text.x = element_text(angle=45, vjust=1, hjust=1,
+                                     color=ifelse(levels(avg_wis_by_model_target_week$model) %in% models_to_highlight,
+                                      "red", "black")), 
+          legend.position = c(.75, .9), legend.direction = "horizontal", plot.margin = margin(10, 10, 20, 20)) +
     facet_wrap(.~target) + #, scales="free_y") +
     ylab("Average WIS") + xlab(NULL) +
     expand_limits(y=0) +
@@ -180,8 +194,14 @@ p1 <- inc_scores %>%
     scale_y_log10() +
     theme_bw() +
     ylab("WIS (log scale)") + xlab(NULL) +
-    theme(axis.text.x = element_text(angle=45, vjust=1, hjust=1)) +
+    theme(axis.text.x = element_text(angle=45, vjust=1, hjust=1,
+          color=
+            ifelse(levels(inc_scores$model) %in% models_to_highlight,
+            "red", "black"))) +
     facet_wrap(.~target)
+
+
+
 
 pdf(file = "figures/overall-wis-boxplot.pdf", width=8, height=6)
 print(p1)
@@ -281,7 +301,7 @@ f4b <- ggplot(filter(avg_scores_byweek, target=="1 wk ahead inc death"), aes(x =
   ggtitle("B: Average 1-week ahead weighted interval scores by model") +
   theme(axis.ticks.length.x = unit(0.5, "cm"),
     axis.text.x = element_text(vjust = 7, hjust = -0.2))
-
+      
 
 f4c <- ggplot(filter(avg_scores_byweek, target=="4 wk ahead inc death"), aes(x = target_end_date, y = mean_wis)) +
   geom_line(aes(group = model), color="darkgray", alpha=.5) +
