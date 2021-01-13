@@ -71,31 +71,31 @@ sf1 <- ggplot(for_loc_figure, aes(y=model, x=sat_fcast_week, fill= num_units_eli
   geom_tile() +
   theme_bw() +
   geom_text(aes(label = num_units_eligible), size = 3.5) +
-  geom_rect(color="red",
+  geom_rect(color="#ED42FA",
             xmin= (first_1wk_target_end_date -7) - 3.5, #color of box, start date 3 days before actual date so rectangle covers entire box
             xmax= (last_4wk_target_end_date -7) + 3.5 ,
             ymax= unique(for_loc_figure$model_numeric[for_loc_figure$model == "JHU_IDD-CovidSP"]) + .5,
             ymin= unique(for_loc_figure$model_numeric[for_loc_figure$model == "IHME-CurveFit"]) - .5,  
             size = .75, fill=alpha("grey",0)) +
-  geom_rect(color="red",
+  geom_rect(color="#ED42FA",
             xmin= (first_1wk_target_end_date -7) - 3.5, #color of box, start date 3 days before actual date so rectangle covers entire box
             xmax= (last_4wk_target_end_date -7) + 3.5 ,
             ymax= unique(for_loc_figure$model_numeric[for_loc_figure$model == "UMich-RidgeTfReg"]) + .5,
             ymin= unique(for_loc_figure$model_numeric[for_loc_figure$model == "UMich-RidgeTfReg"]) - .5,
             size = .75, fill=alpha("grey",0)) +
-  geom_rect(color="blue",
+  geom_rect(color="#340EC3",
             xmin= (last_4wk_target_end_date) - 3.5, #color of box, start date 3 days before actual date so rectangle covers entire box
             xmax= (last_date_evaluated  -7) + 3.5 ,
             ymax= unique(for_loc_figure$model_numeric[for_loc_figure$model == "JHU_IDD-CovidSP"]) + .5,
             ymin= unique(for_loc_figure$model_numeric[for_loc_figure$model == "IHME-CurveFit"]) - .5,  
             size = .75, fill=alpha("grey",0)) +
-  geom_rect(color="blue",
+  geom_rect(color="#340EC3",
             xmin= (last_4wk_target_end_date) - 3.5, #color of box, start date 3 days before actual date so rectangle covers entire box
             xmax= (last_date_evaluated  -7) + 3.5 ,
             ymax= unique(for_loc_figure$model_numeric[for_loc_figure$model == "UMich-RidgeTfReg"]) + .5,
             ymin= unique(for_loc_figure$model_numeric[for_loc_figure$model == "UMich-RidgeTfReg"]) - .5,
             size = .75, fill=alpha("grey",0)) +
-  scale_fill_manual(name = " ", values = c( "lightgreen","lightgrey"),labels = c("Eligible","Ineligible" )) +
+  scale_fill_manual(name = " ", values = c( "#DDECDE","lightgrey"),labels = c("Eligible","Ineligible" )) +
   xlab("Saturday of Forecast Submission Week") + ylab(NULL) +
   scale_x_date(date_labels = "%Y-%m-%d", breaks = c(for_loc_figure$sat_fcast_week)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
