@@ -162,7 +162,7 @@ p <- ggplot(avg_wis_by_model_target_week, aes(x=model, y=mean_wis)) +
     geom_hline(data=baseline_avg, aes(yintercept=mean_wis), linetype=2)+
     geom_point(aes(color=obs_exp_locs), position=position_jitter(width=.2, height=0), alpha=.8) +
     ##geom_point(aes(color=obs_exp_locs, fill=target_end_date_1wk_ahead), shape=21, position=position_jitter(width=.2, height=0), alpha=.8) +
-    geom_point(data=avg_wis_by_model_target, shape=4, color="#d95f02", size=2, stroke=1)+
+    geom_point(data=avg_wis_by_model_target, shape=4, color="#DC3220", size=2, stroke=1)+
     theme_bw() +
     theme(axis.text.x = element_text(angle=45, vjust=1, hjust=1,
                                      color=ifelse(levels(avg_wis_by_model_target_week$model) %in% models_to_highlight,
@@ -171,7 +171,7 @@ p <- ggplot(avg_wis_by_model_target_week, aes(x=model, y=mean_wis)) +
     facet_wrap(.~target) + #, scales="free_y") +
     ylab("Average WIS") + xlab(NULL) +
     expand_limits(y=0) +
-    scale_color_manual(name="all locations predicted", values=c("#7570b3", "#1b9e77")) +
+    scale_color_manual(name="all locations predicted", values=c("#9C3689", "#A8D695")) +
     scale_fill_date(name="forecast date") +
     scale_y_continuous(breaks=seq(0, 400, by=50))
 
