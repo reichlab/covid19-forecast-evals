@@ -103,7 +103,8 @@ p2 <- ggplot(inc_scores, aes(y=model, x=rev_rank, fill = factor(stat(quantile)))
   scale_fill_viridis_d(name = "Quartiles") +
   scale_x_continuous(name="standardized rank", 
     #expand=expansion(add=c(2, 1)/max(inc_scores$n_models)), 
-    limits=c(0,1))    # for both axes to remove unneeded padding
+    limits=c(0,1)) +   # for both axes to remove unneeded padding +
+scale_y_discrete(labels=c("IHME-CurveFit" = "IHME-SEIR"))
   
 
 pdf(file = "figures/fig-model-ranks.pdf", width=8, height=5)
