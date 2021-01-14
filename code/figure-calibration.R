@@ -24,7 +24,8 @@ calibration_scores_inc <- inc_scores %>%
             percent_calib95 = mean(coverage_95, na.rm = T)) %>% 
   ungroup() %>%
   group_by(model) %>%
-  mutate(label = if_else(horizon == 4, model, NA_character_))
+  mutate(label = if_else(horizon == 4, model, NA_character_)) %>%
+  mutate(label = fct_recode(label,"IHME-SEIR" = "IHME-CurveFit"))
 
 calibration_scores_inc_table <- calibration_scores_inc %>%
     pivot_wider(names_from = target, values_from = c(percent_calib50, percent_calib95)) 

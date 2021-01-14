@@ -187,7 +187,8 @@ fig_wis_loc <- ggplot(average_by_loc_to_plot,
                                             "red", "black")),
       axis.title.x = element_text(size = 9),
       axis.text.y = element_text(size = 9),
-      title = element_text(size = 9))
+      title = element_text(size = 9)) +
+      scale_x_discrete(labels=c("IHME-CurveFit" = "IHME-SEIR"))
 
 
 pdf(file = "figures/fig-wis-location.pdf",width=8, height=8)
