@@ -1,5 +1,5 @@
 # make figures
-figures: figures/data-and-forecast.jpg figures/pi-coverage.jpg figures/model-target-week-wis-avgs.jpg figures/inc-loc-heatmap.jpg figures/long-range.jpg figures/fig-wis-location.jpg figures/fig-model-ranks.jpg
+figures: figures/data-and-forecast.jpg figures/pi-coverage.jpg figures/model-target-week-wis-avgs.jpg figures/inc-loc-heatmap.jpg figures/fig-by-horizon-week.jpg figures/fig-wis-location.jpg figures/fig-model-ranks.jpg
 
 # processes scores after updates to anomaly dates, eligibility changes or new scores
 paper-inputs/inc-scores.csv: paper-inputs/model-eligibility-inc.csv code/load-global-analysis-dates.R code/get_forecasts_covidhubutils.R
@@ -28,8 +28,8 @@ figures/model-target-week-wis-avgs.jpg: code/figure-model-week-target-wis-avgs.R
 figures/inc-loc-heatmap.jpg: code/figure-heatmap-locations.R code/load-global-analysis-dates.R paper-inputs/heatmap_data.csv
 	Rscript code/figure-heatmap-locations.R
 
-figures/long-range.jpg: code/figure-long-term-comparisons.R paper-inputs/inc-scores.csv 
-	Rscript code/figure-long-term-comparisons.R
+figures/fig-by-horizon-week.jpg: code/figure-horizon-comparison.R paper-inputs/inc-scores.csv code/load-global-analysis-dates.R
+	Rscript code/figure-horizon-comparison.R
 
 figures/data-and-forecast.jpg: code/figure-data-and-forecast.R code/load-global-analysis-dates.R
 	Rscript code/figure-data-and-forecast.R
