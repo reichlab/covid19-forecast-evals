@@ -102,7 +102,8 @@ sf1 <- ggplot(for_loc_figure, aes(y=model, x=sat_fcast_week, fill= num_units_eli
         axis.title.x = element_text(size = 9),
         axis.text.y = element_text(size = 9),
         title = element_text(size = 9)) +
-  guides( size = "none", color = "none", alpha = "none") 
+  guides( size = "none", color = "none", alpha = "none") +
+  scale_y_discrete(labels=c("IHME-CurveFit" = "IHME-SEIR"))
 
 # ggsave("../figures/inc_loc_heatmap.jpg", width=3, height=5)
 # ggsave("../figures/incidence_loc_heatmap.png", width=3, height=5)

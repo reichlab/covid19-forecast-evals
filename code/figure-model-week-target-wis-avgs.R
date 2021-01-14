@@ -173,7 +173,8 @@ p <- ggplot(avg_wis_by_model_target_week, aes(x=model, y=mean_wis)) +
     expand_limits(y=0) +
     scale_color_manual(name="all locations predicted", values=c("#9C3689", "#A8D695")) +
     scale_fill_date(name="forecast date") +
-    scale_y_continuous(breaks=seq(0, 400, by=50))
+    scale_y_continuous(breaks=seq(0, 400, by=50)) +
+    scale_x_discrete(labels=c("IHME-CurveFit" = "IHME-SEIR"))
 
 pdf(file = "figures/model-target-week-wis-avgs.pdf", width=8, height=6)
 print(p)
@@ -198,7 +199,8 @@ p1 <- inc_scores %>%
           color=
             ifelse(levels(inc_scores$model) %in% models_to_highlight,
             "red", "black"))) +
-    facet_wrap(.~target)
+    facet_wrap(.~target)  +
+  scale_x_discrete(labels=c("IHME-CurveFit" = "IHME-SEIR"))
 
 
 
