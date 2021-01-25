@@ -25,7 +25,15 @@ output:
   width: 100%;
   margin-top: 20px;
 }
+
+#TOC {
+  background: url("https://github.com/reichlab/covid19-forecast-hub-web/raw/master/images/forecast-hub-logo_DARKBLUE-20px-padding.png");
+  background-size: contain;
+  padding-top: 80px !important;
+  background-repeat: no-repeat;
+}
 </style>
+<!-- </style> -->
 
 ```{r setup, include=FALSE}
 #load libraries
@@ -295,21 +303,21 @@ case_calibration <- calib_table(score_case_leaderboard)
 
 ```{r relative wis case}
 #Calculate pairwise WIS
-# helper function
-next_monday <- function(date){
-  nm <- rep(NA, length(date))
-  for(i in seq_along(date)){
-    nm[i] <- date[i] + (0:6)[weekdays(date[i] + (0:6)) == "Monday"]
-  }
-  return(as.Date(nm, origin = "1970-01-01"))
-}
+# # helper function
+# next_monday <- function(date){
+#   nm <- rep(NA, length(date))
+#   for(i in seq_along(date)){
+#     nm[i] <- date[i] + (0:6)[weekdays(date[i] + (0:6)) == "Monday"]
+#   }
+#   return(as.Date(nm, origin = "1970-01-01"))
+# }
 
 inc_scores <- score_case_recent %>%
   filter(!is.na(score_value)) %>%
   filter(n_locations >= 25) %>% droplevels()
 
 # bring all timezeros to Monday:
-inc_scores$timezero <- next_monday(inc_scores$forecast_date) 
+inc_scores$timezero <- inc_scores$submission_sat
 
 # restrict to 1-4 wk ahead state-level 
 scores <- inc_scores %>% filter(horizon %in% paste(1:4),  location %in% the_locations) %>%
@@ -351,9 +359,9 @@ pairwise_comparison <- function(scores, mx, my, subset = rep(TRUE, nrow(scores))
   # compute ratio:
   
   # matrices to store:
-results_ratio <- results_pval <- results_pval_fcd <- matrix(ncol = length(models),
-                                                            nrow = length(models),
-                                                            dimnames = list(models, models))
+  results_ratio <- results_pval <- results_pval_fcd <- matrix(ncol = length(models),
+                                                              nrow = length(models),
+                                                              dimnames = list(models, models))
 
   ratio <- sum(sub$wis.x) / sum(sub$wis.y)
   # perform permutation tests:
@@ -387,14 +395,15 @@ set.seed(123) # set seed for permutation tests
 for(mx in seq_along(models)){
   for(my in 1:mx){
     pwc <- pairwise_comparison(scores = scores, mx = models[mx], my = models[my],
-                               permutation_test = TRUE)
+                               permutation_test = FALSE)
 
     results_ratio[mx, my] <- pwc$ratio
     results_ratio[my, mx] <- 1/pwc$ratio
-    results_pval[mx, my] <-
-      results_pval[my, mx] <- pwc$pval
-    results_pval_fcd[mx, my] <-
-      results_pval_fcd[my, mx] <- pwc$pval_fcd
+    ## commenting these out b/c no permutation test being run
+    #results_pval[mx, my] <-
+    #  results_pval[my, mx] <- pwc$pval
+    #results_pval_fcd[mx, my] <-
+    #  results_pval_fcd[my, mx] <- pwc$pval_fcd
   }
 }
 
@@ -443,7 +452,7 @@ pairabs_error_comparison <- function(scores, mx, my, subset = rep(TRUE, nrow(sco
   # compute ratio:
   
   # matrices to store:
-results_ratio <- results_pval <- results_pval_fcd <- matrix(ncol = length(models),
+  results_ratio <- results_pval <- results_pval_fcd <- matrix(ncol = length(models),
                                                             nrow = length(models),
                                                             dimnames = list(models, models))
 
@@ -478,14 +487,15 @@ set.seed(123) # set seed for permutation tests
 for(mx in seq_along(models)){
   for(my in 1:mx){
     pwc <- pairabs_error_comparison(scores = scores, mx = models[mx], my = models[my],
-                               permutation_test = TRUE)
+                               permutation_test = FALSE)
 
     results_ratio[mx, my] <- pwc$ratio
     results_ratio[my, mx] <- 1/pwc$ratio
-    results_pval[mx, my] <-
-      results_pval[my, mx] <- pwc$pval
-    results_pval_fcd[mx, my] <-
-      results_pval_fcd[my, mx] <- pwc$pval_fcd
+    ## commenting these out b/c no permutation test being run
+    #results_pval[mx, my] <-
+    #  results_pval[my, mx] <- pwc$pval
+    #results_pval_fcd[mx, my] <-
+    #  results_pval_fcd[my, mx] <- pwc$pval_fcd
   }
 }
 
@@ -514,7 +524,7 @@ inc_scores <- score_case_historical %>%
   droplevels()
 
 # bring all timezeros to Monday:
-inc_scores$timezero <- next_monday(inc_scores$forecast_date) 
+inc_scores$timezero <- inc_scores$submission_sat
 
 # restrict to 1-4 wk ahead state-level 
 scores <- inc_scores %>% filter(horizon %in% paste(1:4),  location %in% the_locations) %>%
@@ -538,14 +548,15 @@ set.seed(123) # set seed for permutation tests
 for(mx in seq_along(models)){
   for(my in 1:mx){
     pwc <- pairwise_comparison(scores = scores, mx = models[mx], my = models[my],
-                               permutation_test = TRUE)
+                               permutation_test = FALSE)
 
     results_ratio[mx, my] <- pwc$ratio
     results_ratio[my, mx] <- 1/pwc$ratio
-    results_pval[mx, my] <-
-      results_pval[my, mx] <- pwc$pval
-    results_pval_fcd[mx, my] <-
-      results_pval_fcd[my, mx] <- pwc$pval_fcd
+    ## commenting these out b/c no permutation test being run
+    # results_pval[mx, my] <-
+    #   results_pval[my, mx] <- pwc$pval
+    # results_pval_fcd[mx, my] <-
+    #   results_pval_fcd[my, mx] <- pwc$pval_fcd
   }
 }
 
@@ -578,14 +589,15 @@ set.seed(123) # set seed for permutation tests
 for(mx in seq_along(models)){
   for(my in 1:mx){
     pwc <- pairabs_error_comparison(scores = scores, mx = models[mx], my = models[my],
-                               permutation_test = TRUE)
+                               permutation_test = FALSE)
 
     results_ratio[mx, my] <- pwc$ratio
     results_ratio[my, mx] <- 1/pwc$ratio
-    results_pval[mx, my] <-
-      results_pval[my, mx] <- pwc$pval
-    results_pval_fcd[mx, my] <-
-      results_pval_fcd[my, mx] <- pwc$pval_fcd
+    ## commenting these out b/c no permutation test being run
+    # results_pval[mx, my] <-
+    #   results_pval[my, mx] <- pwc$pval
+    # results_pval_fcd[mx, my] <-
+    #   results_pval_fcd[my, mx] <- pwc$pval_fcd
   }
 }
 
@@ -841,7 +853,7 @@ inc_scores <- score_inc_recent %>%
   droplevels()
 
 # bring all timezeros to Monday:
-inc_scores$timezero <- next_monday(inc_scores$forecast_date) 
+inc_scores$timezero <- inc_scores$submission_sat
 
 # restrict to 1-4 wk ahead state-level 
 scores <- inc_scores %>% filter(horizon %in% paste(1:4),  location %in% the_locations) %>%
@@ -865,14 +877,15 @@ set.seed(123) # set seed for permutation tests
 for(mx in seq_along(models)){
   for(my in 1:mx){
     pwc <- pairwise_comparison(scores = scores, mx = models[mx], my = models[my],
-                               permutation_test = TRUE)
+                               permutation_test = FALSE)
 
     results_ratio[mx, my] <- pwc$ratio
     results_ratio[my, mx] <- 1/pwc$ratio
-    results_pval[mx, my] <-
-      results_pval[my, mx] <- pwc$pval
-    results_pval_fcd[mx, my] <-
-      results_pval_fcd[my, mx] <- pwc$pval_fcd
+    ## commenting these out b/c no permutation test being run
+    # results_pval[mx, my] <-
+    #   results_pval[my, mx] <- pwc$pval
+    # results_pval_fcd[mx, my] <-
+    #   results_pval_fcd[my, mx] <- pwc$pval_fcd
   }
 }
 
@@ -942,7 +955,7 @@ inc_scores <- score_inc_historical %>%
   droplevels()
 
 # bring all timezeros to Monday:
-inc_scores$timezero <- next_monday(inc_scores$forecast_date) 
+inc_scores$timezero <- inc_scores$submission_sat
 
 # restrict to 1-4 wk ahead state-level 
 scores <- inc_scores %>% filter(horizon %in% paste(1:4),  location %in% the_locations) %>%
@@ -966,14 +979,15 @@ set.seed(123) # set seed for permutation tests
 for(mx in seq_along(models)){
   for(my in 1:mx){
     pwc <- pairwise_comparison(scores = scores, mx = models[mx], my = models[my],
-                               permutation_test = TRUE)
+                               permutation_test = FALSE)
 
     results_ratio[mx, my] <- pwc$ratio
     results_ratio[my, mx] <- 1/pwc$ratio
-    results_pval[mx, my] <-
-      results_pval[my, mx] <- pwc$pval
-    results_pval_fcd[mx, my] <-
-      results_pval_fcd[my, mx] <- pwc$pval_fcd
+    ## commenting these out b/c no permutation test being run
+    # results_pval[mx, my] <-
+    #   results_pval[my, mx] <- pwc$pval
+    # results_pval_fcd[mx, my] <-
+    #   results_pval_fcd[my, mx] <- pwc$pval_fcd
   }
 }
 
@@ -1005,14 +1019,15 @@ set.seed(123) # set seed for permutation tests
 for(mx in seq_along(models)){
   for(my in 1:mx){
     pwc <- pairabs_error_comparison(scores = scores, mx = models[mx], my = models[my],
-                               permutation_test = TRUE)
+                               permutation_test = FALSE)
 
     results_ratio[mx, my] <- pwc$ratio
     results_ratio[my, mx] <- 1/pwc$ratio
-    results_pval[mx, my] <-
-      results_pval[my, mx] <- pwc$pval
-    results_pval_fcd[mx, my] <-
-      results_pval_fcd[my, mx] <- pwc$pval_fcd
+    ## commenting these out b/c no permutation test being run
+    # results_pval[mx, my] <-
+    #       results_pval[my, mx] <- pwc$pval
+    #     results_pval_fcd[mx, my] <-
+    #       results_pval_fcd[my, mx] <- pwc$pval_fcd
   }
 }
 
