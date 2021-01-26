@@ -1,6 +1,7 @@
 ---
-title: "Weekly Model Evaluations for State-Level COVID-19 Death Forecasts"
-author: "Chris Scott, Estee Y Cramer, Evan Ray, Jacob Bien, Jed Grabman, Johannes Bracher, Kate Harwood, Logan C Brooks, Nicholas G Reich" 
+title: "Weekly Model Evaluations for State-Level COVID-19 Forecasts"
+subtitle: "COVID-19 Forecast Hub and Delphi Group Forecast Evaluation Working Group"
+author: "(alphabetical order) Jacob Bien, Johannes Bracher, Logan C Brooks, Estee Y Cramer, Jed Grabman, Kate Harwood, Evan Ray, Nicholas G Reich, Chris Scott" 
 date: "`r format(Sys.time(), '%B %d, %Y')`"
 output:
   html_document:
@@ -14,11 +15,11 @@ output:
 
 <!-- Code for adding logo at the top -->
 
-<script>
-  $(document).ready(function() {
-    $('#TOC').parent().prepend('<div id=\"nav_logo\"><a href=\"https://covid19forecasthub.org/\" target=\"_blank\"><img src=\"https://github.com/reichlab/covid19-forecast-hub-web/raw/master/images/forecast-hub-logo_DARKBLUE.png\"></a></div>');
-  });
-</script>
+<!-- <script> -->
+<!--   $(document).ready(function() { -->
+<!--     $('#TOC').parent().prepend('<div id=\"nav_logo\"><a href=\"https://covid19forecasthub.org/\" target=\"_blank\"><img src=\"https://github.com/reichlab/covid19-forecast-hub-web/raw/master/images/forecast-hub-logo_DARKBLUE.png\"></a></div>'); -->
+<!--   }); -->
+<!-- </script> -->
 
 <style>
 #nav_logo {
