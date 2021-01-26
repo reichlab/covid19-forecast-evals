@@ -43,6 +43,7 @@ library(lubridate)
 #library(covidcast)
 #library(evalcast)
 library(RColorBrewer)
+library(DT)
 library(surveillance)
 library(htmltools)
 library(kableExtra)
@@ -292,7 +293,7 @@ In order to calculate each column in our table, different inclusion criteria wer
 
 * The next two columns highlight the calibration scores of models, at a 50% coverage and 95% coverage level respectively. Well calibrated models should have a 50% coverage level of 0.5 and a 95% coverage level of 0.95. The inclusion criteria for these columns is the same as for the first two columns. 
 
-* The following columns (5 and 8) calculate the following: (5) adjusted relative WIS over the most recent `r n_weeks_eval` week period, (6) adjusted relative WIS over the historical period beginning the first week in April, (7) adjusted relative MAE over the most recent period, and (8) adjusted relative MAE over a historical period. For inclusion in the 10 week WIS and MAE calculations, a model must have target_end_dates in more than 50% of evaluated weeks in the recent evaluation period. For inclusion in the historical WIS and MAE calculations, a model must have forecasts with target_end_dates in more than 50% of evaluated weeks in the Historical evaluation period,
+* The following columns (5 through 8) calculate the following: (5) adjusted relative WIS over the most recent `r n_weeks_eval` week period, (6) adjusted relative WIS over the historical period beginning the first week in April, (7) adjusted relative MAE over the most recent period, and (8) adjusted relative MAE over a historical period. For inclusion in the 10 week WIS and MAE calculations (Relative wis and Relative MAE), a model must have target_end_dates in more than 50% of evaluated weeks in the recent evaluation period. For inclusion in the historical WIS and MAE calculations, a model must have forecasts with target_end_dates in more than 50% of evaluated weeks in the historical evaluation period,
 
 * All adjusted relative WIS and adjusted relative MAE calculations in this table are calculated using a pairwise approach to account variation in the difficulty of forecasting different weeks and locations. Models with an adjusted relative WIS or MAE lower than 1 are more accurate than the baseline and models with an adjusted relative WIS greater than 1 are less accurate than the baseline is predicting the number of incident cases. The code for this comparison can be found [here](https://github.com/jbracher/pairwise_comparisons). A preprint on this method for calculating the WIS can be found [here](https://arxiv.org/pdf/2005.12881.pdf). 
 
@@ -626,10 +627,23 @@ leaderboard_table <- case_calibration %>%
   left_join(pairwise_scores) %>%
   left_join(historical_wis) %>%
   left_join(pairwise_scores_mae) %>%
-  left_join(historical_mae) %>%
-  arrange(relative_wis, na.last = FALSE)
+  left_join(historical_mae) 
 
-DT::datatable(leaderboard_table, colnames = c("", "Model", "n historical forecasts", "n forecasts in the last 10 wks", "50% Coverage", "95% Coverage", "Relative WIS", "Historical Relative WIS", "Relative MAE", "Historical Relative MAE"), options = list(pageLength = 10, na.last = TRUE), filter = c("top"))
+render <- JS(
+  "function(data, type, row) {",
+  "  if(type === 'sort' && data === null) {",
+  "    return 999999;",
+  "  }",
+  "  return data;",
+  "}"
+)
+
+ DT::datatable(leaderboard_table, colnames = c("", "Model", "n historical forecasts", "n forecasts in the last 10 wks", "50% Coverage", "95% Coverage", "Relative WIS", "Historical Relative WIS", "Relative MAE", "Historical Relative MAE"), 
+              options =  list(pageLength = 10, 
+                             autoWidth = TRUE,
+                             columnDefs = list(list(width = '200px', targets = "_all", render = render)), 
+                             ordering = TRUE),
+              filter = c("top"))
 ```
 
 
@@ -923,10 +937,10 @@ for(mx in seq_along(models)){
 
     results_ratio[mx, my] <- pwc$ratio
     results_ratio[my, mx] <- 1/pwc$ratio
-    results_pval[mx, my] <-
-      results_pval[my, mx] <- pwc$pval
-    results_pval_fcd[mx, my] <-
-      results_pval_fcd[my, mx] <- pwc$pval_fcd
+    # results_pval[mx, my] <-
+    #   results_pval[my, mx] <- pwc$pval
+    # results_pval_fcd[mx, my] <-
+    #   results_pval_fcd[my, mx] <- pwc$pval_fcd
   }
 }
 
@@ -1053,15 +1067,23 @@ historical_mae <- tab %>%
 
 
 ```{r}
+
 leaderboard_table <- inc_calibration %>%
   left_join(pairwise_scores) %>%
-  left_join(historical_wis) %>% 
+  left_join(historical_wis) %>%
   left_join(pairwise_scores_mae) %>%
-  left_join(historical_mae) %>%
-  arrange(relative_wis)
+  left_join(historical_mae) 
 
-DT::datatable(leaderboard_table, colnames = c("", "Model", "n historical forecasts", "n forecasts in the last 10 wks", "50% Coverage", "95% Coverage", "Relative WIS", "Historical Relative WIS", "Relative MAE", "Historical Relative MAE"), options = list(pageLength = 10, na.last = TRUE), filter = c("top"))
+
+ DT::datatable(leaderboard_table, colnames = c("", "Model", "n historical forecasts", "n forecasts in the last 10 wks", "50% Coverage", "95% Coverage", "Relative WIS", "Historical Relative WIS", "Relative MAE", "Historical Relative MAE"), 
+              options =  list(pageLength = 10, 
+                             autoWidth = TRUE,
+                             columnDefs = list(list(width = '200px', targets = "_all", render = render)), 
+                             ordering = TRUE),
+              filter = c("top"))
 ```
+
+
 
 
 
