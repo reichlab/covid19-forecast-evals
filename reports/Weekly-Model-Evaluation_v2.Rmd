@@ -121,15 +121,15 @@ load(file = "score_inc_all.rda")
 ```{r inclusion in leaderboard recent}
 #Filtered to include only models in scoreboard (number of obs and calibration)
 score_case_leaderboard <- score_case_all %>%
-  filter(n_weeks >= n_weeks_submitted |  n_weeks_3wksPrior >= 2) %>% #filter if missing more than half of forecasts or if missing more than 2 forecasts in the last 3 weeks 
-  filter(is.na(score_value)) ## remove NA scores for comparison to go through
-
-
+  ungroup() %>%
+  filter(n_weeks >= n_weeks_submitted |  n_weeks_3wksPrior >= 2) %>% 
+  filter(!is.na(score_value))
 
 #Filtered to include only models in scoreboard
 score_inc_leaderboard <- score_inc_all %>%
+   group_by(model, location, horizon, score_name) %>% #Add count of weeks
   filter(n_weeks >= n_weeks_submitted |  n_weeks_3wksPrior >= 2) %>% #filter if missing more than half of forecasts or if missing more than 2 forecasts in the last 3 weeks 
-  filter(is.na(score_value)) ## remove NA scores for comparison to go through
+  filter(!is.na(score_value)) %>% ungroup() ## remove NA scores for comparison to go through
 ```
 
 ```{r only 10 weeks back}
@@ -169,15 +169,15 @@ score_inc_historical <- score_inc_all %>%
 
 ```{r inclusion in relative recent calculations}
 #Filtered to include only models that have submitted a forecast in recent weeks and the recent forecasts
-score_case_recent <- score_case_10wks  %>% 
+score_case_recent <- score_case_10wks  %>%
   filter(n_weeks_10wksPrior >= max(n_weeks_10wksPrior)*0.5) %>%
-  filter(is.na(score_value)) %>% ## remove NA scores for comparison to go through
-  droplevels() 
+  filter(!is.na(score_value)) %>% ## remove NA scores for comparison to go through
+  droplevels()
 
-score_inc_recent <- score_inc_10wks %>% 
+score_inc_recent <- score_inc_10wks %>%
   filter(n_weeks_10wksPrior >= max(n_weeks_10wksPrior)*0.5) %>%
-  filter(is.na(score_value)) %>% ## remove NA scores for comparison to go through
-  droplevels() 
+  filter(!is.na(score_value)) %>% ## remove NA scores for comparison to go through
+  droplevels()
 ```
 
 
@@ -290,9 +290,11 @@ This figure shows the number of locations each model submitted a weekly incidenc
 
 The dates listed on the x-axis are the Saturday before the first horizon. This is the Saturday associated with the target submission week. If a model is submitted on Tuesday - Friday, the Saturday listed occurs after the submission. If the model is submitted on a Sunday or Monday, the Saturday occurs before the submission date. 
 
-The number of models who submitted forecasts for incident cases is `r n_unique_models_case`. The number of models that submitted forecasts for all `r n_weeks_eval` weeks was `r n_models_all_weeks`. The number of teams that submitted forecasts for all 57 locations was `r n_models_all_locations`.
+ The number of models that submitted forecasts for all `r n_weeks_eval` weeks was `r n_models_all_weeks`.
+
+
 ```{r,fig.width=20, fig.height=20}
-for_loc_figure_case <- score_case_10wks  %>%
+for_loc_figure_case <- score_inc_leaderboard   %>%
   filter(score_name == "wis") %>%
   filter(horizon == "1") %>%
   group_by(model, submission_sat) %>%
@@ -304,9 +306,6 @@ for_loc_figure_case <- score_case_10wks  %>%
 for_loc_figure_case$model <- reorder(for_loc_figure_case$model, for_loc_figure_case$n_weeks)
 
 plot_location(for_loc_figure_case)
-
-
-max(score_case_10wks$submission_sat)
 ```
 
 ## LeaderBoard Table
@@ -316,7 +315,7 @@ Each week, we generate a leaderboard table to assess the interval coverage, rela
 
 To calculate each column in our table, multiple  inclusion criteria were applied. 
 
-* The first column in the table lists all models that have contributed forecasts for 5 or more weeks total, or if it has submitted forecasts during at least 2 out of the last 3 evaluated weeks. This inclusion criteria was applied in order to score models that submitted for a substantial amount of weeks at any point during the pandemic but may no longer be submitting, but also to evaluate new teams that have recently joined our forecasting efforts. 
+* The first column in the table lists all models that have contributed forecasts for 5 or more weeks total, or models that have submitted forecasts during at least 2 out of the last 3 evaluated weeks. This inclusion criteria was applied in order to score models that submitted for a substantial amount of weeks at any point during the pandemic but may no longer be submitting, but also to evaluate new teams that have recently joined our forecasting efforts.
 
 * The next column lists the number of forecasts a team has submitted with a target end date over the most recent `r n_weeks_eval` week period.
 
@@ -361,7 +360,6 @@ scores <- inc_scores %>% filter(horizon %in% paste(1:4),  location %in% US_fips)
   pivot_wider(names_from = score_name, values_from = score_value) %>% 
   filter(!is.na(wis)) %>%
   droplevels()
-
 
 # the included models:
 models <- unique(scores$model)
@@ -687,10 +685,10 @@ render <- JS(
 )
 
 
-datatable(leaderboard_table, rownames= FALSE, colnames = c("Model", "n recent forecasts",  "Recent rel WIS",  "Recent rel MAE", "Recent 50% coverage", "Recent 95% coverage","n historical forecasts" , "Historical rel WIS", "Historical rel MAE"), 
+datatable(leaderboard_table, rownames= FALSE, colnames = c("Model", "n recent forecasts",  "Recent rel WIS",  "Recent rel MAE", "Recent 50% coverage", "Recent 95% coverage","n historical forecastz" , "Historical rel WIS", "Historical rel MAE"), 
               options =  list(pageLength = 10, 
                              autoWidth = TRUE,
-                             columnDefs = list(list(width = '200px', targets = "_all", render = render)), 
+                             columnDefs = list(list(width = '300px', targets = "_all", render = render)), 
                              ordering = TRUE),
               filter = c("top"))
 ```
@@ -840,6 +838,8 @@ ggplotly(by_week_wis_4wk, tooltip = c("label", "labelx", "labely"))
 ### Truth Data
 
 This plot shows the observed number of incident deaths over the evaluation period. 
+
+
 ```{r, fig.width=8, fig.height=7}
 truth_US_inc <- truth_dat_inc %>% filter(location == "US") 
 
@@ -867,11 +867,10 @@ n_models_all_weeks <- score_inc_10wks %>%
   pull(model) %>% unique() %>% length()
 ```
 
-In the `r n_weeks_eval` week evaluation period, the evaluated Saturdays are `r first_eval_sat` through `r last_eval_sat`.  models submitted incident death forecasts. The number of models who submitted forecasts for incident deaths is `r n_unique_models_inc`. The number of models that submitted forecasts for all `r n_weeks_eval` was `r n_models_all_weeks`. The number of teams that submitted forecasts for all locations was `r n_models_all_locations`.
-
-
 The figure below shows the number of locations that each model submitted incident death forecasts for during this evaluation period. The dates listed on the X axis are the Saturday before the first horizon. This is the Saturday associated with the target submission week. If a model is submitted on a Tuesday - Friday, the Saturday listed occurs after the submission. If the model is submitted on a Sunday or Monday, the Saturday occurs before the submission date. 
 
+
+ The number of models that submitted forecasts for all `r n_weeks_eval` weeks was `r n_models_all_weeks`.
 
 ```{r,fig.width=20, fig.height=20}
 for_loc_figure_inc <- score_inc_10wks %>%
@@ -893,7 +892,7 @@ plot_location(for_loc_figure_inc)
 
 In order to calculate each column in our table, different inclusion criteria were applied. 
 
-* The first column in the table lists all models that have contributed forecasts for 5 or more weeks total, or if it has submitted forecasts during at least 2 out of the last 3 evaluated weeks. This inclusion criteria was applied in order to score models that submitted for a substantial amount of weeks at any point during the pandemic but may no longer be submitting, but also to evaluate new teams that have recently joined our forecasting efforts. 
+* The first column in the table lists all models that have contributed forecasts for 5 or more weeks total, or models that have submitted forecasts during at least 2 out of the last 3 evaluated weeks. This inclusion criteria was applied in order to score models that submitted for a substantial amount of weeks at any point during the pandemic but may no longer be submitting, but also to evaluate new teams that have recently joined our forecasting efforts. 
 
 * The next column lists the number of forecasts a team has submitted with a target end date over the most recent `r n_weeks_eval` week period.
 
