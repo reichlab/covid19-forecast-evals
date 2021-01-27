@@ -103,7 +103,7 @@ forecasts_inc3 <- map_dfr(
 )
 
 forecasts_inc4 <- map_dfr(
-  mondays[31:41], function(the_weeks) {
+  mondays[31:length(mondays)], function(the_weeks) {
     load_latest_forecasts(
       last_forecast_date = the_weeks,
       forecast_date_window_size = 6,
