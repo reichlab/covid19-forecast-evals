@@ -131,21 +131,32 @@ score_inc_leaderboard <- score_inc_all %>%
 ```{r only 10 weeks back}
 score_case_10wks <- score_case_all %>%
   filter(target_end_date >= first_eval_sat) %>%
-  filter(!is.na(score_value))
+  group_by(model, score_name) %>% mutate(n_forecasts_wis = sum(score_name == "wis"),
+                                         n_forecasts_mae = sum(score_name == "abs_error")) %>% ungroup() %>%
+  filter(n_forecasts_wis >= (max(n_forecasts_wis)*0.5) | n_forecasts_mae >= (max(n_forecasts_mae)*0.5)) %>% 
+  filter(!is.na(score_value)) %>% droplevels()
 
 score_inc_10wks <- score_inc_all %>%
   filter(target_end_date >= first_eval_sat) %>%
-  filter(!is.na(score_value))
+  group_by(model, score_name) %>% mutate(n_forecasts_wis = sum(score_name == "wis"),
+                                         n_forecasts_mae = sum(score_name == "abs_error")) %>% ungroup() %>%
+  filter(n_forecasts_wis >= (max(n_forecasts_wis)*0.5) | n_forecasts_mae >= (max(n_forecasts_mae)*0.5)) %>% 
+  filter(!is.na(score_value)) %>% droplevels()
 ```
 
 ```{r inclusion in leaderboard historical}
 score_case_historical <- score_case_all %>%
-  filter(n_weeks > (max(n_weeks)*0.5)) %>% 
+  group_by(model, score_name) %>% mutate(n_forecasts_wis = sum(score_name == "wis"),
+                                         n_forecasts_mae = sum(score_name == "abs_error")) %>% ungroup() %>%
+  filter(n_forecasts_wis >= (max(n_forecasts_wis)*0.5) | n_forecasts_mae >= (max(n_forecasts_mae)*0.5)) %>% 
   filter(!is.na(score_value)) %>% droplevels()
 
 score_inc_historical <- score_inc_all %>%
-  filter(n_weeks > (max(n_weeks)*0.5)) %>% 
+  group_by(model, score_name) %>% mutate(n_forecasts_wis = sum(score_name == "wis"),
+                                         n_forecasts_mae = sum(score_name == "abs_error")) %>% ungroup() %>%
+  filter(n_forecasts_wis >= (max(n_forecasts_wis)*0.5) | n_forecasts_mae >= (max(n_forecasts_mae)*0.5)) %>% 
   filter(!is.na(score_value)) %>% droplevels()
+
 ```
 
 
@@ -300,13 +311,13 @@ To calculate each column in our table, multiple  inclusion criteria were applied
 
 * The next column lists the number of forecasts a team has submitted with a target end date over the most recent `r n_weeks_eval` week period.
 
-* Columns 3 and 4 calculate the adjusted relative WIS over the most recent `r n_weeks_eval` week period and the adjusted relative MAE over the most recent `r n_weeks_eval` week period. For inclusion in these rows, a model must have target_end_dates in 50% or more of the evalated weeks in the most recent evaluation period. 
+* Columns 3 and 4 calculate the adjusted relative WIS over the most recent `r n_weeks_eval` week period and the adjusted relative MAE over the most recent `r n_weeks_eval` week period. For inclusion in these rows, a model must have forecasts for 50% or more of the evaluated forecasts in the most recent evaluation period. 
 
 * Columns 5 and 6 show the calibration scores of recent models, at a 50% coverage and 95% coverage level respectively. Well calibrated models should have a 50% coverage level of 0.5 and a 95% coverage level of 0.95. The inclusion criteria for these columns is the same as for the first two columns. 
 
-* Column 7 shows the number of historical models a team has submitted. All teams that have submitted at least 5 forecasts and/or 2 forecasts out of the last 3 weeks is included in this count.  
+* Column 7 shows the number of historical models a team has submitted. 
 
-* Lastly, columns 8 and 9 show the adjusted WIS and adjusted MAE over a historical period beginning the first week in March. For inclusion in this figure, a model must have forecasts with target_end_dates in 50% or more of evaluated weeks in the historical evaluation period.
+* Lastly, columns 8 and 9 show the adjusted WIS and adjusted MAE over a historical period beginning the first week in March. For inclusion in this figure, a model must have predictions for 50% or more of the evaluated forecasts in the historical evaluation period.
 
 * All adjusted relative WIS and adjusted relative MAE calculations in this table are calculated using a pairwise approach to account variation in the difficulty of forecasting different weeks and locations. Models with an adjusted relative WIS or MAE lower than 1 are more accurate than the baseline and models with an adjusted relative WIS greater than 1 are less accurate than the baseline is predicting the number of incident cases. The code for this comparison can be found [here](https://github.com/jbracher/pairwise_comparisons). A preprint on this method for calculating the WIS can be found [here](https://arxiv.org/pdf/2005.12881.pdf). 
 
@@ -877,7 +888,7 @@ In order to calculate each column in our table, different inclusion criteria wer
 
 * The next column lists the number of forecasts a team has submitted with a target end date over the most recent `r n_weeks_eval` week period.
 
-* Columns 3 and 4 calculate the adjusted relative WIS over the most recent `r n_weeks_eval` week period and the adjusted relative MAE over the most recent `r n_weeks_eval` week period. For inclusion in these rows, a model must have target_end_dates in 50% or more of the evalated weeks in the most recent evaluation period. 
+* Columns 3 and 4 calculate the adjusted relative WIS over the most recent `r n_weeks_eval` week period and the adjusted relative MAE over the most recent `r n_weeks_eval` week period. For inclusion in these rows, a model must have forecasts for 50% or more of the evaluated forecasts in the most recent evaluation period. 
 
 * Columns 5 and 6 show the calibration scores of recent models, at a 50% coverage and 95% coverage level respectively. Well calibrated models should have a 50% coverage level of 0.5 and a 95% coverage level of 0.95. The inclusion criteria for these columns is the same as for the first two columns. 
 
