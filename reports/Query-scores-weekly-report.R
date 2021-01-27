@@ -141,7 +141,7 @@ mutate_scores <- function(x) {
     group_by(model, location, horizon, score_name) %>% #Add count of weeks
     mutate(n_weeks = n(),
            n_weeks_3wksPrior = sum(target_end_date >= (last_eval_sat - 3*7) & horizon == "1"),
-           n_weeks_10wksPrior =sum(target_end_date >= first_eval_sat) & horizon == "1") %>%
+           n_weeks_10wksPrior =sum(target_end_date >= first_eval_sat & horizon == "1")) %>%
     ungroup() %>%
     group_by(model, location, target_end_date, score_name) %>% #Add count of horizons
     mutate(n_horizons = n()) %>%
