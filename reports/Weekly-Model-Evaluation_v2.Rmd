@@ -30,7 +30,7 @@ output:
 #TOC {
   background: url("https://github.com/reichlab/covid19-forecast-hub-web/raw/master/images/forecast-hub-logo_DARKBLUE-20px-padding.png");
   background-size: contain;
-  padding-top: 80px !important;
+  padding-top: .8px !important;
   background-repeat: no-repeat;
 }
 </style>
@@ -57,7 +57,8 @@ data("hub_locations")
 ```
 
 ```{r prelim set values}
-the_locations <- hub_locations %>% filter(geo_type == "state") %>% pull(fips) #states, us and territories
+# the_locations <- hub_locations %>% filter(geo_type == "state") %>% 
+#   filter(abbreviation %in% datasets::state.abb) %>% pull(fips) #states, us and territories
 
 US_fips <- hub_locations %>%  filter(geo_type == "state") %>% filter(abbreviation %in% datasets::state.abb) %>% pull(fips) #only 50 states 
 
@@ -180,7 +181,7 @@ ggplot(data = dat, aes(x = target_end_date, y = value)) +
 #function to plot number of locations
 
 plot_location <- function(x){
-  ggplot(x, aes(y=model, x= submission_sat, fill=n_location)) + 
+  ggplot(x, aes(y=model, x= submission_sat, fill=n_location)) +
     geom_tile() +
     geom_text(aes(label=n_location), size = 7) +
   scale_fill_steps(low="white", high="blue", name = "Number of Locations") +
@@ -190,7 +191,7 @@ plot_location <- function(x){
          axis.title.x = element_text(size = 30),
          axis.text.y = element_text(size = 25),
          title = element_text(size = 20)) +
-    guides(fill=FALSE) 
+    guides(fill=FALSE)
 }
 ```
 
@@ -231,7 +232,7 @@ This report has been created as a collaborative effort between the COVID-19 Fore
 
 ### Truth data
 
-This figure shows the number of incident cases reported each week.  The period between the vertical lines shows the number of weeks for which models were evaluated. 
+This figure shows the number of incident cases reported each week. The period between the vertical lines shows the number of weeks for which models were evaluated. 
 
 ```{r, fig.width=8, fig.height=7}
 truth_US_case <- truth_dat_case %>%
@@ -265,7 +266,7 @@ n_models_all_weeks <- score_case_10wks  %>%
 ```
 
 
-This figure shows the number of locations each model submitted a weekly incidence case forecast for for the last 10 evaluated weeks. The maximum number of locations is 57, which includes all 50 states, a National level forecast, and 6 US territories. 
+This figure shows the number of locations each model submitted a weekly incidence case forecast for the last 10 evaluated weeks. The maximum number of locations is 57, which includes all 50 states, a National level forecast, and 6 US territories. 
 
 The dates listed on the x-axis are the Saturday before the first horizon. This is the Saturday associated with the target submission week. If a model is submitted on Tuesday - Friday, the Saturday listed occurs after the submission. If the model is submitted on a Sunday or Monday, the Saturday occurs before the submission date. 
 
@@ -283,21 +284,29 @@ for_loc_figure_case <- score_case_10wks  %>%
 for_loc_figure_case$model <- reorder(for_loc_figure_case$model, for_loc_figure_case$n_weeks)
 
 plot_location(for_loc_figure_case)
+
+
+max(score_case_10wks$submission_sat)
 ```
 
 ## LeaderBoard Table
 
 Each week, we generate a leaderboard table to assess the interval coverage, relative weighted interval scores (WIS), and relative mean average errors (MAE) of each model.
 
-A model is included in this table if it has submitted forecasts for 5 or more weeks total, or if it has submitted forecasts during at least 2 out of the last 3 evaluated weeks. This inclusion criteria was applied in order to score models that submitted for a substantial amount of weeks at any point during the pandemic but may no longer be submitting, but also to evaluate new teams that have recently joined our forecasting efforts. 
 
-In order to calculate each column in our table, different inclusion criteria were applied. 
+To calculate each column in our table, multiple  inclusion criteria were applied. 
 
-* The first column in the table counts the total number of observations a team has submitted. The second column counts the number of columns a team has submitted over the last 10 weeks. For inclusion in these rows, a model had to have been submitted for at least 5 weeks overall, or at least 2 out of the last 3 weeks. 
+* The first column in the table lists all models that have contributed forecasts for 5 or more weeks total, or if it has submitted forecasts during at least 2 out of the last 3 evaluated weeks. This inclusion criteria was applied in order to score models that submitted for a substantial amount of weeks at any point during the pandemic but may no longer be submitting, but also to evaluate new teams that have recently joined our forecasting efforts. 
 
-* The next two columns highlight the calibration scores of models, at a 50% coverage and 95% coverage level respectively. Well calibrated models should have a 50% coverage level of 0.5 and a 95% coverage level of 0.95. The inclusion criteria for these columns is the same as for the first two columns. 
+* The next column lists the number of forecasts a team has submitted with a target end date over the most recent `r n_weeks_eval` week period.
 
-* Columns 5 through 8 calculate the following: (5) adjusted relative WIS over the most recent `r n_weeks_eval` week period, (6) adjusted relative WIS over the historical period beginning the first week in April, (7) adjusted relative MAE over the most recent period, and (8) adjusted relative MAE over a historical period. For inclusion in the 10 week WIS and MAE calculations (Relative wis and Relative MAE), a model must have target_end_dates in more than 50% of evaluated weeks in the recent evaluation period. For inclusion in the historical WIS and MAE calculations, a model must have forecasts with target_end_dates in more than 50% of evaluated weeks in the historical evaluation period,
+* Columns 3 and 4 calculate the adjusted relative WIS over the most recent `r n_weeks_eval` week period and the adjusted relative MAE over the most recent `r n_weeks_eval` week period. For inclusion in these rows, a model must have target_end_dates in 50% or more of the evalated weeks in the most recent evaluation period. 
+
+*Columns 5 and 6 show the calibration scores of recent models, at a 50% coverage and 95% coverage level respectively. Well calibrated models should have a 50% coverage level of 0.5 and a 95% coverage level of 0.95. The inclusion criteria for these columns is the same as for the first two columns. 
+
+*Column 7 shows the number of historical models a team has submitted. All teams that have submitted at least 5 forecasts and/or 2 forecasts out of the last 3 weeks is included in this count.  
+
+*Lastly, columns 8 and 9 show the adjusted WIS and adjusted MAE over a historical period beginning the first week in March. For inclusion in this figure, a model must have forecasts with target_end_dates in 50% or more of evaluated weeks in the historical evaluation period.
 
 * All adjusted relative WIS and adjusted relative MAE calculations in this table are calculated using a pairwise approach to account variation in the difficulty of forecasting different weeks and locations. Models with an adjusted relative WIS or MAE lower than 1 are more accurate than the baseline and models with an adjusted relative WIS greater than 1 are less accurate than the baseline is predicting the number of incident cases. The code for this comparison can be found [here](https://github.com/jbracher/pairwise_comparisons). A preprint on this method for calculating the WIS can be found [here](https://arxiv.org/pdf/2005.12881.pdf). 
 
@@ -326,7 +335,7 @@ inc_scores <- score_case_recent %>%
 inc_scores$timezero <- inc_scores$submission_sat
 
 # restrict to 1-4 wk ahead state-level 
-scores <- inc_scores %>% filter(horizon %in% paste(1:4),  location %in% the_locations) %>%
+scores <- inc_scores %>% filter(horizon %in% paste(1:4),  location %in% US_fips) %>%
   select("model", "timezero", "location", "horizon", "score_name", "score_value") %>%
   filter(score_name %in% c("abs_error", "wis")) %>%
   pivot_wider(names_from = score_name, values_from = score_value) %>% 
@@ -432,7 +441,7 @@ pairwise_scores <- tab %>%
 ```
 
 ```{r relative mae case }
-scores <- inc_scores %>% filter(horizon %in% paste(1:4),  location %in% the_locations) %>%
+scores <- inc_scores %>% filter(horizon %in% paste(1:4),  location %in% US_fips) %>%
   select("model", "timezero", "location", "horizon", "score_name", "score_value") %>%
   filter(score_name %in% c("abs_error", "wis")) %>%
   pivot_wider(names_from = score_name, values_from = score_value) %>% 
@@ -541,7 +550,7 @@ inc_scores <- score_case_historical %>%
 inc_scores$timezero <- inc_scores$submission_sat
 
 # restrict to 1-4 wk ahead state-level 
-scores <- inc_scores %>% filter(horizon %in% paste(1:4),  location %in% the_locations) %>%
+scores <- inc_scores %>% filter(horizon %in% paste(1:4),  location %in% US_fips) %>%
   filter(!is.na(score_value)) %>%
   select("model", "timezero", "location", "horizon", "score_name", "score_value") %>%
   filter(score_name %in% c("abs_error", "wis")) %>%
@@ -592,7 +601,7 @@ historical_wis <- tab %>%
 ```
 
 ```{r}
-scores <- inc_scores %>% filter(horizon %in% paste(1:4),  location %in% the_locations) %>%
+scores <- inc_scores %>% filter(horizon %in% paste(1:4),  location %in% US_fips) %>%
   select("model", "timezero", "location", "horizon", "score_name", "score_value") %>%
   filter(score_name %in% c("abs_error", "wis")) %>%
   pivot_wider(names_from = score_name, values_from = score_value) %>% 
@@ -645,7 +654,8 @@ leaderboard_table <- case_calibration %>%
   left_join(pairwise_scores) %>%
   left_join(historical_wis) %>%
   left_join(pairwise_scores_mae) %>%
-  left_join(historical_mae) 
+  left_join(historical_mae) %>%
+  select(model, n_forecasts_recent, relative_wis, relative_mae,  mean_PI50, mean_PI95, n_forecasts_historical, relative_wis_historical, historical_relative_mae)
 
 render <- JS(
   "function(data, type, row) {",
@@ -656,7 +666,8 @@ render <- JS(
   "}"
 )
 
- DT::datatable(leaderboard_table, colnames = c("", "Model", "n historical forecasts", "n forecasts in the last 10 wks", "50% Coverage", "95% Coverage", "Relative WIS", "Historical Relative WIS", "Relative MAE", "Historical Relative MAE"), 
+
+datatable(leaderboard_table, rownames= FALSE, colnames = c("Model", "n recent forecasts",  "Recent rel WIS",  "Recent rel MAE", "Recent 50% coverage", "Recent 95% coverage","n historical forecasts" , "Historical rel WIS", "Historical rel MAE"), 
               options =  list(pageLength = 10, 
                              autoWidth = TRUE,
                              columnDefs = list(list(width = '200px', targets = "_all", render = render)), 
@@ -665,12 +676,11 @@ render <- JS(
 ```
 
 
-
 ## Evaluation by Week  {.tabset .tabset-fade}
 
-In the following figures, we have evaluated models across multiple forecasting weeks. Points included in this comparison are for models that have submitted forecasts for all 50 states and a national level probablistic forecast. 
+In the following figures, we have evaluated models across multiple forecasting weeks. Points included in this comparison are for models that have submitted probabalistic forecasts for all 50 states. 
 
-For the first 2 figures, WIS is used as a metric. The first figure shows the mean WIS across all locations for submission weeks beginning the first week in April at a 1 week horizon. The second figure shows the mean WIS aggregated across locations, however it is for a 4 week horizon.
+For the first 2 figures, WIS is used as a metric. The first figure shows the mean WIS across all 50 states for submission weeks beginning the first week in April at a 1 week horizon. The second figure shows the mean WIS aggregated across locations, however it is for a 4 week horizon.
 
 To view specific teams, double click on the team names in the legend. To view a value on the plot, click on the point in the forecast of interest.
 To view a specific time of interest, hightlight that section on the graph or use the zoom functionality. 
@@ -680,7 +690,7 @@ To view a specific time of interest, hightlight that section on the graph or use
 by_week_function <- function(df, var) {
   df %>%
   filter(score_name == var) %>%
-  filter(location %in% c(US_fips, "US")) %>%
+  filter(location %in% c(US_fips)) %>%
   group_by(model, target_end_date, horizon) %>%
   mutate(n_US_location = n()) %>%
   ungroup() %>%
@@ -709,6 +719,7 @@ plot_byweek_function <- function(df, var, horizon_num) {
 byweek_case <- by_week_function(score_case_all, var = "wis") %>% ungroup()
 by_week_wis_1wk <- plot_byweek_function(byweek_case, var = "wis", horizon_num = "1")
 ggplotly(by_week_wis_1wk, tooltip = c("label", "labelx", "labely"))
+
 ```
 
 ### 4 Week Horizon WIS
@@ -733,73 +744,73 @@ ggplotly(by_week_wis_4wk,tooltip = c("label", "labelx", "labely"))
 ```
 
 
-### 1 Week Horizon 80% Coverage
+### 1 Week Horizon 95% Coverage
 
-We would expect a well calibrated model to have a value of 80% in this plot. 
+We would expect a well calibrated model to have a value of 95% in this plot. 
 
 ```{r,fig.width=10, fig.height=6}
-byweek_case <- by_week_function(score_case_all, var = "coverage_80")
-by_week_wis_1wk <- plot_byweek_function(byweek_case, var = "coverage_80", horizon_num = "1") +
-  geom_hline(yintercept = 0.8)
+byweek_case <- by_week_function(score_case_all, var = "coverage_95")
+by_week_wis_1wk <- plot_byweek_function(byweek_case, var = "coverage_95", horizon_num = "1") +
+  geom_hline(yintercept = .95)
 ggplotly(by_week_wis_1wk,tooltip = c("label", "labelx", "labely"))
 ```
 
-### 4 Week Horizon 80% Coverage
+### 4 Week Horizon 95% Coverage
 
-We would expect a well calibrated model to have a value of 80% in this plot. There is typically larger variation in error for the 4 week horizon compared to the 1 week horizon. 
+We would expect a well calibrated model to have a value of 95% in this plot. There is typically larger variation in error for the 4 week horizon compared to the 1 week horizon. 
 
 ```{r,fig.width=10, fig.height=6}
-by_week_wis_4wk <- plot_byweek_function(byweek_case, var = "coverage_80", horizon_num = "4") +
-  geom_hline(yintercept = 0.8)
+by_week_wis_4wk <- plot_byweek_function(byweek_case, var = "coverage_95", horizon_num = "4") +
+  geom_hline(yintercept = .95)
 
 ggplotly(by_week_wis_4wk, tooltip = c("label", "labelx", "labely"))
 ```
 
 
-## Location Specific WIS
+<!-- ## Location Specific WIS -->
 
-The following figure shows the scores of models aggregated by horizon and submission week. In this figure, we only include models that have submitted forecasts for all 4 horizons and at least 50% of evaluated weeks, or at least 2 weeks out of the latest 3 weeks. 
+<!-- The following figure shows the scores of models aggregated by horizon and submission week. In this figure, we only include models that have submitted forecasts for all 4 horizons and at least 50% of evaluated weeks, or at least 2 weeks out of the latest 3 weeks.  -->
 
-The color scheme shows the WIS score relative to the baseline. The only locations evaluated are 50 states and a national level forecast. 
+<!-- The color scheme shows the WIS score relative to the baseline. The only locations evaluated are 50 states and a national level forecast.  -->
 
-```{r fig.height=10, fig.width= 11}
+<!-- ```{r fig.height=10, fig.width= 11} -->
 
-plot_avg_by_loc <- function(df) {
-  
-  average_by_loc <- score_case_10wks %>%
-  filter(horizon %in% c(1:4)) %>%
-  filter(score_name == "wis") %>%
-  filter(n_horizons == max(n_horizons),
-         n_weeks >= max(n_weeks)*0.5 | n_weeks_3wksPrior >= 2 ) %>%
-  group_by(model, location) %>%
-  summarise(avg_wis = round(mean(score_value),1)) %>%
-  group_by(location) %>%
-  mutate(relative_wis = avg_wis / avg_wis[model == "COVIDhub-baseline"]) %>%
-  ungroup() %>%
-  mutate(log_relative_wis = ifelse(relative_wis == 0, 0, log2(relative_wis)),
-    log_relative_wis = ifelse(log_relative_wis > 3, 3, log_relative_wis)) %>%
-    filter(!is.na(relative_wis)) %>% 
-  left_join(hub_locations %>% select(location = fips, abbreviation))
+<!-- plot_avg_by_loc <- function(df) { -->
 
-
-average_by_loc$model<- reorder(average_by_loc$model, -average_by_loc$log_relative_wis) #sort models by WIS for plot
-average_by_loc$abbreviation <- reorder(average_by_loc$abbreviation, average_by_loc$avg_wis)
-
-ggplot(average_by_loc, aes(x=model, y=abbreviation ,fill= log_relative_wis)) +
-  geom_tile() +
-  geom_text(aes(label=round(avg_wis)), size = 3) +
-  scale_fill_gradient2(low = "steelblue", high = "red", midpoint = 0, na.value = "grey50", name = "Relative WIS", 
-                       breaks = c(-2,-1,0,1,2), labels =c(0.25, 0.5, 1, 2, 4)) +
-  xlab("Scored Models") + ylab("Location") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
-      axis.title.x = element_text(size = 9),
-      axis.text.y = element_text(size = 9),
-      title = element_text(size = 9))
-}
+<!--   average_by_loc <- df %>% -->
+<!--   filter(horizon %in% c(1:4)) %>% -->
+<!--   filter(score_name == "wis") %>% -->
+<!--   filter(n_horizons == max(n_horizons), -->
+<!--          n_weeks >= max(n_weeks)*0.5 | n_weeks_3wksPrior >= 2 ) %>% -->
+<!--   group_by(model, location) %>% -->
+<!--   summarise(avg_wis = round(mean(score_value),1)) %>% -->
+<!--   group_by(location) %>% -->
+<!--   mutate(relative_wis = avg_wis / avg_wis[model == "COVIDhub-baseline"]) %>% -->
+<!--   ungroup() %>% -->
+<!--   mutate(log_relative_wis = ifelse(relative_wis == 0, 0, log2(relative_wis)), -->
+<!--     log_relative_wis = ifelse(log_relative_wis > 3, 3, log_relative_wis)) %>% -->
+<!--     filter(!is.na(relative_wis)) %>% -->
+<!--   left_join(hub_locations %>% select(location = fips, abbreviation)) -->
 
 
-plot_avg_by_loc(score_case_10wks)
-```
+<!-- average_by_loc$model<- reorder(average_by_loc$model, -average_by_loc$log_relative_wis) #sort models by WIS for plot -->
+<!-- average_by_loc$abbreviation <- reorder(average_by_loc$abbreviation, average_by_loc$avg_wis) -->
+
+<!-- ggplot(average_by_loc, aes(x=model, y=abbreviation ,fill= log_relative_wis)) + -->
+<!--   geom_tile() + -->
+<!--   geom_text(aes(label=round(avg_wis)), size = 3) + -->
+<!--   scale_fill_gradient2(low = "steelblue", high = "red", midpoint = 0, na.value = "grey50", name = "Relative WIS", -->
+<!--                        breaks = c(-2,-1,0,1,2), labels =c(0.25, 0.5, 1, 2, 4)) + -->
+<!--   xlab("Scored Models") + ylab("Location") + -->
+<!--   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10), -->
+<!--       axis.title.x = element_text(size = 9), -->
+<!--       axis.text.y = element_text(size = 9), -->
+<!--       title = element_text(size = 9)) -->
+<!-- } -->
+
+
+<!-- plot_avg_by_loc(score_case_10wks) -->
+<!-- ``` -->
 
 
 # Incident Deaths {.tabset .tabset-fade}
@@ -860,19 +871,22 @@ plot_location(for_loc_figure_inc)
 ## LeaderBoard Table
 
 
-Each week, we generate a leaderboard table to assess the interval coverage, relative weighted interval scores (WIS), and relative mean average errors (MAE) of each model.
-
-A model is included in this table if it has submitted forecasts for 5 or more weeks total, or if it has submitted forecasts during at least 2 out of the last 3 evaluated weeks. This inclusion criteria was applied in order to score models that submitted for a substantial amount of weeks at any point during the pandemic but may no longer be submitting, but also to evaluate new teams that have recently joined our forecasting efforts. 
-
 In order to calculate each column in our table, different inclusion criteria were applied. 
 
-* The first column in the table counts the total number of observations a team has submitted. The second column counts the number of columns a team has submitted over the last 10 weeks. For inclusion in these rows, a model had to have been submitted for at least 5 weeks overall, or at least 2 out of the last 3 weeks. 
+* The first column in the table lists all models that have contributed forecasts for 5 or more weeks total, or if it has submitted forecasts during at least 2 out of the last 3 evaluated weeks. This inclusion criteria was applied in order to score models that submitted for a substantial amount of weeks at any point during the pandemic but may no longer be submitting, but also to evaluate new teams that have recently joined our forecasting efforts. 
 
-* The next two columns highlight the calibration scores of models, at a 50% coverage and 95% coverage level respectively. Well calibrated models should have a 50% coverage level of 0.5 and a 95% coverage level of 0.95. The inclusion criteria for these columns is the same as for the first two columns. 
+* The next column lists the number of forecasts a team has submitted with a target end date over the most recent `r n_weeks_eval` week period.
 
-* Columns 5 through 8 calculate the following: (5) adjusted relative WIS over the most recent `r n_weeks_eval` week period, (6) adjusted relative WIS over the historical period beginning the first week in April, (7) adjusted relative MAE over the most recent period, and (8) adjusted relative MAE over a historical period. For inclusion in the 10 week WIS and MAE calculations, a model must have target_end_dates in more than 50% of evaluated weeks in the recent evaluation period. For inclusion in the historical WIS and MAE calculations, a model must have forecasts with target_end_dates in more than 50% of evaluated weeks in the Historical evaluation period,
+* Columns 3 and 4 calculate the adjusted relative WIS over the most recent `r n_weeks_eval` week period and the adjusted relative MAE over the most recent `r n_weeks_eval` week period. For inclusion in these rows, a model must have target_end_dates in 50% or more of the evalated weeks in the most recent evaluation period. 
+
+*Columns 5 and 6 show the calibration scores of recent models, at a 50% coverage and 95% coverage level respectively. Well calibrated models should have a 50% coverage level of 0.5 and a 95% coverage level of 0.95. The inclusion criteria for these columns is the same as for the first two columns. 
+
+*Column 7 shows the number of historical models a team has submitted. All teams that have submitted at least 5 forecasts and/or 2 forecasts out of the last 3 weeks is included in this count.  
+
+*Lastly, columns 8 and 9 show the adjusted WIS and adjusted MAE over a historical period beginning the first week in March. For inclusion in this figure, a model must have forecasts with target_end_dates in 50% or more of evaluated weeks in the historical evaluation period.
 
 * All adjusted relative WIS and adjusted relative MAE calculations in this table are calculated using a pairwise approach to account variation in the difficulty of forecasting different weeks and locations. Models with an adjusted relative WIS or MAE lower than 1 are more accurate than the baseline and models with an adjusted relative WIS greater than 1 are less accurate than the baseline is predicting the number of incident cases. The code for this comparison can be found [here](https://github.com/jbracher/pairwise_comparisons). A preprint on this method for calculating the WIS can be found [here](https://arxiv.org/pdf/2005.12881.pdf). 
+
 
 ```{r}
 #calibration table 
@@ -890,7 +904,7 @@ inc_scores <- score_inc_recent %>%
 inc_scores$timezero <- inc_scores$submission_sat
 
 # restrict to 1-4 wk ahead state-level 
-scores <- inc_scores %>% filter(horizon %in% paste(1:4),  location %in% the_locations) %>%
+scores <- inc_scores %>% filter(horizon %in% paste(1:4), location %in% US_fips) %>%
   filter(!is.na(score_value)) %>%
   select("model", "timezero", "location", "horizon", "score_name", "score_value") %>%
   filter(score_name %in% c("abs_error", "wis")) %>%
@@ -899,7 +913,6 @@ scores <- inc_scores %>% filter(horizon %in% paste(1:4),  location %in% the_loca
 
 # the included models:
 models <- unique(scores$model)
-
 
 # matrices to store:
 results_ratio <- results_pval <- results_pval_fcd <- matrix(ncol = length(models),
@@ -941,7 +954,7 @@ pairwise_scores <- tab %>%
 ```
 
 ```{r}
-scores <- inc_scores %>% filter(horizon %in% paste(1:4),  location %in% the_locations) %>%
+scores <- inc_scores %>% filter(horizon %in% paste(1:4),  location %in% US_fips) %>%
   select("model", "timezero", "location", "horizon", "score_name", "score_value") %>%
   filter(score_name %in% c("abs_error", "wis")) %>%
   pivot_wider(names_from = score_name, values_from = score_value) %>% 
@@ -999,10 +1012,10 @@ inc_scores <- score_inc_historical %>%
 inc_scores$timezero <- inc_scores$submission_sat
 
 # restrict to 1-4 wk ahead state-level 
-scores <- inc_scores %>% filter(horizon %in% paste(1:4),  location %in% the_locations) %>%
+scores <- inc_scores %>% filter(horizon %in% paste(1:4), location %in% US_fips) %>%
   filter(!is.na(score_value)) %>%
   select("model", "timezero", "location", "horizon", "score_name", "score_value") %>%
-  filter(score_name %in% c("abs_error", "wis")) %>%
+  filter(score_name %in% c("abs_error", "wis")) %>% 
   pivot_wider(names_from = score_name, values_from = score_value) %>% filter(!is.na(wis))
 
 # the included models:
@@ -1058,7 +1071,7 @@ inc_scores <- score_inc_historical %>%
 inc_scores$timezero <- inc_scores$submission_sat
 
 # restrict to 1-4 wk ahead state-level 
-scores <- inc_scores %>% filter(horizon %in% paste(1:4),  location %in% the_locations) %>%
+scores <- inc_scores %>% filter(horizon %in% paste(1:4),  location %in% US_fips) %>%
   filter(!is.na(score_value)) %>%
   select("model", "timezero", "location", "horizon", "score_name", "score_value") %>%
   filter(score_name %in% c("abs_error", "wis")) %>%
@@ -1112,18 +1125,18 @@ historical_mae <- tab %>%
 
 
 ```{r}
-
 leaderboard_table <- inc_calibration %>%
   left_join(pairwise_scores) %>%
   left_join(historical_wis) %>%
   left_join(pairwise_scores_mae) %>%
-  left_join(historical_mae) 
+  left_join(historical_mae) %>%
+  select(model, n_forecasts_recent, relative_wis, relative_mae,  mean_PI50, mean_PI95, n_forecasts_historical, relative_wis_historical, historical_relative_mae)
 
 
- DT::datatable(leaderboard_table, colnames = c("", "Model", "n historical forecasts", "n forecasts in the last 10 wks", "50% Coverage", "95% Coverage", "Relative WIS", "Historical Relative WIS", "Relative MAE", "Historical Relative MAE"), 
+datatable(leaderboard_table, rownames= FALSE, colnames = c("Model", "n recent forecasts",  "Recent rel WIS",  "Recent rel MAE", "Recent 50% coverage", "Recent 95% coverage","n historical forecasts" , "Historical rel WIS", "Historical rel MAE"), 
               options =  list(pageLength = 10, 
                              autoWidth = TRUE,
-                             columnDefs = list(list(width = '200px', targets = "_all", render = render)), 
+                             columnDefs = list(list(width = '300px', targets = "_all", render = render)), 
                              ordering = TRUE),
               filter = c("top"))
 ```
@@ -1146,7 +1159,7 @@ To view specific teams, double click on the team names in the legend. To view a 
 ```{r,fig.width=10, fig.height=6}
 byweek_inc <- by_week_function(score_inc_all, var = "wis")
 by_week_wis_1wk <- plot_byweek_function(byweek_inc, var = "wis", horizon_num = "1") +
-  geom_hline(yintercept = 0.8)
+  geom_hline(yintercept = .95)
 ggplotly(by_week_wis_1wk, tooltip = c("label", "labelx", "labely"))
 ```
 
@@ -1172,31 +1185,31 @@ ggplotly(by_week_wis_4wk,tooltip = c("label", "labelx", "labely"))
 ```
 
 
-### 1 Week Horizon 80% Coverage
+### 1 Week Horizon 95% Coverage
 
-The black line represents 80% 
+The black line represents 95% 
 ```{r,fig.width=10, fig.height=6}
-byweek_inc <- by_week_function(score_inc_all, var = "coverage_80")
-by_week_wis_1wk <- plot_byweek_function(byweek_inc, var = "coverage_80", horizon_num = "1") +
-  geom_hline(yintercept = 0.8)
+byweek_inc <- by_week_function(score_inc_all, var = "coverage_95")
+by_week_wis_1wk <- plot_byweek_function(byweek_inc, var = "coverage_95", horizon_num = "1") +
+  geom_hline(yintercept = .95)
 ggplotly(by_week_wis_1wk, tooltip = c("label", "labelx", "labely"))
 ```
 
-### 4 Week Horizon 80% Coverage
+### 4 Week Horizon 95% Coverage
 
-The black line represents 80% 
+The black line represents 95% 
 ```{r,fig.width=10, fig.height=6}
-by_week_wis_4wk <- plot_byweek_function(byweek_inc, var = "coverage_80", horizon_num = "4") +
-  geom_hline(yintercept = 0.8)
+by_week_wis_4wk <- plot_byweek_function(byweek_inc, var = "coverage_95", horizon_num = "4") +
+  geom_hline(yintercept = .95)
 
 ggplotly(by_week_wis_4wk, tooltip = c("label", "labelx", "labely"))
 ```
 
 
-## Location Specific WIS
-Finally, we have evaluated which locations teams had the lowest WIS scores for. In this figure, models were included if they submitted forecasts for all submission weeks and all horizons. The WIS scores stratified by location are included in each box. The color scheme shows the WIS score relative to the baseline. 
-```{r fig.height=10, fig.width= 11}
-plot_avg_by_loc(score_inc_10wks)
-```
+<!-- ## Location Specific WIS -->
+<!-- Finally, we have evaluated which locations teams had the lowest WIS scores for. In this figure, models were included if they submitted forecasts for all submission weeks and all horizons. The WIS scores stratified by location are included in each box. The color scheme shows the WIS score relative to the baseline.  -->
+<!-- ```{r fig.height=10, fig.width= 11} -->
+<!-- plot_avg_by_loc(score_inc_10wks) -->
+<!-- ``` -->
 
 
