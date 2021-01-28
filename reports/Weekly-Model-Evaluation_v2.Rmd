@@ -121,20 +121,26 @@ load(file = "score_inc_all.rda")
 ```{r inclusion in leaderboard recent}
 #Filtered to include only models in scoreboard (number of obs and calibration)
 score_case_leaderboard <- score_case_all %>%
-  ungroup() %>%
   filter(n_weeks >= n_weeks_submitted |  n_weeks_3wksPrior >= 2) %>% 
-  filter(!is.na(score_value))
+  filter(!is.na(score_value)) %>%
+  filter(!model %in% c("CU-scenario_high","CU-scenario_mid","CU-scenario_low","CU-nochange"))
 
 #Filtered to include only models in scoreboard
 score_inc_leaderboard <- score_inc_all %>%
-   group_by(model, location, horizon, score_name) %>% #Add count of weeks
   filter(n_weeks >= n_weeks_submitted |  n_weeks_3wksPrior >= 2) %>% #filter if missing more than half of forecasts or if missing more than 2 forecasts in the last 3 weeks 
-  filter(!is.na(score_value)) %>% ungroup() ## remove NA scores for comparison to go through
+  filter(!is.na(score_value)) %>%
+  filter(!model %in% c("CU-scenario_high","CU-scenario_mid","CU-scenario_low","CU-nochange"))
 ```
 
 ```{r only 10 weeks back}
 score_case_10wks <- score_case_all %>%
-  filter(target_end_date >= first_eval_sat) 
+  filter(target_end_date >= first_eval_sat) %>%
+  group_by(model, score_name) %>% mutate(n_forecasts_wis = sum(score_name == "wis"),
+                                         n_forecasts_mae = sum(score_name == "abs_error")) %>% ungroup() %>%
+  filter(n_forecasts_wis >= (max(n_forecasts_wis)*0.5) | n_forecasts_mae >= (max(n_forecasts_mae)*0.5)) %>% 
+  filter(!is.na(score_value)) %>% 
+  filter(!model %in% c("CU-scenario_high","CU-scenario_mid","CU-scenario_low","CU-nochange")) %>%
+  droplevels()
 
 
 score_inc_10wks <- score_inc_all %>%
@@ -142,24 +148,22 @@ score_inc_10wks <- score_inc_all %>%
   group_by(model, score_name) %>% mutate(n_forecasts_wis = sum(score_name == "wis"),
                                          n_forecasts_mae = sum(score_name == "abs_error")) %>% ungroup() %>%
   filter(n_forecasts_wis >= (max(n_forecasts_wis)*0.5) | n_forecasts_mae >= (max(n_forecasts_mae)*0.5)) %>% 
-  filter(!is.na(score_value)) %>% droplevels()
+  filter(!is.na(score_value)) %>% 
+  filter(!model %in% c("CU-scenario_high","CU-scenario_mid","CU-scenario_low","CU-nochange")) %>%
+  droplevels()
 
-score_inc_10wks <- score_inc_all %>%
-  filter(target_end_date >= first_eval_sat) %>%
-  group_by(model, score_name) %>% mutate(n_forecasts_wis = sum(score_name == "wis"),
-                                         n_forecasts_mae = sum(score_name == "abs_error")) %>% ungroup() %>%
-  filter(n_forecasts_wis >= (max(n_forecasts_wis)*0.5) | n_forecasts_mae >= (max(n_forecasts_mae)*0.5)) %>% 
-  filter(!is.na(score_value)) %>% droplevels()
 ```
 
 ```{r inclusion in leaderboard historical}
 score_case_historical <- score_case_all %>%
+  filter(!model %in% c("CU-scenario_high","CU-scenario_mid","CU-scenario_low","CU-nochange")) %>%
   group_by(model, score_name) %>% mutate(n_forecasts_wis = sum(score_name == "wis"),
                                          n_forecasts_mae = sum(score_name == "abs_error")) %>% ungroup() %>%
   filter(n_forecasts_wis >= (max(n_forecasts_wis)*0.5) | n_forecasts_mae >= (max(n_forecasts_mae)*0.5)) %>% 
   filter(!is.na(score_value)) %>% droplevels()
 
 score_inc_historical <- score_inc_all %>%
+  filter(!model %in% c("CU-scenario_high","CU-scenario_mid","CU-scenario_low","CU-nochange")) %>%
   group_by(model, score_name) %>% mutate(n_forecasts_wis = sum(score_name == "wis"),
                                          n_forecasts_mae = sum(score_name == "abs_error")) %>% ungroup() %>%
   filter(n_forecasts_wis >= (max(n_forecasts_wis)*0.5) | n_forecasts_mae >= (max(n_forecasts_mae)*0.5)) %>% 
@@ -169,15 +173,15 @@ score_inc_historical <- score_inc_all %>%
 
 ```{r inclusion in relative recent calculations}
 #Filtered to include only models that have submitted a forecast in recent weeks and the recent forecasts
-score_case_recent <- score_case_10wks  %>%
-  filter(n_weeks_10wksPrior >= max(n_weeks_10wksPrior)*0.5) %>%
-  filter(!is.na(score_value)) %>% ## remove NA scores for comparison to go through
-  droplevels()
-
-score_inc_recent <- score_inc_10wks %>%
-  filter(n_weeks_10wksPrior >= max(n_weeks_10wksPrior)*0.5) %>%
-  filter(!is.na(score_value)) %>% ## remove NA scores for comparison to go through
-  droplevels()
+# score_case_recent <- score_case_10wks  %>%
+#   filter(n_weeks_10wksPrior >= max(n_weeks_10wksPrior)*0.5) %>%
+#   filter(!is.na(score_value)) %>% ## remove NA scores for comparison to go through
+#   droplevels()
+# 
+# score_inc_recent <- score_inc_10wks %>%
+#   filter(n_weeks_10wksPrior >= max(n_weeks_10wksPrior)*0.5) %>%
+#   filter(!is.na(score_value)) %>% ## remove NA scores for comparison to go through
+#   droplevels()
 ```
 
 
@@ -297,6 +301,7 @@ The dates listed on the x-axis are the Saturday before the first horizon. This i
 for_loc_figure_case <- score_inc_leaderboard   %>%
   filter(score_name == "wis") %>%
   filter(horizon == "1") %>%
+  filter(submission_sat >= first_submission_date) %>%
   group_by(model, submission_sat) %>%
   summarise(n_location = n()) %>%
   ungroup() %>%
@@ -346,7 +351,7 @@ case_calibration <- calib_table(score_case_leaderboard)
 #   return(as.Date(nm, origin = "1970-01-01"))
 # }
 
-inc_scores <- score_case_recent %>%
+inc_scores <- score_case_10wks %>%
   filter(!is.na(score_value)) %>%
   filter(n_locations >= 25) %>% droplevels()
 
@@ -685,7 +690,7 @@ render <- JS(
 )
 
 
-datatable(leaderboard_table, rownames= FALSE, colnames = c("Model", "n recent forecasts",  "Recent rel WIS",  "Recent rel MAE", "Recent 50% coverage", "Recent 95% coverage","n historical forecastz" , "Historical rel WIS", "Historical rel MAE"), 
+datatable(leaderboard_table, rownames= FALSE, colnames = c("Model", "n recent forecasts",  "Recent rel WIS",  "Recent rel MAE", "Recent 50% coverage", "Recent 95% coverage","n historical forecasts" , "Historical rel WIS", "Historical rel MAE"), 
               options =  list(pageLength = 10, 
                              autoWidth = TRUE,
                              columnDefs = list(list(width = '300px', targets = "_all", render = render)), 
@@ -914,7 +919,7 @@ inc_calibration <- calib_table(score_inc_leaderboard)
 
 
 ```{r}
-inc_scores <- score_inc_recent %>%
+inc_scores <- score_inc_10wks %>%
   filter(n_locations >= 25) %>%
   filter(n_weeks >= 4) %>%
   droplevels()
