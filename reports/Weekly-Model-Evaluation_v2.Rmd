@@ -30,7 +30,7 @@ output:
 #TOC {
   background: url("https://github.com/reichlab/covid19-forecast-hub-web/raw/master/images/forecast-hub-logo_DARKBLUE-20px-padding.png");
   background-size: contain;
-  padding-top: .8px !important;
+  padding-top: 80px !important;
   background-repeat: no-repeat;
 }
 </style>
@@ -121,55 +121,67 @@ load(file = "score_inc_all.rda")
 ```{r inclusion in leaderboard recent}
 #Filtered to include only models in scoreboard (number of obs and calibration)
 score_case_leaderboard <- score_case_all %>%
-  filter(n_weeks >= n_weeks_submitted |  n_weeks_3wksPrior >= 2) %>% #filter if missing more than half of forecasts or if missing more than 2 forecasts in the last 3 weeks 
-  filter(is.na(score_value)) ## remove NA scores for comparison to go through
-
-
+  filter(n_weeks >= n_weeks_submitted |  n_weeks_3wksPrior >= 2) %>% 
+  filter(!is.na(score_value)) %>%
+  filter(!model %in% c("CU-scenario_high","CU-scenario_mid","CU-scenario_low","CU-nochange"))
 
 #Filtered to include only models in scoreboard
 score_inc_leaderboard <- score_inc_all %>%
   filter(n_weeks >= n_weeks_submitted |  n_weeks_3wksPrior >= 2) %>% #filter if missing more than half of forecasts or if missing more than 2 forecasts in the last 3 weeks 
-  filter(is.na(score_value)) ## remove NA scores for comparison to go through
+  filter(!is.na(score_value)) %>%
+  filter(!model %in% c("CU-scenario_high","CU-scenario_mid","CU-scenario_low","CU-nochange"))
 ```
 
 ```{r only 10 weeks back}
 score_case_10wks <- score_case_all %>%
-  filter(target_end_date >= first_eval_sat) 
+  filter(target_end_date >= first_eval_sat) %>%
+  group_by(model, score_name) %>% mutate(n_forecasts_wis = sum(score_name == "wis"),
+                                         n_forecasts_mae = sum(score_name == "abs_error")) %>% ungroup() %>%
+  filter(n_forecasts_wis >= (max(n_forecasts_wis)*0.5) | n_forecasts_mae >= (max(n_forecasts_mae)*0.5)) %>% 
+  filter(!is.na(score_value)) %>% 
+  filter(!model %in% c("CU-scenario_high","CU-scenario_mid","CU-scenario_low","CU-nochange")) %>%
+  droplevels()
 
 
 score_inc_10wks <- score_inc_all %>%
   filter(target_end_date >= first_eval_sat) %>%
-  filter(!is.na(score_value))
+  group_by(model, score_name) %>% mutate(n_forecasts_wis = sum(score_name == "wis"),
+                                         n_forecasts_mae = sum(score_name == "abs_error")) %>% ungroup() %>%
+  filter(n_forecasts_wis >= (max(n_forecasts_wis)*0.5) | n_forecasts_mae >= (max(n_forecasts_mae)*0.5)) %>% 
+  filter(!is.na(score_value)) %>% 
+  filter(!model %in% c("CU-scenario_high","CU-scenario_mid","CU-scenario_low","CU-nochange")) %>%
+  droplevels()
 
-score_inc_10wks <- score_inc_all %>%
-  filter(target_end_date >= first_eval_sat) %>%
-  filter(!is.na(score_value))
 ```
 
 ```{r inclusion in leaderboard historical}
 score_case_historical <- score_case_all %>%
-  filter(n_weeks > (max(n_weeks)*0.5)) %>%
-  filter(is.na(score_value)) %>% ## remove NA scores for comparison to go through
-  droplevels()
+  filter(!model %in% c("CU-scenario_high","CU-scenario_mid","CU-scenario_low","CU-nochange")) %>%
+  group_by(model, score_name) %>% mutate(n_forecasts_wis = sum(score_name == "wis"),
+                                         n_forecasts_mae = sum(score_name == "abs_error")) %>% ungroup() %>%
+  filter(n_forecasts_wis >= (max(n_forecasts_wis)*0.5) | n_forecasts_mae >= (max(n_forecasts_mae)*0.5)) %>% 
+  filter(!is.na(score_value)) %>% droplevels()
 
 score_inc_historical <- score_inc_all %>%
-  filter(n_weeks > (max(n_weeks)*0.5)) %>%
-  filter(is.na(score_value)) %>% ## remove NA scores for comparison to go through
-  droplevels()
+  filter(!model %in% c("CU-scenario_high","CU-scenario_mid","CU-scenario_low","CU-nochange")) %>%
+  group_by(model, score_name) %>% mutate(n_forecasts_wis = sum(score_name == "wis"),
+                                         n_forecasts_mae = sum(score_name == "abs_error")) %>% ungroup() %>%
+  filter(n_forecasts_wis >= (max(n_forecasts_wis)*0.5) | n_forecasts_mae >= (max(n_forecasts_mae)*0.5)) %>% 
+  filter(!is.na(score_value)) %>% droplevels()
 ```
 
 
 ```{r inclusion in relative recent calculations}
 #Filtered to include only models that have submitted a forecast in recent weeks and the recent forecasts
-score_case_recent <- score_case_10wks  %>% 
-  filter(n_weeks_10wksPrior >= max(n_weeks_10wksPrior)*0.5) %>%
-  filter(is.na(score_value)) %>% ## remove NA scores for comparison to go through
-  droplevels() 
-
-score_inc_recent <- score_inc_10wks %>% 
-  filter(n_weeks_10wksPrior >= max(n_weeks_10wksPrior)*0.5) %>%
-  filter(is.na(score_value)) %>% ## remove NA scores for comparison to go through
-  droplevels() 
+# score_case_recent <- score_case_10wks  %>%
+#   filter(n_weeks_10wksPrior >= max(n_weeks_10wksPrior)*0.5) %>%
+#   filter(!is.na(score_value)) %>% ## remove NA scores for comparison to go through
+#   droplevels()
+# 
+# score_inc_recent <- score_inc_10wks %>%
+#   filter(n_weeks_10wksPrior >= max(n_weeks_10wksPrior)*0.5) %>%
+#   filter(!is.na(score_value)) %>% ## remove NA scores for comparison to go through
+#   droplevels()
 ```
 
 
@@ -282,11 +294,14 @@ This figure shows the number of locations each model submitted a weekly incidenc
 
 The dates listed on the x-axis are the Saturday before the first horizon. This is the Saturday associated with the target submission week. If a model is submitted on Tuesday - Friday, the Saturday listed occurs after the submission. If the model is submitted on a Sunday or Monday, the Saturday occurs before the submission date. 
 
-The number of models who submitted forecasts for incident cases is `r n_unique_models_case`. The number of models that submitted forecasts for all `r n_weeks_eval` weeks was `r n_models_all_weeks`. The number of teams that submitted forecasts for all 57 locations was `r n_models_all_locations`.
+ The number of models that submitted forecasts for all `r n_weeks_eval` weeks was `r n_models_all_weeks`.
+
+
 ```{r,fig.width=20, fig.height=20}
-for_loc_figure_case <- score_case_10wks  %>%
+for_loc_figure_case <- score_inc_leaderboard   %>%
   filter(score_name == "wis") %>%
   filter(horizon == "1") %>%
+  filter(submission_sat >= first_submission_date) %>%
   group_by(model, submission_sat) %>%
   summarise(n_location = n()) %>%
   ungroup() %>%
@@ -296,9 +311,6 @@ for_loc_figure_case <- score_case_10wks  %>%
 for_loc_figure_case$model <- reorder(for_loc_figure_case$model, for_loc_figure_case$n_weeks)
 
 plot_location(for_loc_figure_case)
-
-
-max(score_case_10wks$submission_sat)
 ```
 
 ## LeaderBoard Table
@@ -308,17 +320,17 @@ Each week, we generate a leaderboard table to assess the interval coverage, rela
 
 To calculate each column in our table, multiple  inclusion criteria were applied. 
 
-* The first column in the table lists all models that have contributed forecasts for 5 or more weeks total, or if it has submitted forecasts during at least 2 out of the last 3 evaluated weeks. This inclusion criteria was applied in order to score models that submitted for a substantial amount of weeks at any point during the pandemic but may no longer be submitting, but also to evaluate new teams that have recently joined our forecasting efforts. 
+* The first column in the table lists all models that have contributed forecasts for 5 or more weeks total, or models that have submitted forecasts during at least 2 out of the last 3 evaluated weeks. This inclusion criteria was applied in order to score models that submitted for a substantial amount of weeks at any point during the pandemic but may no longer be submitting, but also to evaluate new teams that have recently joined our forecasting efforts.
 
 * The next column lists the number of forecasts a team has submitted with a target end date over the most recent `r n_weeks_eval` week period.
 
-* Columns 3 and 4 calculate the adjusted relative WIS over the most recent `r n_weeks_eval` week period and the adjusted relative MAE over the most recent `r n_weeks_eval` week period. For inclusion in these rows, a model must have target_end_dates in 50% or more of the evalated weeks in the most recent evaluation period. 
+* Columns 3 and 4 calculate the adjusted relative WIS over the most recent `r n_weeks_eval` week period and the adjusted relative MAE over the most recent `r n_weeks_eval` week period. For inclusion in these rows, a model must have forecasts for 50% or more of the evaluated forecasts in the most recent evaluation period. 
 
 * Columns 5 and 6 show the calibration scores of recent models, at a 50% coverage and 95% coverage level respectively. Well calibrated models should have a 50% coverage level of 0.5 and a 95% coverage level of 0.95. The inclusion criteria for these columns is the same as for the first two columns. 
 
-* Column 7 shows the number of historical models a team has submitted. All teams that have submitted at least 5 forecasts and/or 2 forecasts out of the last 3 weeks is included in this count.  
+* Column 7 shows the number of historical models a team has submitted. 
 
-* Lastly, columns 8 and 9 show the adjusted WIS and adjusted MAE over a historical period beginning the first week in March. For inclusion in this figure, a model must have forecasts with target_end_dates in 50% or more of evaluated weeks in the historical evaluation period.
+* Lastly, columns 8 and 9 show the adjusted WIS and adjusted MAE over a historical period beginning the first week in March. For inclusion in this figure, a model must have predictions for 50% or more of the evaluated forecasts in the historical evaluation period.
 
 * All adjusted relative WIS and adjusted relative MAE calculations in this table are calculated using a pairwise approach to account variation in the difficulty of forecasting different weeks and locations. Models with an adjusted relative WIS or MAE lower than 1 are more accurate than the baseline and models with an adjusted relative WIS greater than 1 are less accurate than the baseline is predicting the number of incident cases. The code for this comparison can be found [here](https://github.com/jbracher/pairwise_comparisons). A preprint on this method for calculating the WIS can be found [here](https://arxiv.org/pdf/2005.12881.pdf). 
 
@@ -339,7 +351,7 @@ case_calibration <- calib_table(score_case_leaderboard)
 #   return(as.Date(nm, origin = "1970-01-01"))
 # }
 
-inc_scores <- score_case_recent %>%
+inc_scores <- score_case_10wks %>%
   filter(!is.na(score_value)) %>%
   filter(n_locations >= 25) %>% droplevels()
 
@@ -353,7 +365,6 @@ scores <- inc_scores %>% filter(horizon %in% paste(1:4),  location %in% US_fips)
   pivot_wider(names_from = score_name, values_from = score_value) %>% 
   filter(!is.na(wis)) %>%
   droplevels()
-
 
 # the included models:
 models <- unique(scores$model)
@@ -682,7 +693,7 @@ render <- JS(
 datatable(leaderboard_table, rownames= FALSE, colnames = c("Model", "n recent forecasts",  "Recent rel WIS",  "Recent rel MAE", "Recent 50% coverage", "Recent 95% coverage","n historical forecasts" , "Historical rel WIS", "Historical rel MAE"), 
               options =  list(pageLength = 10, 
                              autoWidth = TRUE,
-                             columnDefs = list(list(width = '200px', targets = "_all", render = render)), 
+                             columnDefs = list(list(width = '300px', targets = "_all", render = render)), 
                              ordering = TRUE),
               filter = c("top"))
 ```
@@ -832,6 +843,8 @@ ggplotly(by_week_wis_4wk, tooltip = c("label", "labelx", "labely"))
 ### Truth Data
 
 This plot shows the observed number of incident deaths over the evaluation period. 
+
+
 ```{r, fig.width=8, fig.height=7}
 truth_US_inc <- truth_dat_inc %>% filter(location == "US") 
 
@@ -859,11 +872,10 @@ n_models_all_weeks <- score_inc_10wks %>%
   pull(model) %>% unique() %>% length()
 ```
 
-In the `r n_weeks_eval` week evaluation period, the evaluated Saturdays are `r first_eval_sat` through `r last_eval_sat`.  models submitted incident death forecasts. The number of models who submitted forecasts for incident deaths is `r n_unique_models_inc`. The number of models that submitted forecasts for all `r n_weeks_eval` was `r n_models_all_weeks`. The number of teams that submitted forecasts for all locations was `r n_models_all_locations`.
-
-
 The figure below shows the number of locations that each model submitted incident death forecasts for during this evaluation period. The dates listed on the X axis are the Saturday before the first horizon. This is the Saturday associated with the target submission week. If a model is submitted on a Tuesday - Friday, the Saturday listed occurs after the submission. If the model is submitted on a Sunday or Monday, the Saturday occurs before the submission date. 
 
+
+ The number of models that submitted forecasts for all `r n_weeks_eval` weeks was `r n_models_all_weeks`.
 
 ```{r,fig.width=20, fig.height=20}
 for_loc_figure_inc <- score_inc_10wks %>%
@@ -885,17 +897,17 @@ plot_location(for_loc_figure_inc)
 
 In order to calculate each column in our table, different inclusion criteria were applied. 
 
-* The first column in the table lists all models that have contributed forecasts for 5 or more weeks total, or if it has submitted forecasts during at least 2 out of the last 3 evaluated weeks. This inclusion criteria was applied in order to score models that submitted for a substantial amount of weeks at any point during the pandemic but may no longer be submitting, but also to evaluate new teams that have recently joined our forecasting efforts. 
+* The first column in the table lists all models that have contributed forecasts for 5 or more weeks total, or models that have submitted forecasts during at least 2 out of the last 3 evaluated weeks. This inclusion criteria was applied in order to score models that submitted for a substantial amount of weeks at any point during the pandemic but may no longer be submitting, but also to evaluate new teams that have recently joined our forecasting efforts. 
 
 * The next column lists the number of forecasts a team has submitted with a target end date over the most recent `r n_weeks_eval` week period.
 
-* Columns 3 and 4 calculate the adjusted relative WIS over the most recent `r n_weeks_eval` week period and the adjusted relative MAE over the most recent `r n_weeks_eval` week period. For inclusion in these rows, a model must have target_end_dates in 50% or more of the evalated weeks in the most recent evaluation period. 
+* Columns 3 and 4 calculate the adjusted relative WIS over the most recent `r n_weeks_eval` week period and the adjusted relative MAE over the most recent `r n_weeks_eval` week period. For inclusion in these rows, a model must have forecasts for 50% or more of the evaluated forecasts in the most recent evaluation period. 
 
 * Columns 5 and 6 show the calibration scores of recent models, at a 50% coverage and 95% coverage level respectively. Well calibrated models should have a 50% coverage level of 0.5 and a 95% coverage level of 0.95. The inclusion criteria for these columns is the same as for the first two columns. 
 
 * Column 7 shows the number of historical models a team has submitted. All teams that have submitted at least 5 forecasts and/or 2 forecasts out of the last 3 weeks is included in this count.  
 
-* Lastly, columns 8 and 9 show the adjusted WIS and adjusted MAE over a historical period beginning the first week in March. For inclusion in this figure, a model must have forecasts with target_end_dates in 50% or more of evaluated weeks in the historical evaluation period.
+* Lastly, columns 8 and 9 show the adjusted WIS and adjusted MAE over a historical period beginning the first week in March. For inclusion in this figure, a model must have predictions for 50% or more of the evaluated forecasts in the historical evaluation period.
 
 * All adjusted relative WIS and adjusted relative MAE calculations in this table are calculated using a pairwise approach to account variation in the difficulty of forecasting different weeks and locations. Models with an adjusted relative WIS or MAE lower than 1 are more accurate than the baseline and models with an adjusted relative WIS greater than 1 are less accurate than the baseline is predicting the number of incident cases. The code for this comparison can be found [here](https://github.com/jbracher/pairwise_comparisons). A preprint on this method for calculating the WIS can be found [here](https://arxiv.org/pdf/2005.12881.pdf). 
 
@@ -907,7 +919,7 @@ inc_calibration <- calib_table(score_inc_leaderboard)
 
 
 ```{r}
-inc_scores <- score_inc_recent %>%
+inc_scores <- score_inc_10wks %>%
   filter(n_locations >= 25) %>%
   filter(n_weeks >= 4) %>%
   droplevels()
