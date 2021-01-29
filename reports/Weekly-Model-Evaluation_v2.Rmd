@@ -1,7 +1,7 @@
 ---
-title: "Weekly Model Evaluations for State-Level COVID-19 Forecasts"
-subtitle: "COVID-19 Forecast Hub and Delphi Group Forecast Evaluation Working Group"
-author: "(alphabetical order) Jacob Bien, Johannes Bracher, Logan C Brooks, Estee Y Cramer, Jed Grabman, Kate Harwood, Evan Ray, Nicholas G Reich, Chris Scott" 
+title: "COVID-19 US Forecast Evaluation Report"
+subtitle: "[US COVID-19 Forecast Hub](https://covid19forecasthub.org/) and [Delphi Group](https://delphi.cmu.edu/) Forecast Evaluation Working Group"
+author: "(alphabetical order) Jacob Bien, Johannes Bracher, Logan C Brooks, Estee Y Cramer, Jed Grabman, Kate Harwood, Evan L Ray, Nicholas G Reich, Chris Scott" 
 date: "`r format(Sys.time(), '%B %d, %Y')`"
 output:
   html_document:
@@ -236,20 +236,18 @@ calib_table <- function(x){
 
 
 # Overview
-This report provides an evaluation of the accuracy and precision of probabilistic forecasts submitted to the [COVID-19 Forecast Hub](https://covid19forecasthub.org/) over the last `r n_weeks_eval` weeks. The forecasts evaluated were submitted during the time period from `r format(first_submission_date, "%B %d, %Y")` through `r format(last_submission_date, "%B %d, %Y")`. The revision dates of this data was calculated as of `r today()`. 
+This report provides an evaluation of the accuracy and precision of probabilistic forecasts of COVID-19 cases and deaths submitted to the [US COVID-19 Forecast Hub](https://covid19forecasthub.org/). Some analyses include forecasts submitted starting in April 2020. Others focus on evaluating "recent" forecasts, submitted only in the last `r n_weeks_eval` weeks. 
+
+<!-- The forecasts evaluated were submitted during the time period from `r format(first_submission_date, "%B %d, %Y")` through `r format(last_submission_date, "%B %d, %Y")`. The revision dates of this data was calculated as of `r today()`. 
 
 In this weekly report we are evaluating forecasts made in 57 different locations (US on a national level, 50 states, and 6 territories), for 4 horizons over `r n_weeks_eval` submission weeks. We are evaluating incident cases, and incident deaths. 
 
 Additionally, we have included a historical score report to aggregate scores from forecasts that have been submitted to the forecast hub since the first week in April.
+-->
 
-In collaboration with the US CDC, our team collects COVID-19 forecasts from dozens of teams around the globe. Each Monday evening or Tuesday morning, we combine the most recent forecasts from each team into a single "ensemble" forecast for each of the target submissions.
+In collaboration with the US Centers for Disease Control and Prevention (CDC), the COVID-19 Forecast hub collects short-term COVID-19 forecasts from dozens of research groups around the globe. Every Tuesday morning we combine the most recent forecasts from each team into a single "ensemble" forecast for each of the target submissions. This forecast is used as the official ensemble forecast of the CDC, typically appearing on their [forecasting website](https://www.cdc.gov/coronavirus/2019-ncov/covid-data/mathematical-modeling.html) on Wednesday.
 
-Typically on Wednesday or Thursday of each week, a summary of the week's forecast from the COVID-19 Forecast Hub, including the ensemble forecast, appear on the [official CDC COVID-19 forecasting page](https://www.cdc.gov/coronavirus/2019-ncov/covid-data/forecasting-us.html).
-
-This report has been created as a collaborative effort between the COVID-19 Forecast hub and the CMU Delphi group. 
-
-
-# Incident Cases {.tabset .tabset-fade}
+# Incident Case Forecasts {.tabset .tabset-fade}
 
 
 ## Truth data and Model Submissions  {.tabset .tabset-fade}
@@ -258,7 +256,7 @@ This report has been created as a collaborative effort between the COVID-19 Fore
 
 This figure shows the number of incident cases reported each week. The period between the vertical lines shows the number of weeks for which models were evaluated. 
 
-```{r, fig.width=8, fig.height=7}
+```{r, fig.width=8, fig.height=5}
 truth_US_case <- truth_dat_case %>%
   filter(location == "US")
 
@@ -836,7 +834,7 @@ ggplotly(by_week_wis_4wk, tooltip = c("label", "labelx", "labely"))
 <!-- ``` -->
 
 
-# Incident Deaths {.tabset .tabset-fade}
+# Incident Death Forecasts {.tabset .tabset-fade}
 
 ## Truth data and Model Submissions {.tabset .tabset-fade}
 
@@ -845,7 +843,7 @@ ggplotly(by_week_wis_4wk, tooltip = c("label", "labelx", "labely"))
 This plot shows the observed number of incident deaths over the evaluation period. 
 
 
-```{r, fig.width=8, fig.height=7}
+```{r, fig.width=8, fig.height=5}
 truth_US_inc <- truth_dat_inc %>% filter(location == "US") 
 
 plot_truth(truth_US_inc)
