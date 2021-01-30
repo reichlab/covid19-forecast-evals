@@ -197,7 +197,11 @@ ggplot(data = dat, aes(x = target_end_date, y = value)) +
   labs(title = paste("Weekly reported COVID-19 data: \n Models evaluated from", first_eval_sat, "to", last_eval_sat, sep = " "),
                           caption="source: JHU CSSE (observed data)")+
   theme(legend.position = c(.05,.95), legend.justification = c(0,1)) +
-  geom_vline(xintercept= eval_sat, linetype=2, color = "blue")
+  geom_vline(aes(xintercept= c(first_submission_date -3.5), color = "Submission Date Boundaries"), linetype=2) +
+  geom_vline(aes(xintercept= c(last_submission_date + 3.5), color = "Submission Date Boundaries"), linetype=2) +  
+  geom_vline(aes(xintercept= c(first_eval_sat -3.5), color = "Evaluated Date Boundaries"), linetype=2) +
+  geom_vline(aes(xintercept= c(last_eval_sat + 3.5), color = "Evaluated Date Boundaries"), linetype=2) +    
+  scale_color_manual(name = "", values = c("Evaluated Date Boundaries" = "blue", "Submission Date Boundaries" = "red"))
 }
 ```
 
@@ -238,8 +242,7 @@ calib_table <- function(x){
 # Overview
 This report provides an evaluation of the accuracy and precision of probabilistic forecasts of COVID-19 cases and deaths submitted to the [US COVID-19 Forecast Hub](https://covid19forecasthub.org/). Some analyses include forecasts submitted starting in April 2020. Others focus on evaluating "recent" forecasts, submitted only in the last `r n_weeks_eval` weeks. 
 
-<!-- The forecasts evaluated were submitted during the time period from `r format(first_submission_date, "%B %d, %Y")` through `r format(last_submission_date, "%B %d, %Y")`. The revision dates of this data was calculated as of `r today()`. 
-
+<!-- The forecasts evaluated were submitted during the time period from `r format(first_submission_date, "%B %d, %Y")` through `r format(last_submission_date, "%B %d, %Y")`. The revision dates of this data was calculated as of `r today()`.
 In this weekly report we are evaluating forecasts made in 57 different locations (US on a national level, 50 states, and 6 territories), for 4 horizons over `r n_weeks_eval` submission weeks. We are evaluating incident cases, and incident deaths. 
 
 Additionally, we have included a historical score report to aggregate scores from forecasts that have been submitted to the forecast hub since the first week in April.
@@ -249,89 +252,18 @@ In collaboration with the US Centers for Disease Control and Prevention (CDC), t
 
 # Incident Case Forecasts {.tabset .tabset-fade}
 
-
-## Truth data and Model Submissions  {.tabset .tabset-fade}
-
-### Truth data
-
-This figure shows the number of incident cases reported each week. The period between the vertical lines shows the number of weeks for which models were evaluated. 
-
-```{r, fig.width=8, fig.height=5}
-truth_US_case <- truth_dat_case %>%
-  filter(location == "US")
-
-plot_truth(dat = truth_US_case)
-```
-
-
-### Number of Locations
-
-```{r filters for analysis inc case, fig.width=8, fig.height=10}
-#counts of case submissions for the week
-
-#Count of models that have submitted for last 10 evaluated weeks
-n_unique_models_case <- score_case_10wks  %>%
-  pull(model) %>% unique()
-
-n_models_all_weeks <- score_case_10wks  %>% 
-  filter(n_weeks_10wksPrior == max(n_weeks_10wksPrior)) %>%
-  pull(model) %>% unique() %>% length()
-
-n_models_all_locations <- score_case_10wks  %>% 
-  filter(n_locations >= 50) %>%
-  pull(model) %>% unique() %>% length()
-
-n_models_all_weeks <- score_case_10wks  %>% 
-  group_by(horizon) %>%
-  filter(n_horizons == max(n_horizons)) %>%
-  pull(model) %>% unique() %>% length()
-```
-
-
-This figure shows the number of locations each model submitted a weekly incidence case forecast for the last 10 evaluated weeks. The maximum number of locations is 57, which includes all 50 states, a National level forecast, and 6 US territories. 
-
-The dates listed on the x-axis are the Saturday before the first horizon. This is the Saturday associated with the target submission week. If a model is submitted on Tuesday - Friday, the Saturday listed occurs after the submission. If the model is submitted on a Sunday or Monday, the Saturday occurs before the submission date. 
-
- The number of models that submitted forecasts for all `r n_weeks_eval` weeks was `r n_models_all_weeks`.
-
-
-```{r,fig.width=20, fig.height=20}
-for_loc_figure_case <- score_inc_leaderboard   %>%
-  filter(score_name == "wis") %>%
-  filter(horizon == "1") %>%
-  filter(submission_sat >= first_submission_date) %>%
-  group_by(model, submission_sat) %>%
-  summarise(n_location = n()) %>%
-  ungroup() %>%
-  group_by(model, n_location) %>%
-  mutate(n_weeks = n())
-
-for_loc_figure_case$model <- reorder(for_loc_figure_case$model, for_loc_figure_case$n_weeks)
-
-plot_location(for_loc_figure_case)
-```
-
 ## LeaderBoard Table
 
-Each week, we generate a leaderboard table to assess the interval coverage, relative weighted interval scores (WIS), and relative mean average errors (MAE) of each model.
+The LeaderBoard table included below evaluated models based on their prediction interval coverage (50% and 95% coverage), and their adjusted relative weighted interval scores (WIS) and adjusted relative mean absolute error (MAE) for a recent and historical number of weeks. 
 
+* The **prediction interval coverage**  measures  the proportion of times a prediction interval of a certain level covered the true value, to assess the degree to which forecasts accurately characterized uncertainty about future observations. Well calibrated models should have a 50% coverage level of 0.5 and a 95% coverage level of 0.95. 
 
-To calculate each column in our table, multiple  inclusion criteria were applied. 
+* The **weighted interval score (WIS)** is a proper score that combines a set of interval scores for probabilistic forecasts that provide quantiles of the predictive forecast distribution. To account for the variation in difficult of forecasting different weeks and locations, a pairwis approach was used to calculated the relative adjusted WIS. The code for this comparison can be found [here](https://github.com/jbracher/pairwise_comparisons). A preprint on this method for calculating the WIS can be found [here](https://arxiv.org/pdf/2005.12881.pdf). Models with an adjusted relative WIS  lower than 1 are more accurate than the baseline, and models with an adjusted relative WIS greater than 1 are less accurate than the baseline is predicting the number of incident cases. 
 
-* The first column in the table lists all models that have contributed forecasts for 5 or more weeks total, or models that have submitted forecasts during at least 2 out of the last 3 evaluated weeks. This inclusion criteria was applied in order to score models that submitted for a substantial amount of weeks at any point during the pandemic but may no longer be submitting, but also to evaluate new teams that have recently joined our forecasting efforts.
+* The **mean absolute error** is defined as the the difference between the forecasted value and the actual value. For this calculation, point forecasts submitted by teams were used. When point forecasts were not available, the 0.50 quantile was used. Similar to calculating the WIS, a pairwise approach was used to account for variation across locations and weeks. Models with an adjusted relative MAE lower than 1 are more accurate than the baseline, and models with an adjusted relative MAE greater than 1 are less accurate than the baseline is predicting the number of incident cases. 
 
-* The next column lists the number of forecasts a team has submitted with a target end date over the most recent `r n_weeks_eval` week period.
-
-* Columns 3 and 4 calculate the adjusted relative WIS over the most recent `r n_weeks_eval` week period and the adjusted relative MAE over the most recent `r n_weeks_eval` week period. For inclusion in these rows, a model must have forecasts for 50% or more of the evaluated forecasts in the most recent evaluation period. 
-
-* Columns 5 and 6 show the calibration scores of recent models, at a 50% coverage and 95% coverage level respectively. Well calibrated models should have a 50% coverage level of 0.5 and a 95% coverage level of 0.95. The inclusion criteria for these columns is the same as for the first two columns. 
-
-* Column 7 shows the number of historical models a team has submitted. 
-
-* Lastly, columns 8 and 9 show the adjusted WIS and adjusted MAE over a historical period beginning the first week in March. For inclusion in this figure, a model must have predictions for 50% or more of the evaluated forecasts in the historical evaluation period.
-
-* All adjusted relative WIS and adjusted relative MAE calculations in this table are calculated using a pairwise approach to account variation in the difficulty of forecasting different weeks and locations. Models with an adjusted relative WIS or MAE lower than 1 are more accurate than the baseline and models with an adjusted relative WIS greater than 1 are less accurate than the baseline is predicting the number of incident cases. The code for this comparison can be found [here](https://github.com/jbracher/pairwise_comparisons). A preprint on this method for calculating the WIS can be found [here](https://arxiv.org/pdf/2005.12881.pdf). 
-
+ 
+Inclusion criteria for each column are detailed below the table. 
 
 ```{r}
 #calibration table 
@@ -676,7 +608,8 @@ leaderboard_table <- case_calibration %>%
   left_join(historical_wis) %>%
   left_join(pairwise_scores_mae) %>%
   left_join(historical_mae) %>%
-  select(model, n_forecasts_recent, relative_wis, relative_mae,  mean_PI50, mean_PI95, n_forecasts_historical, relative_wis_historical, historical_relative_mae)
+  select(model, n_forecasts_recent, relative_wis, relative_mae,  mean_PI50, mean_PI95, n_forecasts_historical, relative_wis_historical, historical_relative_mae) %>%
+  arrange(relative_wis)
 
 render <- JS(
   "function(data, type, row) {",
@@ -689,7 +622,7 @@ render <- JS(
 
 
 datatable(leaderboard_table, rownames= FALSE, colnames = c("Model", "n recent forecasts",  "Recent rel WIS",  "Recent rel MAE", "Recent 50% coverage", "Recent 95% coverage","n historical forecasts" , "Historical rel WIS", "Historical rel MAE"), 
-              options =  list(pageLength = 10, 
+              options =  list(pageLength = 5, 
                              autoWidth = TRUE,
                              columnDefs = list(list(width = '300px', targets = "_all", render = render)), 
                              ordering = TRUE),
@@ -697,14 +630,90 @@ datatable(leaderboard_table, rownames= FALSE, colnames = c("Model", "n recent fo
 ```
 
 
+In order to calculate each column in our table, different inclusion criteria were applied. 
+
+* The first column in the table lists all models that have contributed forecasts for 5 or more weeks total since the beginning of April, or models that have submitted forecasts during at least 2 out of the last 3 evaluated weeks. This inclusion criteria was applied in order to score models that submitted for a substantial amount of weeks at any point during the pandemic but may no longer be submitting, but also to evaluate new teams that have recently joined our forecasting efforts. 
+
+* The next column lists the number of forecasts a team has submitted with a target end date over the most recent `r n_weeks_eval` week period.
+
+* Columns 3 and 4 calculate the adjusted relative WIS over the most recent `r n_weeks_eval` week period and the adjusted relative MAE over the most recent `r n_weeks_eval` week period. For inclusion in these rows, a model must have forecasts for 50% or more of the evaluated forecasts in the most recent evaluation period. 
+
+* The inclusion criteria for the calibration coverage levels are the same as for the first two columns. 
+
+* Column 7 shows the number of historical models a team has submitted. All teams that have submitted at least 5 forecasts and/or 2 forecasts out of the last 3 weeks is included in this count.  
+
+* Columns 8 and 9 show the adjusted WIS and adjusted MAE over a historical period beginning the first week in March. For inclusion in this figure, a model must have predictions for 50% or more of the evaluated forecasts in the historical evaluation period.
+
+
+
+
+## Truth data 
+
+This figure shows the number of incident cases reported each week. The period between the vertical lines shows the number of weeks for which models were evaluated. 
+
+```{r, fig.width=8, fig.height=5}
+truth_US_case <- truth_dat_case %>%
+  filter(location == "US")
+
+plot_truth(dat = truth_US_case)
+```
+
+
+<!-- ## Number of Locations -->
+
+<!-- ```{r filters for analysis inc case, fig.width=8, fig.height=10} -->
+<!-- #counts of case submissions for the week -->
+
+<!-- #Count of models that have submitted for last 10 evaluated weeks -->
+<!-- n_unique_models_case <- score_case_10wks  %>% -->
+<!--   pull(model) %>% unique() -->
+
+<!--  <- score_case_10wks  %>% -->
+<!--   filter(n_weeks_10wksPrior == max(n_weeks_10wksPrior)) %>% -->
+<!--   pull(model) %>% unique() %>% length() -->
+
+<!-- n_models_all_locations <- score_case_10wks  %>% -->
+<!--   filter(n_locations >= 50) %>% -->
+<!--   pull(model) %>% unique() %>% length() -->
+
+<!-- <- score_case_10wks  %>% -->
+<!--   group_by(horizon) %>% -->
+<!--   filter(n_horizons == max(n_horizons)) %>% -->
+<!--   pull(model) %>% unique() %>% length() -->
+<!-- ``` -->
+
+
+<!-- This figure shows the number of locations each model submitted a weekly incidence case forecast for the last 10 evaluated weeks. The maximum number of locations is 57, which includes all 50 states, a National level forecast, and 6 US territories. -->
+
+<!-- The dates listed on the x-axis are the Saturday before the first horizon. This is the Saturday associated with the target submission week. If a model is submitted on Tuesday - Friday, the Saturday listed occurs after the submission. If the model is submitted on a Sunday or Monday, the Saturday occurs before the submission date. -->
+
+<!--  The number of models that submitted forecasts for all `r n_weeks_eval` weeks was `. -->
+
+
+<!-- ```{r,fig.width=20, fig.height=20} -->
+<!-- for_loc_figure_case <- score_inc_leaderboard   %>% -->
+<!--   filter(score_name == "wis") %>% -->
+<!--   filter(horizon == "1") %>% -->
+<!--   filter(submission_sat >= first_submission_date) %>% -->
+<!--   group_by(model, submission_sat) %>% -->
+<!--   summarise(n_location = n()) %>% -->
+<!--   ungroup() %>% -->
+<!--   group_by(model, n_location) %>% -->
+<!--   mutate(n_weeks = n()) -->
+
+<!-- for_loc_figure_case$model <- reorder(for_loc_figure_case$model, for_loc_figure_case$n_weeks) -->
+
+<!-- plot_location(for_loc_figure_case) -->
+<!-- ``` -->
+
+
 ## Evaluation by Week  {.tabset .tabset-fade}
 
-In the following figures, we have evaluated models across multiple forecasting weeks. Points included in this comparison are for models that have submitted probabalistic forecasts for all 50 states. 
+In the following figures, we have evaluated models across multiple forecasting weeks. Points included in this comparison are for models that have submitted probabilistic forecasts for all 50 states. 
 
 For the first 2 figures, WIS is used as a metric. The first figure shows the mean WIS across all 50 states for submission weeks beginning the first week in April at a 1 week horizon. The second figure shows the mean WIS aggregated across locations, however it is for a 4 week horizon.
 
-To view specific teams, double click on the team names in the legend. To view a value on the plot, click on the point in the forecast of interest.
-To view a specific time of interest, hightlight that section on the graph or use the zoom functionality. 
+**To view a specific team, double click on the team names in the legend. To view a value on the plot, click on the point in the forecast of interest. To view a specific time of interest, highlight that section on the graph or use the zoom functionality. **
 
 ### 1 Week Horizon WIS
 ```{r,fig.width=10, fig.height=6}
@@ -745,7 +754,7 @@ ggplotly(by_week_wis_1wk, tooltip = c("label", "labelx", "labely"))
 
 ### 4 Week Horizon WIS
 
-In this figure, the dotted black line represents the average 1 week ahead error. There is often larger variation in error for the 4 week horizon compared to the 1 week horizon. 
+In this figure, the dotted black line represents the average 1 week ahead error. There is often larger error for the 4 week horizon compared to the 1 week horizon. 
 
 ```{r,fig.width=10, fig.height=6}
 #calc 1 week error
@@ -778,7 +787,7 @@ ggplotly(by_week_wis_1wk,tooltip = c("label", "labelx", "labely"))
 
 ### 4 Week Horizon 95% Coverage
 
-We would expect a well calibrated model to have a value of 95% in this plot. There is typically larger variation in error for the 4 week horizon compared to the 1 week horizon. 
+We would expect a well calibrated model to have a value of 95% in this plot. There is typically larger error for the 4 week horizon compared to the 1 week horizon. 
 
 ```{r,fig.width=10, fig.height=6}
 by_week_wis_4wk <- plot_byweek_function(byweek_case, var = "coverage_95", horizon_num = "4") +
@@ -836,80 +845,19 @@ ggplotly(by_week_wis_4wk, tooltip = c("label", "labelx", "labely"))
 
 # Incident Death Forecasts {.tabset .tabset-fade}
 
-## Truth data and Model Submissions {.tabset .tabset-fade}
-
-### Truth Data
-
-This plot shows the observed number of incident deaths over the evaluation period. 
-
-
-```{r, fig.width=8, fig.height=5}
-truth_US_inc <- truth_dat_inc %>% filter(location == "US") 
-
-plot_truth(truth_US_inc)
-```
-
-
-### Number of Locations
-
-```{r filters for analysis inc death}
-n_unique_models_inc <- length(unique(score_inc_10wks$model)) #Total models submitted during this time period
-
-n_models_all_weeks <- score_inc_10wks %>% 
-  group_by(horizon) %>%
-  filter(n_weeks == max(n_weeks)) %>%
-  pull(model) %>% unique() %>% length()
-
-n_models_all_locations <- score_inc_10wks %>% 
-  filter(n_locations == max(n_locations)) %>%
-  pull(model) %>% unique() %>% length()
-
-n_models_all_weeks <- score_inc_10wks %>% 
-  group_by(horizon) %>%
-  filter(n_horizons == max(n_horizons)) %>%
-  pull(model) %>% unique() %>% length()
-```
-
-The figure below shows the number of locations that each model submitted incident death forecasts for during this evaluation period. The dates listed on the X axis are the Saturday before the first horizon. This is the Saturday associated with the target submission week. If a model is submitted on a Tuesday - Friday, the Saturday listed occurs after the submission. If the model is submitted on a Sunday or Monday, the Saturday occurs before the submission date. 
-
-
- The number of models that submitted forecasts for all `r n_weeks_eval` weeks was `r n_models_all_weeks`.
-
-```{r,fig.width=20, fig.height=20}
-for_loc_figure_inc <- score_inc_10wks %>%
-  filter(score_name == "wis") %>%
-  filter(horizon == "1") %>%
-  group_by(model, submission_sat) %>%
-  summarise(n_location = n()) %>%
-  ungroup() %>%
-  group_by(model, n_location) %>%
-  mutate(n_weeks = n())
-
-for_loc_figure_inc$model <- reorder(for_loc_figure_inc$model, for_loc_figure_inc$n_weeks)
-
-plot_location(for_loc_figure_inc)
-```
 
 ## LeaderBoard Table
 
+The LeaderBoard table included below evaluated models based on their prediction interval coverage (50% and 95% coverage), and their adjusted relative weighted interval scores (WIS) and adjusted relative mean absolute error (MAE) for a recent and historical number of weeks. 
 
-In order to calculate each column in our table, different inclusion criteria were applied. 
+* The **prediction interval coverage**  measures  the proportion of times a prediction interval of a certain level covered the true value, to assess the degree to which forecasts accurately characterized uncertainty about future observations. Well calibrated models should have a 50% coverage level of 0.5 and a 95% coverage level of 0.95. 
 
-* The first column in the table lists all models that have contributed forecasts for 5 or more weeks total, or models that have submitted forecasts during at least 2 out of the last 3 evaluated weeks. This inclusion criteria was applied in order to score models that submitted for a substantial amount of weeks at any point during the pandemic but may no longer be submitting, but also to evaluate new teams that have recently joined our forecasting efforts. 
+* The **weighted interval score (WIS)** is a proper score that combines a set of interval scores for probabilistic forecasts that provide quantiles of the predictive forecast distribution. To account for the variation in difficult of forecasting different weeks and locations, a pairwis approach was used to calculated the relative adjusted WIS. The code for this comparison can be found [here](https://github.com/jbracher/pairwise_comparisons). A preprint on this method for calculating the WIS can be found [here](https://arxiv.org/pdf/2005.12881.pdf). Models with an adjusted relative WIS  lower than 1 are more accurate than the baseline, and models with an adjusted relative WIS greater than 1 are less accurate than the baseline is predicting the number of incident cases. 
 
-* The next column lists the number of forecasts a team has submitted with a target end date over the most recent `r n_weeks_eval` week period.
+* The **mean absolute error (MAE)** is defined as the the difference between the forecasted value and the actual value. For this calculation, point forecasts submitted by teams were used. When point forecasts were not available, the 0.50 quantile was used. Similar to calculating the WIS, a pairwise approach was used to account for variation across locations and weeks. Models with an adjusted relative MAE lower than 1 are more accurate than the baseline, and models with an adjusted relative MAE greater than 1 are less accurate than the baseline is predicting the number of incident cases. 
 
-* Columns 3 and 4 calculate the adjusted relative WIS over the most recent `r n_weeks_eval` week period and the adjusted relative MAE over the most recent `r n_weeks_eval` week period. For inclusion in these rows, a model must have forecasts for 50% or more of the evaluated forecasts in the most recent evaluation period. 
-
-* Columns 5 and 6 show the calibration scores of recent models, at a 50% coverage and 95% coverage level respectively. Well calibrated models should have a 50% coverage level of 0.5 and a 95% coverage level of 0.95. The inclusion criteria for these columns is the same as for the first two columns. 
-
-* Column 7 shows the number of historical models a team has submitted. All teams that have submitted at least 5 forecasts and/or 2 forecasts out of the last 3 weeks is included in this count.  
-
-* Lastly, columns 8 and 9 show the adjusted WIS and adjusted MAE over a historical period beginning the first week in March. For inclusion in this figure, a model must have predictions for 50% or more of the evaluated forecasts in the historical evaluation period.
-
-* All adjusted relative WIS and adjusted relative MAE calculations in this table are calculated using a pairwise approach to account variation in the difficulty of forecasting different weeks and locations. Models with an adjusted relative WIS or MAE lower than 1 are more accurate than the baseline and models with an adjusted relative WIS greater than 1 are less accurate than the baseline is predicting the number of incident cases. The code for this comparison can be found [here](https://github.com/jbracher/pairwise_comparisons). A preprint on this method for calculating the WIS can be found [here](https://arxiv.org/pdf/2005.12881.pdf). 
-
-
+ 
+Inclusion criteria for each column are detailed below the table. 
 ```{r}
 #calibration table 
 inc_calibration <- calib_table(score_inc_leaderboard)
@@ -1152,11 +1100,12 @@ leaderboard_table <- inc_calibration %>%
   left_join(historical_wis) %>%
   left_join(pairwise_scores_mae) %>%
   left_join(historical_mae) %>%
-  select(model, n_forecasts_recent, relative_wis, relative_mae,  mean_PI50, mean_PI95, n_forecasts_historical, relative_wis_historical, historical_relative_mae)
+  select(model, n_forecasts_recent, relative_wis, relative_mae,  mean_PI50, mean_PI95, n_forecasts_historical, relative_wis_historical, historical_relative_mae)  %>%
+  arrange(relative_wis)
 
 
 datatable(leaderboard_table, rownames= FALSE, colnames = c("Model", "n recent forecasts",  "Recent rel WIS",  "Recent rel MAE", "Recent 50% coverage", "Recent 95% coverage","n historical forecasts" , "Historical rel WIS", "Historical rel MAE"), 
-              options =  list(pageLength = 10, 
+              options =  list(pageLength = 5, 
                              autoWidth = TRUE,
                              columnDefs = list(list(width = '300px', targets = "_all", render = render)), 
                              ordering = TRUE),
@@ -1165,6 +1114,73 @@ datatable(leaderboard_table, rownames= FALSE, colnames = c("Model", "n recent fo
 
 
 
+In order to calculate each column in our table, different inclusion criteria were applied. 
+
+* The first column in the table lists all models that have contributed forecasts for 5 or more weeks total since the beginning of April, or models that have submitted forecasts during at least 2 out of the last 3 evaluated weeks. This inclusion criteria was applied in order to score models that submitted for a substantial amount of weeks at any point during the pandemic but may no longer be submitting, but also to evaluate new teams that have recently joined our forecasting efforts. 
+
+* The next column lists the number of forecasts a team has submitted with a target end date over the most recent `r n_weeks_eval` week period.
+
+* Columns 3 and 4 calculate the adjusted relative WIS over the most recent `r n_weeks_eval` week period and the adjusted relative MAE over the most recent `r n_weeks_eval` week period. For inclusion in these rows, a model must have forecasts for 50% or more of the evaluated forecasts in the most recent evaluation period. 
+
+* The inclusion criteria for the calibration coverage levels are the same as for the first two columns. 
+
+* Column 7 shows the number of historical models a team has submitted. All teams that have submitted at least 5 forecasts and/or 2 forecasts out of the last 3 weeks is included in this count.  
+
+* Columns 8 and 9 show the adjusted WIS and adjusted MAE over a historical period beginning the first week in March. For inclusion in this figure, a model must have predictions for 50% or more of the evaluated forecasts in the historical evaluation period.
+
+
+
+## Truth data
+
+This plot shows the observed number of incident deaths over the evaluation period. 
+
+
+```{r, fig.width=8, fig.height=5}
+truth_US_inc <- truth_dat_inc %>% filter(location == "US") 
+
+plot_truth(truth_US_inc)
+```
+
+
+<!-- ## Number of Locations -->
+
+<!-- ```{r filters for analysis inc death} -->
+<!-- n_unique_models_inc <- length(unique(score_inc_10wks$model)) #Total models submitted during this time period -->
+
+<!--   n_models_all_weeks <- score_inc_10wks %>%  -->
+<!--   group_by(horizon) %>% -->
+<!--   filter(n_weeks == max(n_weeks)) %>% -->
+<!--   pull(model) %>% unique() %>% length() -->
+
+<!--  n_models_all_locations <- score_inc_10wks %>%  -->
+<!--   filter(n_locations == max(n_locations)) %>% -->
+<!--   pull(model) %>% unique() %>% length() -->
+
+<!--    score_inc_10wks %>%  -->
+<!--   group_by(horizon) %>% -->
+<!--   filter(n_horizons == max(n_horizons)) %>% -->
+<!--   pull(model) %>% unique() %>% length() -->
+<!-- ``` -->
+
+<!-- The figure below shows the number of locations that each model submitted incident death forecasts for during this evaluation period. The dates listed on the X axis are the Saturday before the first horizon. This is the Saturday associated with the target submission week. If a model is submitted on a Tuesday - Friday, the Saturday listed occurs after the submission. If the model is submitted on a Sunday or Monday, the Saturday occurs before the submission date.  -->
+
+
+<!--  The number of models that submitted forecasts for all `r n_weeks_eval` weeks was n_models_all_weeks. -->
+
+<!-- ```{r,fig.width=20, fig.height=20} -->
+<!-- for_loc_figure_inc <- score_inc_10wks %>% -->
+<!--   filter(score_name == "wis") %>% -->
+<!--   filter(horizon == "1") %>% -->
+<!--   group_by(model, submission_sat) %>% -->
+<!--   summarise(n_location = n()) %>% -->
+<!--   ungroup() %>% -->
+<!--   group_by(model, n_location) %>% -->
+<!--   mutate(n_weeks = n()) -->
+
+<!-- for_loc_figure_inc$model <- reorder(for_loc_figure_inc$model, for_loc_figure_inc$n_weeks) -->
+
+<!-- plot_location(for_loc_figure_inc) -->
+<!-- ``` -->
 
 
 ## Evaluation by Week  {.tabset .tabset-fade}
@@ -1173,9 +1189,7 @@ In the following figures, we have evaluated models across multiple forecasting w
 
 For the first 2 figures, WIS is used as a metric. The first figure shows the mean WIS across all locations for each submission week at a 1 week horizon. The second figure shows the mean WIS aggregated across locations, however it is for a 4 week horizon.
 
-To view specific teams, double click on the team names in the legend. To view a value on the plot, click on the point in the forecast of interest.
-
-
+**To view a specific team, double click on the team names in the legend. To view a value on the plot, click on the point in the forecast of interest.To view a specific time of interest, highlight that section on the graph or use the zoom functionality.**
 
 ### 1 Week Horizon
 ```{r,fig.width=10, fig.height=6}
