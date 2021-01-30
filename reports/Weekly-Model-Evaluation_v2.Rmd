@@ -122,14 +122,16 @@ load(file = "score_inc_all.rda")
 #Filtered to include only models in scoreboard (number of obs and calibration)
 score_case_leaderboard <- score_case_all %>%
   filter(n_weeks >= n_weeks_submitted |  n_weeks_3wksPrior >= 2) %>% 
-  filter(!is.na(score_value)) %>%
-  filter(!model %in% c("CU-scenario_high","CU-scenario_mid","CU-scenario_low","CU-nochange"))
+  filter(!is.na(score_value)) 
+# %>%
+#   filter(!model %in% c("CU-scenario_high","CU-scenario_mid","CU-scenario_low","CU-nochange"))
 
 #Filtered to include only models in scoreboard
 score_inc_leaderboard <- score_inc_all %>%
   filter(n_weeks >= n_weeks_submitted |  n_weeks_3wksPrior >= 2) %>% #filter if missing more than half of forecasts or if missing more than 2 forecasts in the last 3 weeks 
-  filter(!is.na(score_value)) %>%
-  filter(!model %in% c("CU-scenario_high","CU-scenario_mid","CU-scenario_low","CU-nochange"))
+  filter(!is.na(score_value)) 
+# %>%
+#   filter(!model %in% c("CU-scenario_high","CU-scenario_mid","CU-scenario_low","CU-nochange"))
 ```
 
 ```{r only 10 weeks back}
@@ -139,7 +141,7 @@ score_case_10wks <- score_case_all %>%
                                          n_forecasts_mae = sum(score_name == "abs_error")) %>% ungroup() %>%
   filter(n_forecasts_wis >= (max(n_forecasts_wis)*0.5) | n_forecasts_mae >= (max(n_forecasts_mae)*0.5)) %>% 
   filter(!is.na(score_value)) %>% 
-  filter(!model %in% c("CU-scenario_high","CU-scenario_mid","CU-scenario_low","CU-nochange")) %>%
+  #filter(!model %in% c("CU-scenario_high","CU-scenario_mid","CU-scenario_low","CU-nochange")) %>%
   droplevels()
 
 
@@ -149,21 +151,21 @@ score_inc_10wks <- score_inc_all %>%
                                          n_forecasts_mae = sum(score_name == "abs_error")) %>% ungroup() %>%
   filter(n_forecasts_wis >= (max(n_forecasts_wis)*0.5) | n_forecasts_mae >= (max(n_forecasts_mae)*0.5)) %>% 
   filter(!is.na(score_value)) %>% 
-  filter(!model %in% c("CU-scenario_high","CU-scenario_mid","CU-scenario_low","CU-nochange")) %>%
+ # filter(!model %in% c("CU-scenario_high","CU-scenario_mid","CU-scenario_low","CU-nochange")) %>%
   droplevels()
 
 ```
 
 ```{r inclusion in leaderboard historical}
 score_case_historical <- score_case_all %>%
-  filter(!model %in% c("CU-scenario_high","CU-scenario_mid","CU-scenario_low","CU-nochange")) %>%
+  #filter(!model %in% c("CU-scenario_high","CU-scenario_mid","CU-scenario_low","CU-nochange")) %>%
   group_by(model, score_name) %>% mutate(n_forecasts_wis = sum(score_name == "wis"),
                                          n_forecasts_mae = sum(score_name == "abs_error")) %>% ungroup() %>%
   filter(n_forecasts_wis >= (max(n_forecasts_wis)*0.5) | n_forecasts_mae >= (max(n_forecasts_mae)*0.5)) %>% 
   filter(!is.na(score_value)) %>% droplevels()
 
 score_inc_historical <- score_inc_all %>%
-  filter(!model %in% c("CU-scenario_high","CU-scenario_mid","CU-scenario_low","CU-nochange")) %>%
+  #filter(!model %in% c("CU-scenario_high","CU-scenario_mid","CU-scenario_low","CU-nochange")) %>%
   group_by(model, score_name) %>% mutate(n_forecasts_wis = sum(score_name == "wis"),
                                          n_forecasts_mae = sum(score_name == "abs_error")) %>% ungroup() %>%
   filter(n_forecasts_wis >= (max(n_forecasts_wis)*0.5) | n_forecasts_mae >= (max(n_forecasts_mae)*0.5)) %>% 
