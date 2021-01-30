@@ -32,7 +32,7 @@ last_4wk_target_end_date <- as.Date(calc_target_week_end_date(last_submission_da
 
 eval_sat <- c(first_eval_sat, last_eval_sat) #range of dates evaluated 
 
-models_primary_sec <- get_model_designations(source = "zoltar") %>% filter(designation %in% c("secondary", "primary")) %>% pull(model)
+models_primary_secondary <- get_model_designations(source = "zoltar") %>% filter(designation %in% c("secondary", "primary")) %>% pull(model)
 
 #function to load truth data for all 2 targets
 
