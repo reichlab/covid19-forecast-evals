@@ -32,7 +32,7 @@ last_4wk_target_end_date <- as.Date(calc_target_week_end_date(last_submission_da
 
 eval_sat <- c(first_eval_sat, last_eval_sat) #range of dates evaluated 
 
-
+models_primary_secondary <- get_model_designations(source = "zoltar") %>% filter(designation %in% c("secondary", "primary")) %>% pull(model)
 
 #function to load truth data for all 2 targets
 
@@ -63,7 +63,7 @@ forecasts_case <- map_dfr(
       targets = paste(1:4, "wk ahead inc case"),
       source = "zoltar")
   }
-)
+) %>% filter(model %in% models_primary_secondary)
 
 
 forecasts_inc1 <- map_dfr(
@@ -115,7 +115,7 @@ forecasts_inc4 <- map_dfr(
 )
 
 
-forecasts_inc <- rbind(forecasts_inc1,forecasts_inc2,forecasts_inc3,forecasts_inc4)
+forecasts_inc <- rbind(forecasts_inc1,forecasts_inc2,forecasts_inc3,forecasts_inc4) %>% filter(model %in% models_primary_secondary)
 
 forecasts_case1 <- unique(forecasts_case) #used to ensure there are no duplicates
 forecasts_inc1 <- unique(forecasts_inc)
