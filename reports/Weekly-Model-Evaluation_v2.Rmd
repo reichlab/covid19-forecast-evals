@@ -254,16 +254,17 @@ In collaboration with the US Centers for Disease Control and Prevention (CDC), t
 
 # Incident Case Forecasts {.tabset .tabset-fade}
 
-## LeaderBoard Table
+## Summary Table
 
-The LeaderBoard table included below evaluated models based on their prediction interval coverage (50% and 95% coverage), and their adjusted relative weighted interval scores (WIS) and adjusted relative mean absolute error (MAE) for a recent and historical number of weeks. 
+The table included below evaluated models based on their prediction interval coverage (at the 50% and 95% levels), their [adjusted relative weighted interval scores (WIS, a measure of distributional accuracy)](https://arxiv.org/abs/2005.12881), and adjusted relative mean absolute error (MAE). Scores are aggregated separately for the most recent 10 weeks and for all historical weeks. To account for the variation in difficult of forecasting different weeks and locations, a pairwise approach was used to calculated the relative adjusted WIS and MAE. Models with relative scores lower than 1 have been more accurate than the baseline on average, whereas relative scores greater than 1 indicate less accuracy than baseline on average.  
 
-* The **prediction interval coverage**  measures  the proportion of times a prediction interval of a certain level covered the true value, to assess the degree to which forecasts accurately characterized uncertainty about future observations. Well calibrated models should have a 50% coverage level of 0.5 and a 95% coverage level of 0.95. 
+
+<!-- * The **prediction interval coverage**  measures  the proportion of times a prediction interval of a certain level covered the true value, to assess the degree to which forecasts accurately characterized uncertainty about future observations. Well calibrated models should have a 50% coverage level of 0.5 and a 95% coverage level of 0.95. 
 
 * The **weighted interval score (WIS)** is a proper score that combines a set of interval scores for probabilistic forecasts that provide quantiles of the predictive forecast distribution. To account for the variation in difficult of forecasting different weeks and locations, a pairwis approach was used to calculated the relative adjusted WIS. The code for this comparison can be found [here](https://github.com/jbracher/pairwise_comparisons). A preprint on this method for calculating the WIS can be found [here](https://arxiv.org/pdf/2005.12881.pdf). Models with an adjusted relative WIS  lower than 1 are more accurate than the baseline, and models with an adjusted relative WIS greater than 1 are less accurate than the baseline is predicting the number of incident cases. 
 
 * The **mean absolute error** is defined as the the difference between the forecasted value and the actual value. For this calculation, point forecasts submitted by teams were used. When point forecasts were not available, the 0.50 quantile was used. Similar to calculating the WIS, a pairwise approach was used to account for variation across locations and weeks. Models with an adjusted relative MAE lower than 1 are more accurate than the baseline, and models with an adjusted relative MAE greater than 1 are less accurate than the baseline is predicting the number of incident cases. 
-
+-->
  
 Inclusion criteria for each column are detailed below the table. 
 
@@ -649,17 +650,6 @@ In order to calculate each column in our table, different inclusion criteria wer
 
 
 
-## Truth data 
-
-This figure shows the number of incident cases reported each week. The period between the vertical lines shows the number of weeks for which models were evaluated. 
-
-```{r, fig.width=8, fig.height=5}
-truth_US_case <- truth_dat_case %>%
-  filter(location == "US")
-
-plot_truth(dat = truth_US_case)
-```
-
 
 <!-- ## Number of Locations -->
 
@@ -845,19 +835,35 @@ ggplotly(by_week_wis_4wk, tooltip = c("label", "labelx", "labely"))
 <!-- ``` -->
 
 
+## Truth data 
+
+This figure shows the number of incident cases reported each week. The period between the vertical lines shows the number of weeks for which models were evaluated. 
+
+```{r, fig.width=8, fig.height=5}
+truth_US_case <- truth_dat_case %>%
+  filter(location == "US")
+
+plot_truth(dat = truth_US_case)
+```
+
+
+
 # Incident Death Forecasts {.tabset .tabset-fade}
 
 
-## LeaderBoard Table
+## Summary Table
 
-The LeaderBoard table included below evaluated models based on their prediction interval coverage (50% and 95% coverage), and their adjusted relative weighted interval scores (WIS) and adjusted relative mean absolute error (MAE) for a recent and historical number of weeks. 
+
+The table included below evaluated models based on their prediction interval coverage (at the 50% and 95% levels), their [adjusted relative weighted interval scores (WIS, a measure of distributional accuracy)](https://arxiv.org/abs/2005.12881), and adjusted relative mean absolute error (MAE). Scores are aggregated separately for the most recent 10 weeks and for all historical weeks. To account for the variation in difficult of forecasting different weeks and locations, a pairwise approach was used to calculated the relative adjusted WIS and MAE. Models with relative scores lower than 1 have been more accurate than the baseline on average, whereas relative scores greater than 1 indicate less accuracy than baseline on average.  
+
+<!--The table included below evaluated models based on their prediction interval coverage (50% and 95% coverage), and their adjusted relative weighted interval scores (WIS) and adjusted relative mean absolute error (MAE) for a recent and historical number of weeks. 
 
 * The **prediction interval coverage**  measures  the proportion of times a prediction interval of a certain level covered the true value, to assess the degree to which forecasts accurately characterized uncertainty about future observations. Well calibrated models should have a 50% coverage level of 0.5 and a 95% coverage level of 0.95. 
 
 * The **weighted interval score (WIS)** is a proper score that combines a set of interval scores for probabilistic forecasts that provide quantiles of the predictive forecast distribution. To account for the variation in difficult of forecasting different weeks and locations, a pairwis approach was used to calculated the relative adjusted WIS. The code for this comparison can be found [here](https://github.com/jbracher/pairwise_comparisons). A preprint on this method for calculating the WIS can be found [here](https://arxiv.org/pdf/2005.12881.pdf). Models with an adjusted relative WIS  lower than 1 are more accurate than the baseline, and models with an adjusted relative WIS greater than 1 are less accurate than the baseline is predicting the number of incident cases. 
 
 * The **mean absolute error (MAE)** is defined as the the difference between the forecasted value and the actual value. For this calculation, point forecasts submitted by teams were used. When point forecasts were not available, the 0.50 quantile was used. Similar to calculating the WIS, a pairwise approach was used to account for variation across locations and weeks. Models with an adjusted relative MAE lower than 1 are more accurate than the baseline, and models with an adjusted relative MAE greater than 1 are less accurate than the baseline is predicting the number of incident cases. 
-
+-->
  
 Inclusion criteria for each column are detailed below the table. 
 ```{r}
@@ -1132,17 +1138,6 @@ In order to calculate each column in our table, different inclusion criteria wer
 
 
 
-## Truth data
-
-This plot shows the observed number of incident deaths over the evaluation period. 
-
-
-```{r, fig.width=8, fig.height=5}
-truth_US_inc <- truth_dat_inc %>% filter(location == "US") 
-
-plot_truth(truth_US_inc)
-```
-
 
 <!-- ## Number of Locations -->
 
@@ -1250,4 +1245,16 @@ ggplotly(by_week_wis_4wk, tooltip = c("label", "labelx", "labely"))
 <!-- plot_avg_by_loc(score_inc_10wks) -->
 <!-- ``` -->
 
+
+
+## Truth data
+
+This plot shows the observed number of incident deaths over the evaluation period. 
+
+
+```{r, fig.width=8, fig.height=5}
+truth_US_inc <- truth_dat_inc %>% filter(location == "US") 
+
+plot_truth(truth_US_inc)
+```
 
