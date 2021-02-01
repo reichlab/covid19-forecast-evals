@@ -16,7 +16,7 @@ n_weeks_eval <- 10 #weeks included in evaluation
 n_weeks_submitted <- 5 #number of weeks needed for inclusion if no longer submitting
 
 #Important dates used
-last_eval_sat <- as.Date(calc_target_week_end_date(Sys.Date(), horizon = -1))
+last_eval_sat <- as.Date(calc_target_week_end_date(Sys.Date(), horizon = 0))
 first_eval_sat <- last_eval_sat  - 7*(n_weeks_eval - 1)  #First Evaluated Date
 
 last_submission_date <- last_eval_sat  - 5 #Last submission date
@@ -149,8 +149,7 @@ mutate_scores <- function(x) {
     group_by(model, horizon,  target_end_date, score_name) %>% #Add count of locations
     mutate(n_locations = n()) %>%
     ungroup()  %>%
-    mutate(submission_sat = as.Date(calc_target_week_end_date(forecast_date, horizon=0))) %>%
-    filter(!model %in% c("CU-scenario_high","CU-scenario_mid","CU-scenario_low","CU-nochange"))
+    mutate(submission_sat = as.Date(calc_target_week_end_date(forecast_date, horizon=0)))
   }
 
 score_case_all <- mutate_scores(score_case)
@@ -174,4 +173,3 @@ save(truth_dat_inc, file = "reports/truth_dat_inc.rda")
 #write rda to save scores (this will be taken out if we use a csv pipeline)
 save(score_case_all, file = "reports/score_case_all.rda")
 save(score_inc_all, file = "reports/score_inc_all.rda")
-
