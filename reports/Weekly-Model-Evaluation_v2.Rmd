@@ -68,7 +68,8 @@ n_weeks_submitted <- 5 #number of weeks needed for inclusion if no longer submit
 
 ```{r get-date-boundaries}
 #Important dates used (likely there is a cleaner way to code this)
-last_eval_sat <- as.Date(calc_target_week_end_date(today(), horizon = 0))
+forecast_mon <- lubridate::floor_date(Sys.Date(), unit = "week") + 1      #Even when running on Tuesday, will be Monday date
+last_eval_sat <- as.Date(calc_target_week_end_date(forecast_mon, horizon = 0))
 first_eval_sat <- last_eval_sat  - 7*(n_weeks_eval - 1)  #First Evaluated Date
 
 last_submission_date <- last_eval_sat  - 5 #Last submission date
