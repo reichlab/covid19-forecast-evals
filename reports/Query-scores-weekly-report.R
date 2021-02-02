@@ -115,7 +115,7 @@ forecasts_inc4 <- map_dfr(
 )
 
 
-forecasts_inc <- rbind(forecasts_inc1,forecasts_inc2,forecasts_inc3,forecasts_inc4)  %>% filter(model %in% models_primary_secondary)
+forecasts_inc <- rbind(forecasts_inc1,forecasts_inc2,forecasts_inc3,forecasts_inc4) %>% filter(model %in% models_primary_secondary)
 
 forecasts_case_update <- unique(forecasts_case) #used to ensure there are no duplicates
 forecasts_inc_update <- unique(forecasts_inc)
