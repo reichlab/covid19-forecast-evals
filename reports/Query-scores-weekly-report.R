@@ -115,24 +115,23 @@ forecasts_inc4 <- map_dfr(
 )
 
 
-forecasts_inc <- rbind(forecasts_inc1,forecasts_inc2,forecasts_inc3,forecasts_inc4) %>% filter(model %in% models_primary_secondary)
+forecasts_inc <- rbind(forecasts_inc1,forecasts_inc2,forecasts_inc3,forecasts_inc4)  %>% filter(model %in% models_primary_secondary)
 
-forecasts_case1 <- unique(forecasts_case) #used to ensure there are no duplicates
-forecasts_inc1 <- unique(forecasts_inc)
+forecasts_case_update <- unique(forecasts_case) #used to ensure there are no duplicates
+forecasts_inc_update <- unique(forecasts_inc)
 
 
 #covidhub utils function to score the data
 
-score_case <- score_forecasts(forecasts = forecasts_case1,
+score_case <- score_forecasts(forecasts = forecasts_case_update,
                               truth = truth_dat_case,
                               return_format = "long",
                               use_median_as_point = TRUE)
 
-score_inc <- score_forecasts(forecasts = forecasts_inc1,
+score_inc <- score_forecasts(forecasts = forecasts_inc_update,
                              truth = truth_dat_inc,
                              return_format = "long",
                              use_median_as_point = TRUE)
-
 
 
 # function to clean the datasets and add in columns to count the number of weeks, horizons, and locations
@@ -149,7 +148,8 @@ mutate_scores <- function(x) {
     group_by(model, horizon,  target_end_date, score_name) %>% #Add count of locations
     mutate(n_locations = n()) %>%
     ungroup()  %>%
-    mutate(submission_sat = as.Date(calc_target_week_end_date(forecast_date, horizon=0)))
+    mutate(submission_sat = as.Date(calc_target_week_end_date(forecast_date, horizon=0))) %>%
+    filter(model %in% models_primary_secondary)
   }
 
 score_case_all <- mutate_scores(score_case)
