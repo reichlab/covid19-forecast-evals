@@ -199,11 +199,11 @@ ggplot(data = dat, aes(x = target_end_date, y = value)) +
   labs(title = paste("Weekly reported COVID-19 data: \n Models evaluated from", first_eval_sat, "to", last_eval_sat, sep = " "),
                           caption="source: JHU CSSE (observed data)")+
   theme(legend.position = c(.05,.95), legend.justification = c(0,1)) +
-  geom_vline(aes(xintercept= c(first_submission_date -3.5), color = "Submission Date Boundaries"), linetype=2) +
-  geom_vline(aes(xintercept= c(last_submission_date + 3.5), color = "Submission Date Boundaries"), linetype=2) +  
+  #geom_vline(aes(xintercept= c(first_submission_date -3.5), color = "Submission Date Boundaries"), linetype=2) +
+  #geom_vline(aes(xintercept= c(last_submission_date + 3.5), color = "Submission Date Boundaries"), linetype=2) +  
   geom_vline(aes(xintercept= c(first_eval_sat -3.5), color = "Evaluated Date Boundaries"), linetype=2) +
   geom_vline(aes(xintercept= c(last_eval_sat + 3.5), color = "Evaluated Date Boundaries"), linetype=2) +    
-  scale_color_manual(name = "", values = c("Evaluated Date Boundaries" = "blue", "Submission Date Boundaries" = "red"))
+  scale_color_manual(name = "", values = c("Evaluated Date Boundaries" = "blue"))# , "Submission Date Boundaries" = "red"))
 }
 ```
 
@@ -267,7 +267,7 @@ render <- JS(
 )
 
 
-print(datatable(calibration_table, rownames= FALSE, colnames = c("Model", "n recent forecasts", "Recent 50% coverage", "Recent 95% coverage","n historical forecasts" , "Historical 50% coverage", "Recent 95% coverage"), 
+print(datatable(calibration_table, rownames= FALSE, colnames = c("Model", "n recent forecasts", "Recent 50% coverage", "Recent 95% coverage","n historical forecasts" , "Historical 50% coverage", "Historical 95% coverage"), 
               options =  list(pageLength = 5, 
                              autoWidth = TRUE,
                              columnDefs = list(list(width = '200px', targets = "_all", render = render)), 
@@ -886,9 +886,9 @@ ggplotly(by_week_wis_4wk, tooltip = c("label", "labelx", "labely"))
 <!-- ``` -->
 
 
-## Truth data 
+## Observed data 
 
-This figure shows the number of incident cases reported each week. The period between the vertical lines shows the number of weeks for which models were evaluated. 
+This figure shows the number of incident reported COVID-19 cases reported each week in the US. The period between the vertical blue lines shows the weeks included in the "recent" model evaluations. 
 
 ```{r, fig.width=8, fig.height=5}
 truth_US_case <- truth_dat_case %>%
@@ -1303,9 +1303,9 @@ ggplotly(by_week_wis_4wk, tooltip = c("label", "labelx", "labely"))
 
 
 
-## Truth data
+## Observed data
 
-This plot shows the observed number of incident deaths over the evaluation period. 
+This plot shows the observed number of incident deaths over time in the US. The period between the vertical blue lines shows the weeks included in the "recent" model evaluations.
 
 
 ```{r, fig.width=8, fig.height=5}
