@@ -68,7 +68,7 @@ n_weeks_submitted <- 5 #number of weeks needed for inclusion if no longer submit
 
 ```{r get-date-boundaries}
 #Important dates used (likely there is a cleaner way to code this)
-last_eval_sat <- as.Date(calc_target_week_end_date(today(), horizon = -1))
+last_eval_sat <- as.Date(calc_target_week_end_date(today(), horizon = 0))
 first_eval_sat <- last_eval_sat  - 7*(n_weeks_eval - 1)  #First Evaluated Date
 
 last_submission_date <- last_eval_sat  - 5 #Last submission date
@@ -227,16 +227,53 @@ plot_location <- function(x){
 
 ```{r calibration table function}
 calib_table <- function(x){
-  x %>% 
-      filter(score_name %in% c("coverage_50","coverage_95")) %>%
+  
+ historical_calib <-  x  %>% 
+  filter(score_name %in% c("coverage_50","coverage_95")) %>%
   pivot_wider(names_from = score_name, values_from = score_value) %>%
   group_by(model) %>%
   summarise(n_forecasts_historical = n(),
-            n_forecasts_recent = sum(target_end_date >= first_eval_sat),
             mean_PI50 = round(sum(coverage_50, na.rm = TRUE) / n(),2),
-            mean_PI95 = round(sum(coverage_95, na.rm = TRUE) / n(),2)) %>%
-  ungroup() %>%
-  arrange(-mean_PI50)
+            mean_PI95 = round(sum(coverage_95, na.rm = TRUE) / n(),2)) %>% ungroup() 
+  
+  
+ recent_calib  <- x  %>%
+    filter(score_name %in% c("coverage_50","coverage_95")) %>%
+    filter(target_end_date >= first_eval_sat) %>%  droplevels() %>%
+  pivot_wider(names_from = score_name, values_from = score_value) %>%
+  group_by(model) %>%
+   summarise(n_forecasts_recent = n(),
+            mean_PI50_recent = round(sum(coverage_50, na.rm = TRUE) / n(),2),
+            mean_PI95_recent = round(sum(coverage_95, na.rm = TRUE) / n(),2)) %>%
+  ungroup() 
+ 
+ merge(historical_calib, recent_calib, by = "model")
+}
+```
+
+```{r coverage table}
+coverage_function <- function(x) {
+  calibration_table <-  x  %>%
+  select(model, n_forecasts_recent, mean_PI50_recent, mean_PI95_recent, n_forecasts_historical, mean_PI50, mean_PI95) %>%
+  arrange(-mean_PI50_recent)
+
+render <- JS(
+  "function(data, type, row) {",
+  "  if(type === 'sort' && data === null) {",
+  "    return 999999;",
+  "  }",
+  "  return data;",
+  "}"
+)
+
+
+print(datatable(calibration_table, rownames= FALSE, colnames = c("Model", "n recent forecasts", "Recent 50% coverage", "Recent 95% coverage","n historical forecasts" , "Historical 50% coverage", "Recent 95% coverage"), 
+              options =  list(pageLength = 5, 
+                             autoWidth = TRUE,
+                             columnDefs = list(list(width = '200px', targets = "_all", render = render)), 
+                             ordering = TRUE),
+              filter = c("top")))
+  
 }
 ```
 
@@ -254,10 +291,13 @@ In collaboration with the US Centers for Disease Control and Prevention (CDC), t
 
 # Incident Case Forecasts {.tabset .tabset-fade}
 
-## Summary Table
+## Summary Tables {.tabset .tabset-fade}
 
-The table included below evaluated models based on their prediction interval coverage (at the 50% and 95% levels), their [adjusted relative weighted interval scores (WIS, a measure of distributional accuracy)](https://arxiv.org/abs/2005.12881), and adjusted relative mean absolute error (MAE). Scores are aggregated separately for the most recent 10 weeks and for all historical weeks. To account for the variation in difficult of forecasting different weeks and locations, a pairwise approach was used to calculated the relative adjusted WIS and MAE. Models with relative scores lower than 1 have been more accurate than the baseline on average, whereas relative scores greater than 1 indicate less accuracy than baseline on average.  
 
+The first table evaluates models based on their [adjusted relative weighted interval scores (WIS, a measure of distributional accuracy)](https://arxiv.org/abs/2005.12881), and adjusted relative mean absolute error (MAE). Scores are aggregated separately for the most recent 10 weeks and for all historical weeks. To account for the variation in difficult of forecasting different weeks and locations, a pairwise approach was used to calculated the relative adjusted WIS and MAE. Models with relative scores lower than 1 have been more accurate than the baseline on average, whereas relative scores greater than 1 indicate less accuracy than baseline on average.  
+
+
+The second table evaluates models based on their prediction interval coverage at the 50% and 95% levels. Scores are aggregated seperately for the most recent 10 weeks and for all historical weeks. 
 
 <!-- * The **prediction interval coverage**  measures  the proportion of times a prediction interval of a certain level covered the true value, to assess the degree to which forecasts accurately characterized uncertainty about future observations. Well calibrated models should have a 50% coverage level of 0.5 and a 95% coverage level of 0.95. 
 
@@ -267,6 +307,10 @@ The table included below evaluated models based on their prediction interval cov
 -->
  
 Inclusion criteria for each column are detailed below the table. 
+
+
+
+### Accuracy Table 
 
 ```{r}
 #calibration table 
@@ -604,15 +648,15 @@ historical_mae <- tab %>%
   select(model, historical_relative_mae) 
 ```
 
-
 ```{r}
 leaderboard_table <- case_calibration %>%
   left_join(pairwise_scores) %>%
   left_join(historical_wis) %>%
   left_join(pairwise_scores_mae) %>%
   left_join(historical_mae) %>%
-  select(model, n_forecasts_recent, relative_wis, relative_mae,  mean_PI50, mean_PI95, n_forecasts_historical, relative_wis_historical, historical_relative_mae) %>%
-  arrange(relative_wis)
+  select(model, n_forecasts_recent, relative_wis, relative_mae,  n_forecasts_historical, relative_wis_historical, historical_relative_mae) %>%
+  arrange(relative_wis) %>% 
+  filter(!is.na(relative_wis) | !is.na(relative_mae) | !is.na(relative_wis_historical) | !is.na(historical_relative_mae))
 
 render <- JS(
   "function(data, type, row) {",
@@ -624,7 +668,7 @@ render <- JS(
 )
 
 
-datatable(leaderboard_table, rownames= FALSE, colnames = c("Model", "n recent forecasts",  "Recent rel WIS",  "Recent rel MAE", "Recent 50% coverage", "Recent 95% coverage","n historical forecasts" , "Historical rel WIS", "Historical rel MAE"), 
+datatable(leaderboard_table, rownames= FALSE, colnames = c("Model", "n recent forecasts",  "Recent rel WIS",  "Recent rel MAE", "n historical forecasts" , "Historical rel WIS", "Historical rel MAE"), 
               options =  list(pageLength = 5, 
                              autoWidth = TRUE,
                              columnDefs = list(list(width = '300px', targets = "_all", render = render)), 
@@ -641,13 +685,20 @@ In order to calculate each column in our table, different inclusion criteria wer
 
 * Columns 3 and 4 calculate the adjusted relative WIS over the most recent `r n_weeks_eval` week period and the adjusted relative MAE over the most recent `r n_weeks_eval` week period. For inclusion in these rows, a model must have forecasts for 50% or more of the evaluated forecasts in the most recent evaluation period. 
 
-* The inclusion criteria for the calibration coverage levels are the same as for the first two columns. 
+* Column 5 shows the number of historical models a team has submitted. All teams that have submitted at least 5 forecasts and/or 2 forecasts out of the last 3 weeks is included in this count.  
 
-* Column 7 shows the number of historical models a team has submitted. All teams that have submitted at least 5 forecasts and/or 2 forecasts out of the last 3 weeks is included in this count.  
-
-* Columns 8 and 9 show the adjusted WIS and adjusted MAE over a historical period beginning the first week in March. For inclusion in this figure, a model must have predictions for 50% or more of the evaluated forecasts in the historical evaluation period.
+* Columns 6 and 7 show the adjusted WIS and adjusted MAE over a historical period beginning the first week in March. For inclusion in this figure, a model must have predictions for 50% or more of the evaluated forecasts in the historical evaluation period.
 
 
+
+### Coverage Table 
+
+```{r}
+(coverage_table  <- coverage_function(case_calibration))
+```
+
+
+For inclusion in this table, a model most have contributed forecasts for 5 or more weeks total since the beginning of April, or have submitted forecasts during at least 2 out of the last 3 evaluated weeks. This inclusion criteria was applied in order to score models that submitted for a substantial amount of weeks at any point during the pandemic but may no longer be submitting, but also to evaluate new teams that have recently joined our forecasting efforts. 
 
 
 
@@ -851,10 +902,13 @@ plot_truth(dat = truth_US_case)
 # Incident Death Forecasts {.tabset .tabset-fade}
 
 
-## Summary Table
+## Summary Tables {.tabset .tabset-fade}
 
 
-The table included below evaluated models based on their prediction interval coverage (at the 50% and 95% levels), their [adjusted relative weighted interval scores (WIS, a measure of distributional accuracy)](https://arxiv.org/abs/2005.12881), and adjusted relative mean absolute error (MAE). Scores are aggregated separately for the most recent 10 weeks and for all historical weeks. To account for the variation in difficult of forecasting different weeks and locations, a pairwise approach was used to calculated the relative adjusted WIS and MAE. Models with relative scores lower than 1 have been more accurate than the baseline on average, whereas relative scores greater than 1 indicate less accuracy than baseline on average.  
+The first table below evaluates models based on their [adjusted relative weighted interval scores (WIS, a measure of distributional accuracy)](https://arxiv.org/abs/2005.12881), and adjusted relative mean absolute error (MAE). Scores are aggregated separately for the most recent 10 weeks and for all historical weeks. To account for the variation in difficult of forecasting different weeks and locations, a pairwise approach was used to calculated the relative adjusted WIS and MAE. Models with relative scores lower than 1 have been more accurate than the baseline on average, whereas relative scores greater than 1 indicate less accuracy than baseline on average.  
+
+
+The second table evaluates models based on their prediction interval coverage at the 50% and 95% levels. Scores are aggregated seperately for the most recent 10 weeks and for all historical weeks. 
 
 <!--The table included below evaluated models based on their prediction interval coverage (50% and 95% coverage), and their adjusted relative weighted interval scores (WIS) and adjusted relative mean absolute error (MAE) for a recent and historical number of weeks. 
 
@@ -866,12 +920,15 @@ The table included below evaluated models based on their prediction interval cov
 -->
  
 Inclusion criteria for each column are detailed below the table. 
+
 ```{r}
 #calibration table 
 inc_calibration <- calib_table(score_inc_leaderboard)
 ```
 
 
+
+### Accuracy Table
 ```{r}
 inc_scores <- score_inc_10wks %>%
   filter(n_locations >= 25) %>%
@@ -1108,11 +1165,11 @@ leaderboard_table <- inc_calibration %>%
   left_join(historical_wis) %>%
   left_join(pairwise_scores_mae) %>%
   left_join(historical_mae) %>%
-  select(model, n_forecasts_recent, relative_wis, relative_mae,  mean_PI50, mean_PI95, n_forecasts_historical, relative_wis_historical, historical_relative_mae)  %>%
-  arrange(relative_wis)
+  select(model, n_forecasts_recent, relative_wis, relative_mae, n_forecasts_historical, relative_wis_historical, historical_relative_mae) %>% arrange(relative_wis) %>% 
+  filter(!is.na(relative_wis) | !is.na(relative_mae) | !is.na(relative_wis_historical) | !is.na(historical_relative_mae))
 
 
-datatable(leaderboard_table, rownames= FALSE, colnames = c("Model", "n recent forecasts",  "Recent rel WIS",  "Recent rel MAE", "Recent 50% coverage", "Recent 95% coverage","n historical forecasts" , "Historical rel WIS", "Historical rel MAE"), 
+datatable(leaderboard_table, rownames= FALSE, colnames = c("Model", "n recent forecasts",  "Recent rel WIS",  "Recent rel MAE","n historical forecasts" , "Historical rel WIS", "Historical rel MAE"), 
               options =  list(pageLength = 5, 
                              autoWidth = TRUE,
                              columnDefs = list(list(width = '300px', targets = "_all", render = render)), 
@@ -1121,21 +1178,20 @@ datatable(leaderboard_table, rownames= FALSE, colnames = c("Model", "n recent fo
 ```
 
 
+In this table, we have included all models with an eligible WIS or MAE score. 
 
-In order to calculate each column in our table, different inclusion criteria were applied. 
+In order to meet eligibility for adjusted relative WIS or MAE over the most recent  `r n_weeks_eval` week period, a model must have submitted forecasts 50% or more of the evaluated forecasts in the most recent evaluation period. WIS was only calculated for teams that submitted all required quantiles. 
 
-* The first column in the table lists all models that have contributed forecasts for 5 or more weeks total since the beginning of April, or models that have submitted forecasts during at least 2 out of the last 3 evaluated weeks. This inclusion criteria was applied in order to score models that submitted for a substantial amount of weeks at any point during the pandemic but may no longer be submitting, but also to evaluate new teams that have recently joined our forecasting efforts. 
+In order to be eligible for the historical calculation of MAE or WIS, a model must have predictions for 50% or more of the evaluated forecasts in the historical evaluation period.
 
-* The next column lists the number of forecasts a team has submitted with a target end date over the most recent `r n_weeks_eval` week period.
+### Coverage Table 
 
-* Columns 3 and 4 calculate the adjusted relative WIS over the most recent `r n_weeks_eval` week period and the adjusted relative MAE over the most recent `r n_weeks_eval` week period. For inclusion in these rows, a model must have forecasts for 50% or more of the evaluated forecasts in the most recent evaluation period. 
+```{r}
+coverage_table  <- coverage_function(inc_calibration)
+coverage_table 
+```
 
-* The inclusion criteria for the calibration coverage levels are the same as for the first two columns. 
-
-* Column 7 shows the number of historical models a team has submitted. All teams that have submitted at least 5 forecasts and/or 2 forecasts out of the last 3 weeks is included in this count.  
-
-* Columns 8 and 9 show the adjusted WIS and adjusted MAE over a historical period beginning the first week in March. For inclusion in this figure, a model must have predictions for 50% or more of the evaluated forecasts in the historical evaluation period.
-
+For inclusion in this table, a model most have contributed forecasts for 5 or more weeks total since the beginning of April, or have submitted forecasts during at least 2 out of the last 3 evaluated weeks. This inclusion criteria was applied in order to score models that submitted for a substantial amount of weeks at any point during the pandemic but may no longer be submitting, but also to evaluate new teams that have recently joined our forecasting efforts. 
 
 
 
@@ -1184,7 +1240,7 @@ In order to calculate each column in our table, different inclusion criteria wer
 
 In the following figures, we have evaluated models across multiple forecasting weeks. The models included in this comparison must have submitted forecasts for all 50 states and at a national level for each timepoint. 
 
-For the first 2 figures, WIS is used as a metric. The first figure shows the mean WIS across all locations for each submission week at a 1 week horizon. The second figure shows the mean WIS aggregated across locations, however it is for a 4 week horizon.
+For the first 2 figures, WIS is used as a metric. The first figure shows the mean WIS across all locations for each submission week at a 1 week horizon. The second figure shows the mean WIS aggregated across locations for a 4 week horizon.
 
 **To view a specific team, double click on the team names in the legend. To view a value on the plot, click on the point in the forecast of interest.To view a specific time of interest, highlight that section on the graph or use the zoom functionality.**
 
