@@ -1050,9 +1050,10 @@ For inclusion in this table, a model most have contributed forecasts for 5 or mo
 
 ## WIS components
 
+
 The data in this graph has been aggregated over all locations and submission weeks. The models included have submitted forecasts for at least 50% of forecasts out of the last 10 weeks. 
 
-```{r wis bar function, fig.height= 10, fig.width=6}
+```{r wis bar function, fig.height= 8, fig.width=13}
 wis_plot_function(x = score_case_all, y = score_case_10wks)
 ```
 
@@ -1198,7 +1199,7 @@ The color scheme shows the WIS score relative to the baseline. The only location
 
 ### Evaluation by WIS
 
-```{r, width=15, fig.height=11}
+```{r, width=16, fig.height=10}
 plot_by_location_wis(score_case_10wks)
 ```
 
@@ -1563,7 +1564,7 @@ For inclusion in this table, a model most have contributed forecasts for 5 or mo
 
 The data in this graph has been aggregated over all locations and submission weeks. The models included have submitted forecasts for at least 50% of forecasts out of the last 10 weeks. 
 
-```{r, fig.height=10, fig.width=6}
+```{r, fig.height=8, fig.width=13}
 wis_plot_function(score_inc_all, score_inc_10wks)
 ```
 
@@ -1634,7 +1635,7 @@ This figures below show model performance stratified by location In this figure,
 The color scheme shows the WIS score relative to the baseline. The only locations evaluated are 50 states and a national level forecast.
 
 ### Evaluation by WIS
-```{r, width=15, fig.height=11}
+```{r, width=16, fig.height=10}
 plot_by_location_wis(score_inc_10wks)
 ```
 
