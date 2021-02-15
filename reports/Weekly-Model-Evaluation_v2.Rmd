@@ -58,7 +58,7 @@ data("hub_locations")
 ```
 
 ```{r prelim set values}
-# the_locations <- hub_locations %>% filter(geo_type == "state") %>% 
+# the_locations <- hub_locations %>% filter(geo_type == "state") %>%
 #   filter(abbreviation %in% datasets::state.abb) %>% pull(fips) #states, us and territories
 
 US_fips <- hub_locations %>%  filter(geo_type == "state") %>% filter(abbreviation %in% datasets::state.abb) %>% pull(fips) #only 50 states 
@@ -112,7 +112,8 @@ n_weeks_missing <- 5
 #   filter(!model %in% c("CU-scenario_high","CU-scenario_mid","CU-scenario_low","CU-nochange"))
 ```
 
-```{r}
+```{r load data}
+#load files generated in query-scores-weekly-report.R
 load(file = "truth_dat_case.rda")
 load(file = "truth_dat_inc.rda")
 
@@ -121,14 +122,14 @@ load(file = "score_inc_all.rda")
 ```
 
 ```{r inclusion in leaderboard recent}
-#Filtered to include only models in scoreboard (number of obs and calibration)
+#Filtered to include only models in scoreboard (coverage table)
 score_case_leaderboard <- score_case_all %>%
   filter(n_weeks >= n_weeks_submitted |  n_weeks_3wksPrior >= 2) %>% 
   filter(!is.na(score_value)) 
 # %>%
 #   filter(!model %in% c("CU-scenario_high","CU-scenario_mid","CU-scenario_low","CU-nochange"))
 
-#Filtered to include only models in scoreboard
+#Filtered to include only models in scoreboard (coverage table)
 score_inc_leaderboard <- score_inc_all %>%
   filter(n_weeks >= n_weeks_submitted |  n_weeks_3wksPrior >= 2) %>% #filter if missing more than half of forecasts or if missing more than 2 forecasts in the last 3 weeks 
   filter(!is.na(score_value)) 
@@ -137,28 +138,31 @@ score_inc_leaderboard <- score_inc_all %>%
 ```
 
 ```{r only 10 weeks back}
+#filter for 10 weeks back accuracy table
 score_case_10wks <- score_case_all %>%
-  filter(target_end_date >= first_eval_sat) %>%
-  group_by(model, score_name) %>% mutate(n_forecasts_wis = sum(score_name == "wis"),
-                                         n_forecasts_mae = sum(score_name == "abs_error")) %>% ungroup() %>%
-  filter(n_forecasts_wis >= (max(n_forecasts_wis)*0.5) | n_forecasts_mae >= (max(n_forecasts_mae)*0.5)) %>% 
   filter(!is.na(score_value)) %>% 
+  filter(target_end_date >= first_eval_sat) %>%
+  group_by(model, score_name) %>% 
+  mutate(n_forecasts_wis = sum(score_name == "wis"),
+         n_forecasts_mae = sum(score_name == "abs_error")) %>% ungroup() %>%
+  filter(n_forecasts_wis >= (max(n_forecasts_wis)*0.5) | n_forecasts_mae >= (max(n_forecasts_mae)*0.5)) %>% 
   #filter(!model %in% c("CU-scenario_high","CU-scenario_mid","CU-scenario_low","CU-nochange")) %>%
   droplevels()
 
-
+#filter for 10 weeks back accuracy table
 score_inc_10wks <- score_inc_all %>%
+  filter(!is.na(score_value)) %>% 
   filter(target_end_date >= first_eval_sat) %>%
   group_by(model, score_name) %>% mutate(n_forecasts_wis = sum(score_name == "wis"),
                                          n_forecasts_mae = sum(score_name == "abs_error")) %>% ungroup() %>%
   filter(n_forecasts_wis >= (max(n_forecasts_wis)*0.5) | n_forecasts_mae >= (max(n_forecasts_mae)*0.5)) %>% 
-  filter(!is.na(score_value)) %>% 
  # filter(!model %in% c("CU-scenario_high","CU-scenario_mid","CU-scenario_low","CU-nochange")) %>%
   droplevels()
 
 ```
 
 ```{r inclusion in leaderboard historical}
+#filter for historical accuracy table
 score_case_historical <- score_case_all %>%
   #filter(!model %in% c("CU-scenario_high","CU-scenario_mid","CU-scenario_low","CU-nochange")) %>%
   group_by(model, score_name) %>% mutate(n_forecasts_wis = sum(score_name == "wis"),
@@ -166,6 +170,7 @@ score_case_historical <- score_case_all %>%
   filter(n_forecasts_wis >= (max(n_forecasts_wis)*0.5) | n_forecasts_mae >= (max(n_forecasts_mae)*0.5)) %>% 
   filter(!is.na(score_value)) %>% droplevels()
 
+#filter for historical accuracy table
 score_inc_historical <- score_inc_all %>%
   #filter(!model %in% c("CU-scenario_high","CU-scenario_mid","CU-scenario_low","CU-nochange")) %>%
   group_by(model, score_name) %>% mutate(n_forecasts_wis = sum(score_name == "wis"),
@@ -284,14 +289,14 @@ print(datatable(calibration_table, rownames= FALSE, colnames = c("Model", "n rec
 ```{r plot by location wis}
 # select relevant columns:
 
-plot_by_location_wis <- function(df) {
+plot_by_location_wis <- function(df, order) {
 scores <- df %>%
   filter(horizon %in% c(1:4)) %>%
   filter(score_name == "wis") %>%
   filter(n_horizons == max(n_horizons),
          n_weeks >= max(n_weeks)*0.5) %>%
   rename(wis = score_value) %>%
-  left_join(hub_locations %>% select(location = fips, abbreviation, location_name))
+  left_join(hub_locations %>% select(location = fips, abbreviation, location_name)) 
 
 
 # the included models and locations:
@@ -388,9 +393,9 @@ average_by_loc_to_plot <- average_by_loc %>%
   filter(location_name != "American Samoa" & location_name != "Northern Mariana Islands") %>%
   mutate(relative_wis_text = sprintf("%.1f", round(relative_wis, 1)),
          log_relative_wis = log2(relative_wis)) %>%
-  filter(!is.na(relative_wis)) 
+  filter(!is.na(relative_wis)) %>%
+  mutate(model = fct_relevel(model, order))
 
-average_by_loc_to_plot$model <- reorder(average_by_loc_to_plot$model, -average_by_loc_to_plot$log_relative_wis)
 
 # plot:
 ggplot(average_by_loc_to_plot, 
@@ -544,7 +549,7 @@ print(avg_by_loc)
 
 
 ```{r}
-wis_plot_function <- function(x,y) {
+wis_plot_function <- function(x,y,order) {
 wis_plot <- x %>% 
   filter(target_end_date >= first_eval_sat) %>%
   filter(score_name %in% c("sharpness","overprediction", "underprediction")) %>% 
@@ -552,18 +557,13 @@ wis_plot <- x %>%
   summarise(mean_values = mean(score_value,na.rm = T)) %>% 
   mutate(n_forecasts = n()) %>%
   ungroup() %>%
-  filter(n_forecasts >= (max(n_forecasts)*0.5)) %>% 
+  #filter(n_forecasts >= (max(n_forecasts)*0.5)) %>% 
   droplevels()  %>%
   filter(model %in% y$model)
    
 
-model_levels <- wis_plot %>%
-  group_by(model) %>%
-  summarise(sum_val = sum(mean_values)) %>% arrange(desc(sum_val)) %>% pull(model) 
-
-
 wis_plot <- wis_plot %>%
-  mutate(model = fct_relevel(model, model_levels))
+  mutate(model = fct_relevel(model, order))
 
 
 ggplot(wis_plot, aes(fill=score_name, y=mean_values, x=model)) + 
@@ -574,8 +574,6 @@ ggplot(wis_plot, aes(fill=score_name, y=mean_values, x=model)) +
   labs(y = "WIS components")
 }
 ```
-
-
 
 
 # Overview
@@ -630,7 +628,8 @@ case_calibration <- calib_table(score_case_leaderboard)
 
 inc_scores <- score_case_10wks %>%
   filter(!is.na(score_value)) %>%
-  filter(n_locations >= 25) %>% droplevels()
+  filter(n_locations >= 25) %>% 
+  droplevels()
 
 # bring all timezeros to Monday:
 inc_scores$timezero <- inc_scores$submission_sat
@@ -978,6 +977,11 @@ datatable(leaderboard_table, rownames= FALSE, colnames = c("Model", "n recent fo
 ```
 
 
+```{r}
+case_model_order <- leaderboard_table %>%
+  arrange(-relative_wis) %>% pull(model)
+```
+
 To calculate each column in our table, different inclusion criteria were applied. This table only includes models that have submitted forecasts for at least 50% of forecasts for the last 10 weeks or at least 50% of forecasts since the first week in April. 
 
 * The column titled, "n recent forecasts" lists the number of forecasts a team has submitted with a target end date over the most recent `r n_weeks_eval` week period.
@@ -1050,10 +1054,13 @@ For inclusion in this table, a model most have contributed forecasts for 5 or mo
 
 ## WIS components
 
-The data in this graph has been aggregated over all locations and submission weeks. The models included have submitted forecasts for at least 50% of forecasts out of the last 10 weeks. 
 
-```{r wis bar function, fig.height= 10, fig.width=6}
-wis_plot_function(x = score_case_all, y = score_case_10wks)
+The data in this graph has been aggregated over all locations and submission weeks. The models included have submitted forecasts for at least 50% of forecasts out of the last 10 weeks. This is the same exclusion criteria applied for WIS scores in the recent evaluation period. 
+
+The sum of the bars adds up to the WIS score. Of note, these values may not be exactly the same as the relative WIS scores shown in the leaderboard table because these are not adjusted for weeks or locations missing. 
+
+```{r wis bar function, fig.height= 8, fig.width=13}
+wis_plot_function(x = score_case_all, y = score_case_10wks, order = case_model_order)
 ```
 
 
@@ -1192,21 +1199,21 @@ ggplotly(by_week_wis_4wk, tooltip = c("label", "labelx", "labely"))
 
 ## Evaluation by location {.tabset .tabset-fade}
 
-This figures below show model performance stratified by location In this figure, we only include models that have submitted forecasts for all 4 horizons and at least 50% of past 10 evaluated weeks. 
+This figures below show model performance stratified by location. We have only included included models that have submitted forecasts for all 4 horizons and at least 50% of weeks over the past 10 evaluated weeks. 
 
 The color scheme shows the WIS score relative to the baseline. The only locations evaluated are 50 states and a national level forecast.
 
-### Evaluation by WIS
+<!-- ### Evaluation by WIS -->
 
-```{r, width=15, fig.height=11}
-plot_by_location_wis(score_case_10wks)
+```{r, width=16, fig.height=10}
+plot_by_location_wis(score_case_10wks, order = case_model_order)
 ```
 
 
-### Evaluation by MAE
-``````{r, width=15, fig.height=11}
-plot_by_location_mae(score_case_10wks)
-```
+<!-- ### Evaluation by MAE -->
+<!-- ``````{r, width=15, fig.height=11} -->
+<!-- plot_by_location_mae(score_case_10wks) -->
+<!-- ``` -->
 
 
 ## Observed data 
@@ -1501,6 +1508,11 @@ datatable(leaderboard_table, rownames= FALSE, colnames = c("Model", "n recent fo
 ```
 
 
+```{r}
+inc_model_order <- leaderboard_table %>%
+  arrange(-relative_wis) %>% pull(model)
+```
+
 In this table, we have included all models with an eligible WIS or MAE score. 
 
 In order to meet eligibility for adjusted relative WIS or MAE over the most recent  `r n_weeks_eval` week period, a model must have submitted forecasts 50% or more of the evaluated forecasts in the most recent evaluation period. WIS was only calculated for teams that submitted all required quantiles. 
@@ -1510,8 +1522,7 @@ In order to be eligible for the historical calculation of MAE or WIS, a model mu
 ### Coverage Table 
 
 ```{r}
-coverage_table  <- coverage_function(inc_calibration)
-coverage_table 
+(coverage_table  <- coverage_function(inc_calibration))
 ```
 
 For inclusion in this table, a model most have contributed forecasts for 5 or more weeks total since the beginning of April, or have submitted forecasts during at least 2 out of the last 3 evaluated weeks. This inclusion criteria was applied in order to score models that submitted for a substantial amount of weeks at any point during the pandemic but may no longer be submitting, but also to evaluate new teams that have recently joined our forecasting efforts. 
@@ -1561,10 +1572,14 @@ For inclusion in this table, a model most have contributed forecasts for 5 or mo
 
 ## WIS components
 
-The data in this graph has been aggregated over all locations and submission weeks. The models included have submitted forecasts for at least 50% of forecasts out of the last 10 weeks. 
+The data in this graph has been aggregated over all locations and submission weeks. The models included have submitted forecasts for at least 50% of forecasts out of the last 10 weeks. This is the same exclusion criteria applied for WIS scores in the recent evaluation period. 
 
-```{r, fig.height=10, fig.width=6}
-wis_plot_function(score_inc_all, score_inc_10wks)
+The sum of the bars adds up to the WIS score. Of note, these values may not be exactly the same as the relative WIS scores shown in the leaderboard table because these are not adjusted for weeks or locations missing. 
+
+The data are ordered on the x axis based on their relative WIS score shown in the accuracy table. 
+
+```{r, fig.height=8, fig.width=13}
+wis_plot_function(score_inc_all, y = score_inc_10wks, order = inc_model_order)
 ```
 
 
@@ -1633,16 +1648,16 @@ This figures below show model performance stratified by location In this figure,
 
 The color scheme shows the WIS score relative to the baseline. The only locations evaluated are 50 states and a national level forecast.
 
-### Evaluation by WIS
-```{r, width=15, fig.height=11}
-plot_by_location_wis(score_inc_10wks)
+<!-- ### Evaluation by WIS -->
+```{r, width=16, fig.height=10}
+plot_by_location_wis(score_inc_10wks, order = inc_model_order)
 ```
 
 
-### Evaluation by MAE
-```{r, width=15, fig.height=11}
-plot_by_location_mae(score_inc_10wks)
-```
+<!-- ### Evaluation by MAE -->
+<!-- ```{r, width=15, fig.height=11} -->
+<!-- plot_by_location_mae(score_inc_10wks) -->
+<!-- ``` -->
 
 
 ## Observed data
