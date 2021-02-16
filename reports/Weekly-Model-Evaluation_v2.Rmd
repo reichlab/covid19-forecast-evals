@@ -153,8 +153,8 @@ score_case_10wks <- score_case_all %>%
 score_inc_10wks <- score_inc_all %>%
   filter(!is.na(score_value)) %>% 
   filter(target_end_date >= first_eval_sat) %>%
-  group_by(model, score_name) %>% mutate(n_forecasts_wis = sum(score_name == "wis"),
-                                         n_forecasts_mae = sum(score_name == "abs_error")) %>% ungroup() %>%
+  group_by(model, score_name) %>% mutate(n_forecasts_wis = sum(score_name == "wis" & !is.na(score_value)),
+                                         n_forecasts_mae = sum(score_name == "abs_error" & !is.na(score_value))) %>% ungroup() %>%
   filter(n_forecasts_wis >= (max(n_forecasts_wis)*0.5) | n_forecasts_mae >= (max(n_forecasts_mae)*0.5)) %>% 
  # filter(!model %in% c("CU-scenario_high","CU-scenario_mid","CU-scenario_low","CU-nochange")) %>%
   droplevels()
@@ -165,16 +165,16 @@ score_inc_10wks <- score_inc_all %>%
 #filter for historical accuracy table
 score_case_historical <- score_case_all %>%
   #filter(!model %in% c("CU-scenario_high","CU-scenario_mid","CU-scenario_low","CU-nochange")) %>%
-  group_by(model, score_name) %>% mutate(n_forecasts_wis = sum(score_name == "wis"),
-                                         n_forecasts_mae = sum(score_name == "abs_error")) %>% ungroup() %>%
+  group_by(model, score_name) %>% mutate(n_forecasts_wis = sum(score_name == "wis" & !is.na(score_value)),
+                                         n_forecasts_mae = sum(score_name == "abs_error" & !is.na(score_value))) %>% ungroup() %>%
   filter(n_forecasts_wis >= (max(n_forecasts_wis)*0.5) | n_forecasts_mae >= (max(n_forecasts_mae)*0.5)) %>% 
   filter(!is.na(score_value)) %>% droplevels()
 
 #filter for historical accuracy table
 score_inc_historical <- score_inc_all %>%
   #filter(!model %in% c("CU-scenario_high","CU-scenario_mid","CU-scenario_low","CU-nochange")) %>%
-  group_by(model, score_name) %>% mutate(n_forecasts_wis = sum(score_name == "wis"),
-                                         n_forecasts_mae = sum(score_name == "abs_error")) %>% ungroup() %>%
+  group_by(model, score_name) %>% mutate(n_forecasts_wis = sum(score_name == "wis" & !is.na(score_value)),
+                                         n_forecasts_mae = sum(score_name == "abs_error" & !is.na(score_value))) %>% ungroup() %>%
   filter(n_forecasts_wis >= (max(n_forecasts_wis)*0.5) | n_forecasts_mae >= (max(n_forecasts_mae)*0.5)) %>% 
   filter(!is.na(score_value)) %>% droplevels()
 ```
@@ -636,8 +636,8 @@ inc_scores$timezero <- inc_scores$submission_sat
 
 # restrict to 1-4 wk ahead state-level 
 scores <- inc_scores %>% filter(horizon %in% paste(1:4),  location %in% US_fips) %>%
-  select("model", "timezero", "location", "horizon", "score_name", "score_value") %>%
   filter(score_name %in% c("abs_error", "wis")) %>%
+  select("model", "timezero", "location", "horizon", "score_name", "score_value") %>%
   pivot_wider(names_from = score_name, values_from = score_value) %>% 
   filter(!is.na(wis)) %>%
   droplevels()
@@ -645,9 +645,8 @@ scores <- inc_scores %>% filter(horizon %in% paste(1:4),  location %in% US_fips)
 # the included models:
 models <- unique(scores$model)
 
-
 pairwise_comparison <- function(scores, mx, my, subset = rep(TRUE, nrow(scores)),
-                                permutation_test = TRUE){
+                                permutation_test = FALSE){
   # subsets of available scores for both models:
   subx <- subset(scores, model == mx)
   suby <- subset(scores, model == my)
@@ -748,9 +747,11 @@ scores <- inc_scores %>% filter(horizon %in% paste(1:4),  location %in% US_fips)
   filter(!is.na(abs_error)) %>%
   droplevels()
 
+# the included models:
+models <- unique(scores$model)
 
 pairabs_error_comparison <- function(scores, mx, my, subset = rep(TRUE, nrow(scores)),
-                                permutation_test = TRUE){
+                                permutation_test = FALSE){
   # subsets of available scores for both models:
   subx <- subset(scores, model == mx)
   suby <- subset(scores, model == my)
@@ -856,7 +857,6 @@ scores <- inc_scores %>% filter(horizon %in% paste(1:4),  location %in% US_fips)
   filter(score_name %in% c("abs_error", "wis")) %>%
   pivot_wider(names_from = score_name, values_from = score_value) %>% filter(!is.na(wis))
 
-
 # the included models:
 models <- unique(scores$model)
 
@@ -908,6 +908,10 @@ scores <- inc_scores %>% filter(horizon %in% paste(1:4),  location %in% US_fips)
   filter(!is.na(abs_error)) %>%
   droplevels()
 
+# the included models:
+models <- unique(scores$model)
+
+
 # matrices to store:
 results_ratio <- results_pval <- results_pval_fcd <- matrix(ncol = length(models),
                                                             nrow = length(models),
@@ -950,10 +954,10 @@ historical_mae <- tab %>%
 
 ```{r}
 leaderboard_table <- case_calibration %>%
-  left_join(pairwise_scores) %>%
-  left_join(historical_wis) %>%
-  left_join(pairwise_scores_mae) %>%
-  left_join(historical_mae) %>%
+  full_join(pairwise_scores) %>%
+  full_join(historical_wis) %>%
+  full_join(pairwise_scores_mae) %>%
+  full_join(historical_mae) %>%
   select(model, n_forecasts_recent, relative_wis, relative_mae,  n_forecasts_historical, relative_wis_historical, historical_relative_mae) %>%
   arrange(relative_wis) %>% 
   filter(!is.na(relative_wis) | !is.na(relative_mae) | !is.na(relative_wis_historical) | !is.na(historical_relative_mae))
@@ -1060,7 +1064,7 @@ The data in this graph has been aggregated over all locations and submission wee
 The sum of the bars adds up to the WIS score. Of note, these values may not be exactly the same as the relative WIS scores shown in the leaderboard table because these are not adjusted for weeks or locations missing. 
 
 ```{r wis bar function, fig.height= 8, fig.width=13}
-wis_plot_function(x = score_case_all, y = score_case_10wks, order = case_model_order)
+wis_plot_function(x = score_case_all, y = pairwise_scores, order = case_model_order)
 ```
 
 
@@ -1326,6 +1330,8 @@ scores <- inc_scores %>% filter(horizon %in% paste(1:4),  location %in% US_fips)
   filter(!is.na(abs_error)) %>%
   droplevels()
 
+# the included models:
+models <- unique(scores$model)
 
 # matrices to store:
 results_ratio <- results_pval <- results_pval_fcd <- matrix(ncol = length(models),
@@ -1337,7 +1343,7 @@ set.seed(123) # set seed for permutation tests
 for(mx in seq_along(models)){
   for(my in 1:mx){
     pwc <- pairabs_error_comparison(scores = scores, mx = models[mx], my = models[my],
-                               permutation_test = TRUE)
+                               permutation_test = FALSE)
 
     results_ratio[mx, my] <- pwc$ratio
     results_ratio[my, mx] <- 1/pwc$ratio
@@ -1445,8 +1451,6 @@ scores <- inc_scores %>% filter(horizon %in% paste(1:4),  location %in% US_fips)
 # the included models:
 models <- unique(scores$model)
 
-
-
 # matrices to store:
 results_ratio <- results_pval <- results_pval_fcd <- matrix(ncol = length(models),
                                                             nrow = length(models),
@@ -1491,10 +1495,10 @@ historical_mae <- tab %>%
 
 ```{r}
 leaderboard_table <- inc_calibration %>%
-  left_join(pairwise_scores) %>%
-  left_join(historical_wis) %>%
-  left_join(pairwise_scores_mae) %>%
-  left_join(historical_mae) %>%
+  full_join(pairwise_scores) %>%
+  full_join(historical_wis) %>%
+  full_join(pairwise_scores_mae) %>%
+  full_join(historical_mae) %>%
   select(model, n_forecasts_recent, relative_wis, relative_mae, n_forecasts_historical, relative_wis_historical, historical_relative_mae) %>% arrange(relative_wis) %>% 
   filter(!is.na(relative_wis) | !is.na(relative_mae) | !is.na(relative_wis_historical) | !is.na(historical_relative_mae))
 
@@ -1579,7 +1583,7 @@ The sum of the bars adds up to the WIS score. Of note, these values may not be e
 The data are ordered on the x axis based on their relative WIS score shown in the accuracy table. 
 
 ```{r, fig.height=8, fig.width=13}
-wis_plot_function(score_inc_all, y = score_inc_10wks, order = inc_model_order)
+wis_plot_function(score_inc_all, y = pairwise_scores, order = inc_model_order)
 ```
 
 
