@@ -1,0 +1,128 @@
+---
+title: "CvM Calculation for COVID-19 Forecasting Models - Demo"
+author: "Estee Cramer, Nick Reich, Nutcha Wattanachit"
+date: "02/16/2021"
+header-includes:
+   - \usepackage{tabularx}
+   - \usepackage{hyperref}
+   - \usepackage{wrapfig}
+   - \usepackage{float}
+   - \usepackage{colortbl}
+   - \usepackage{pdflscape}
+   - \usepackage{tabu}
+   - \usepackage{xcolor}
+output:
+  pdf_document:
+        latex_engine: xelatex
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+# cvm packages to compare results
+library(twosamples)
+library(cramer)
+library(CDFt)
+library(knitr)
+library(data.table)
+library(covidHubUtils)
+library(zoltr)
+knitr::opts_chunk$set(comment = FALSE, message=FALSE, fig.show= 'hold', fig.pos="h",
+                      table.placement='h')
+```
+
+# Cramer von-Mises Criterion 
+
+## Definition
+
+The Cramer von-Mises criterion is defined as 
+
+$$
+\omega^2=\int^\infty_{-\infty}[F_n(x)-F^*(x)]^2dF^*(x),
+$$
+where $F_{n}(x)$ and $F^*(x)$ are empirical cumulative distribution functions. The CvM is symmetric. 
+
+
+## CvM calculation 
+
+The two-sample formulation of CvM criterion can be written in many forms. The equation below is currently used in the first part of this demo.
+
+$$
+T=\frac{mn}{(m+n)}\Big(\frac{2}{mn}\sum_{i=1..m,j=1..n}^{m,n}\phi(||X_i-Y_j||^2) - \frac{1}{m^2}\sum_{i=1..m,j=1..m}^{m,n} \phi(||X_i-X_j||^2) - \frac{1}{n^2}\sum_{i=1..n,j=1..n}^{m,n} \phi(||Y_i-Y_j||^2)\Big)\\
+\phi_{\text{Cramer}}(z)=\sqrt{z}/2
+$$
+
+Since we have sample quantiles from COVID-19 forecasting models, we do not have the whole empirical distributions for the CvM calculation. In the current implementation, we do the following:
+
+- The monotonic spline function to interpolate is used to interpolate points between available sample quantiles from the forecasting models. Now we have samples (with points interpolated between sample quantiles and extrapolated at the tails).
+- We can apply the `ecdf()` function to create and plot the ecdfs from these samples. For the calculation of CvM, samples created in the first step are  used. 
+
+
+In this demo, the models are from the week of 02/08/2021. 
+
+```{r}
+source("./cvm_script.R")
+# create sample data for this demo
+sample_frame <- load_latest_forecasts(models = c("CU-select", "UMass-MechBayes", "Covid19Sim-Simulator", 
+                                                 "COVIDhub-ensemble", "COVIDhub-baseline"),
+                              last_forecast_date = "2021-02-08", 
+                              forecast_date_window_size = 6,
+                              locations = "US", 
+                              types = "quantile", 
+                              targets = "1 wk ahead inc death",
+                              source = "zoltar")
+
+## make a single target data for demo run
+small <- frame_format(sample_frame) %>%
+   dplyr::filter(type=="quantile") %>%
+   data.frame(.)
+names <- colnames(small)[6:ncol(small)]
+# interpolate points for these quantiles
+point_to_interpolate <- seq(0, 1, by=0.001)
+for(i in 1:5){
+   assign(paste0("emp",i),
+          ecdf(spline(x=small$quantile, 
+                      y=small[,names[i]], 
+                      method = "hyman",
+                      xout=point_to_interpolate)$y))
+}
+```
+
+Plot from the ecdf created from the samples:
+
+```{r,fig.align="center",message=FALSE,warning=FALSE,fig.cap=""}
+plot(emp1,verticals=TRUE, do.points=FALSE, col='blue',xlim=c(5000,30000), main="ECDF Plot")
+plot(emp2,verticals=TRUE, do.points=FALSE, add=TRUE, col='red')
+plot(emp3,verticals=TRUE, do.points=FALSE, add=TRUE, col='green')
+plot(emp4,verticals=TRUE, do.points=FALSE, add=TRUE, col='purple')
+plot(emp5,verticals=TRUE, do.points=FALSE, add=TRUE, col='brown')
+legend("topleft",names,fill=c("blue","red","green","purple","brown"))
+```
+
+Now we can create a matrix of CvM for the models as shown in the table. We do a log transformation on these values for the heatmap because they are huge:
+
+```{r}
+cvm_mat <- build_CvM_frame(small, 
+                           spline_method="hyman",
+                           target_list=unique(small$target_variable),
+                           point_to_interpolate)
+kable(cvm_mat[[1]])
+transf_mat <-log(cvm_mat[[1]])
+CvM_heatmap(transf_mat)
+```
+
+## Comparison of CvM values from various sources
+
+
+```{r}
+for(i in 1:4){
+   assign(paste0("cvm_vals",i),build_CvM_frame_compare(small,
+                                       spline_method="hyman",
+                                       target_list=unique(small$target_variable),
+                                       point_to_interpolate,
+                                       est_method=i))
+}
+kable(cvm_vals1[[1]],caption="From cramer package")
+kable(cvm_vals2[[1]],caption="From twosamples package")
+kable(round(cvm_vals3[[1]],2),caption="From  package")
+kable(cvm_vals4[[1]],caption="From http://estatcomp.github.io/henrique/exer_chap8.html")
+```
