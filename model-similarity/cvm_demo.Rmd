@@ -26,6 +26,7 @@ library(knitr)
 library(data.table)
 library(covidHubUtils)
 library(zoltr)
+library(purrr)
 knitr::opts_chunk$set(comment = FALSE, message=FALSE, fig.show= 'hold', fig.pos="h",
                       table.placement='h')
 ```
@@ -44,14 +45,13 @@ where $F_{n}(x)$ and $F^*(x)$ are empirical cumulative distribution functions. T
 
 ## CvM calculation 
 
-The two-sample formulation of CvM criterion can be written in many forms. The equation below is currently used in the first part of this demo.
+The two-sample formulation of CvM criterion can be written in many forms. The equation below is currently used in the first part of this demo (from `cramer::cramer.test()`).
 
 $$
 T=\frac{mn}{(m+n)}\Big(\frac{2}{mn}\sum_{i=1..m,j=1..n}^{m,n}\phi(||X_i-Y_j||^2) - \frac{1}{m^2}\sum_{i=1..m,j=1..m}^{m,n} \phi(||X_i-X_j||^2) - \frac{1}{n^2}\sum_{i=1..n,j=1..n}^{m,n} \phi(||Y_i-Y_j||^2)\Big)\\
-\phi_{\text{Cramer}}(z)=\sqrt{z}/2
 $$
 
-Since we have sample quantiles from COVID-19 forecasting models, we do not have the whole empirical distributions for the CvM calculation. In the current implementation, we do the following:
+with $\phi_{\text{Cramer}}(z)=\sqrt{z}/2$. Since we have sample quantiles from COVID-19 forecasting models, we do not have the whole empirical distributions for the CvM calculation. In the current implementation, we do the following:
 
 - The monotonic spline function to interpolate is used to interpolate points between available sample quantiles from the forecasting models. Now we have samples (with points interpolated between sample quantiles and extrapolated at the tails).
 - We can apply the `ecdf()` function to create and plot the ecdfs from these samples. For the calculation of CvM, samples created in the first step are  used. 
@@ -125,4 +125,56 @@ kable(cvm_vals1[[1]],caption="From cramer package")
 kable(cvm_vals2[[1]],caption="From twosamples package")
 kable(round(cvm_vals3[[1]],2),caption="From  package")
 kable(cvm_vals4[[1]],caption="From http://estatcomp.github.io/henrique/exer_chap8.html")
+```
+
+## Simpler toy example of known distributions
+
+Due to large discrepancies in what we see above. We want to see how those functions compare in this toy example. We simulated 3 discrete uniform distributions:
+
+$$
+f_1\sim\text{U}(1,2)\\
+f_2\sim\text{U}(1,3)\\
+f_3\sim\text{U}(1,10)
+$$
+
+```{r}
+# create toy data
+n <- 1000
+b <- c(2,3,10)
+a <- c(1,1,1)
+q <- seq(0, 1, by=0.01)
+#  fill in bin probs
+toy_forecasts <- data.frame(q=q) %>%
+   dplyr::mutate(forecast1=sample_quantile(rdunif(n, b[1] , a[1]),q),
+                 forecast2=sample_quantile(rdunif(n, b[2] , a[2]),q),
+                 forecast3=sample_quantile(rdunif(n, b[3] , a[3]),q))
+
+tnames <- c("forecast1","forecast2","forecast3")
+```
+
+We can see the clear step functions here since the distributions are discrete and and the ranges of values are relatively narrow :
+
+```{r,fig.align="center",message=FALSE,warning=FALSE,fig.cap=""}
+# cut the tails (-Inf, Inf) out
+plot(ecdf(toy_forecasts$forecast1),verticals=TRUE, do.points=FALSE,xlim=c(0,12), 
+     col='blue', main="ECDF Plot")
+plot(ecdf(toy_forecasts$forecast2),verticals=TRUE, do.points=FALSE, add=TRUE, col='red')
+plot(ecdf(toy_forecasts$forecast3),verticals=TRUE, do.points=FALSE, add=TRUE, col='green')
+legend("topleft",tnames,fill=c("blue","red","green"))
+```
+The last two functions still seem off. At this point I'm not sure how correct the first two are since I have not calculated the actual integral. Since the squared difference of the ecdfs is integrated with respect to a function (one of the two distributions), it is not equal to the area between the two curves. The paper "A Geometric Interpretation of the Riemann-Stieltjes Integral" by Gregory L. Bullock is a good read for trying to visualize this. 
+
+The formula that `twosample` use is a simplified calculation of the actual CvM, $\sum|F_1(x)-F_2(x)|^p$ with $p=2$. The CvM values differ greatly in scale. Depending on the distributions of CvM statistic from `cramer` and `twosample`, they might give the same two-test results. However, the two-sample test is not our objective and scale might matter. 
+
+```{r}
+p <- seq(0, 1, by=0.001)
+for(i in 1:4){
+   assign(paste0("tcvm_vals",i),toy_compare(toy_forecasts,
+                                            spline_method="hyman",
+                                            p,
+                                            est_method=i))}
+kable(tcvm_vals1,caption="From cramer package")
+kable(tcvm_vals2,caption="From twosamples package")
+kable(round(tcvm_vals3,2),caption="From  package")
+kable(tcvm_vals4,caption="From http://estatcomp.github.io/henrique/exer_chap8.html")
 ```

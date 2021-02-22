@@ -172,3 +172,31 @@ build_CvM_frame_compare <- function(model_dataframe, spline_method, target_list,
   }
   return(CvM_list)
 }
+
+## toy functions
+sample_quantile <- function(x, prob) {
+  if (is.unsorted(x)) x <- sort(x)
+  n <- length(x)
+  approx(seq(0, 1, length = n), x, prob)$y
+}
+
+toy_compare <- function(single_frame,spline_method,point_to_interpolate,est_method){
+  # remove any models with NA for values for this target location (assuming all models have the same quantiles)
+  quantiles <- single_frame$q
+  # pairwise column calculation
+  tmp <- single_frame %>%
+    dplyr::select(-"q")
+  nc <- ncol(tmp)
+  cnames <- colnames(tmp)
+  eg <- expand.grid(1:nc, 1:nc)
+  nr <- nrow(eg)
+  v <- vector(length=nr)
+  for (i in 1:nr) {
+    cc <- CvM_comparision_pairwise(tmp[,eg[i,1]], tmp[,eg[i,2]],quantiles,
+                                   spline_method,point_to_interpolate,est_method)
+    v[i] <- cc
+  }
+  single_tarloc_cvm <- matrix(v, nc, byrow=TRUE)
+  dimnames(single_tarloc_cvm) <- list(cnames, cnames)
+  return(single_tarloc_cvm)
+}
