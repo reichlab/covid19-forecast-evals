@@ -33,7 +33,7 @@ weekly_inc_deaths <- weekly_inc_deaths %>%
 pdf('figures/data_revisions_all.pdf', height=12, width=8)
 
 for(i in 1:7) {
-  fig_revisions <- ggplot(data = weekly_inc_deaths, aes(x = MMWRweek, y = inc, color = factor(revision_date))) +
+  fig_revisions <- ggplot(data = weekly_inc_deaths, aes(x = date, y = inc, color = factor(revision_date))) +
     geom_line() +
     geom_point(size = 1) +
     theme_bw() +
