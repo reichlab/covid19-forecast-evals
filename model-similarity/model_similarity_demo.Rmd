@@ -1,5 +1,5 @@
 ---
-title: "CvM Calculation for COVID-19 Forecasting Models - Demo"
+title: "Distance Calculation for COVID-19 Forecasting Models - Demo"
 author: "Estee Cramer, Nick Reich, Nutcha Wattanachit"
 date: "02/23/2021"
 header-includes:
@@ -28,13 +28,11 @@ library(data.table)
 library(covidHubUtils)
 library(zoltr)
 library(purrr)
-knitr::opts_chunk$set(comment = FALSE, message=FALSE, fig.show= 'hold', fig.pos="h",
-                      table.placement='h')
+knitr::opts_chunk$set(comment = FALSE, message=FALSE, fig.show= 'hold', fig.pos="H",
+                      table.placement='H')
 ```
 
-# Model Similarity Demo
-
-## Definitions
+# Definitions
 
 ## Cramer von-Mises criterion
 
@@ -51,7 +49,7 @@ $$
 T=\frac{mn}{(m+n)}\Big(\frac{2}{mn}\sum_{i=1..m,j=1..n}^{m,n}\phi(||X_i-Y_j||^2) - \frac{1}{m^2}\sum_{i=1..m,j=1..m}^{m,n} \phi(||X_i-X_j||^2) - \frac{1}{n^2}\sum_{i=1..n,j=1..n}^{m,n} \phi(||Y_i-Y_j||^2)\Big)\\
 $$
 
-with $\phi_{\text{Cramer}}(z)=\sqrt{z}/2$. The formula that `twosample` use is $\sum|F_1(x)-F_2(x)|^p$ with $p=2$. The CvM values differ greatly in scale. 
+with $\phi_{\text{Cramer}}(z)=\sqrt{z}/2$. We can factor out the fraction at the front to get the distance. The formula that `twosample` use is $\sum|F_1(x)-F_2(x)|^p$ with $p=2$. The CvM values differ greatly in scale. 
 
 
 ## Cramer's Distance
@@ -61,11 +59,12 @@ Cramer's Distance is defined as
 $$
 CD(F,G)=\int^\infty_{-\infty}[F(x)-G(x)]^2dx.
 $$
-For univariate distributions, the Cramer's distance is exactly twice the energy distance. The current implementatino in this demo uses the function `eqdist.e()` from the `energy` package to calculate the energy distance or statistic and then divide the number by 2 to get Cramer's distance. 
+
+For univariate distributions, the Cramer's distance is exactly twice the energy distance. The current implementation in this demo uses the function `eqdist.e()` from the `energy` package to calculate the energy distance or statistic and then divide the number by 2 and by the sample size factor $n^2/2n$ to get Cramer's distance. 
 
 ## Setup Process
 
-Since we have sample quantiles from COVID-19 forecasting models, we do not have the whole empirical distributions for the CvM calculation. In the current implementation, we do the following:
+Since we have sample quantiles from COVID-19 forecasting models, we do not have the whole empirical distributions for the distance calculation. In the current implementation, we do the following:
 
 - The monotonic spline function to interpolate is used to interpolate points between available sample quantiles from the forecasting models. Now we have samples (with points interpolated between sample quantiles and extrapolated at the tails).
 - We can apply the `ecdf()` function to create and plot the ecdfs from these samples. For the calculation of CvM, samples created in the first step are  used. 
@@ -75,8 +74,8 @@ Since we have sample quantiles from COVID-19 forecasting models, we do not have 
 Due to large discrepancies in what we see above. We want to see how those functions compare in this toy example. We simulated 3 discrete uniform distributions:
 
 $$
-f_1\sim\text{U}(1,2)\\
-f_2\sim\text{U}(1,3)\\
+f_1\sim\text{U}(1,2), \\
+f_2\sim\text{U}(1,3), \\
 f_3\sim\text{U}(1,10)
 $$
 
@@ -98,7 +97,7 @@ tnames <- c("forecast1","forecast2","forecast3")
 
 We can see the clear step functions here since the distributions are discrete and and the ranges of values are relatively narrow :
 
-```{r,fig.align="center",message=FALSE,warning=FALSE,fig.cap=""}
+```{r,fig.align="center",message=FALSE,warning=FALSE,fig.cap="",echo=FALSE}
 # cut the tails (-Inf, Inf) out
 plot(ecdf(toy_forecasts$forecast1),verticals=TRUE, do.points=FALSE,xlim=c(0,12), 
      col='blue', main="ECDF Plot")
@@ -107,7 +106,9 @@ plot(ecdf(toy_forecasts$forecast3),verticals=TRUE, do.points=FALSE, add=TRUE, co
 legend("topleft",tnames,fill=c("blue","red","green"))
 ```
 
-```{r}
+Looking at these value make me wonder if some of these functions accommodate discrete distributions. I can try continuous distributions later. 
+
+```{r,echo=FALSE}
 p <- seq(0, 1, by=0.001)
 for(i in 1:6){
    assign(paste0("tcvm_vals",i),toy_compare(toy_forecasts,
@@ -116,9 +117,9 @@ for(i in 1:6){
                                             est_method=i))}
 kable(tcvm_vals1,caption="From cramer package")
 kable(tcvm_vals2,caption="From twosamples package")
-kable(round(tcvm_vals3,2),caption="From  package")
+kable(round(tcvm_vals3,2),caption="From CDFt package")
 kable(tcvm_vals4,caption="From http://estatcomp.github.io/henrique/exer_chap8.html")
-kable(round(tcvm_vals5,3),caption="cramer's distance using energy distance from energy package divided by 2")
+kable(round(tcvm_vals5,3),caption="cramer's distance based on energy distance from energy package")
 kable(round(tcvm_vals6,3),caption="Approx. cramer's distance based on quantile from Johannes")
 ```
 
@@ -155,7 +156,7 @@ for(i in 1:5){
 
 Plot from the ecdf created from the samples:
 
-```{r,fig.align="center",message=FALSE,warning=FALSE,fig.cap=""}
+```{r,fig.align="center",message=FALSE,warning=FALSE,fig.cap="",echo=FALSE}
 plot(emp1,verticals=TRUE, do.points=FALSE, col='blue',xlim=c(5000,30000), main="ECDF Plot")
 plot(emp2,verticals=TRUE, do.points=FALSE, add=TRUE, col='red')
 plot(emp3,verticals=TRUE, do.points=FALSE, add=TRUE, col='green')
@@ -164,7 +165,6 @@ plot(emp5,verticals=TRUE, do.points=FALSE, add=TRUE, col='brown')
 legend("topleft",names,fill=c("blue","red","green","purple","brown"))
 ```
 
-Now we can create distance matrices for the models.The CvM criterion and Cramer's distance results are the same. Is it possible the author of the `cramer` package confuse CvM with Cramer's distance just like we did? The authors of the `energy` package made it clear that those are different, so I assume they are aware. On the other hand, the approximated Cramer's distance based on quantile look different from the Cramer's distance we see. It is possible that I interpolated so many points and created a large sample (and sample size matters in the calculation of the the distances based on their formula).
 
 ```{r}
 cvm_mat <- build_distance_frame(small, 
@@ -172,6 +172,11 @@ cvm_mat <- build_distance_frame(small,
                            target_list=unique(small$target_variable),
                            point_to_interpolate,
                            distance="CvM")
+cvm2_mat <- build_distance_frame(small, 
+                           spline_method="hyman",
+                           target_list=unique(small$target_variable),
+                           point_to_interpolate,
+                           distance="CvM2")
 cramer_mat <- build_distance_frame(small, 
                            spline_method="hyman",
                            target_list=unique(small$target_variable),
@@ -180,18 +185,23 @@ cramer_mat <- build_distance_frame(small,
 approx_cd_mat <- build_distance_frame(small, 
                            target_list=unique(small$target_variable),
                            distance="approx_cramer")
-kable(cvm_mat[[1]])
-kable(round(cramer_mat[[1]],3))
-kable(round(approx_cd_mat[[1]],3))
 ```
 
-We can visualize matrices above in heat maps shown below.
+```{r,echo=FALSE}
+kable(cvm_mat[[1]],caption="From cramer package")
+kable(cvm2_mat[[1]],caption="From twosamples package")
+kable(round(cramer_mat[[1]],3),caption="cramer's distance based on energy distance from energy package")
+kable(round(approx_cd_mat[[1]],3),caption="Approx. cramer's distance based on quantile from Johannes")
+```
 
-```{r}
+We can visualize the matrices above in heat maps shown below.
+
+```{r,echo=FALSE}
 #transf_mat <-log(cvm_mat[[1]])
-distance_heatmap(cvm_mat[[1]])
-distance_heatmap(round(cramer_mat[[1]],3))
-distance_heatmap(round(approx_cd_mat[[1]],3))
+# distance_heatmap(cvm_mat[[1]])
+# distance_heatmap(cvm2_mat[[1]])
+distance_heatmap(round(cramer_mat[[1]],3),"Cramer's distance based on interpolated sample")
+distance_heatmap(round(approx_cd_mat[[1]],3),"Quantile-based approx. Cramer's distance")
 ```
 
 <!-- ## Comparison of CvM values from various sources -->
@@ -199,7 +209,7 @@ distance_heatmap(round(approx_cd_mat[[1]],3))
 
 <!-- ```{r} -->
 <!-- for(i in 1:4){ -->
-<!--    assign(paste0("cvm_vals",i),build_CvM_frame_compare(small, -->
+<!--    assign(paste0("cvm_vals",i),build_distance_frame_compare(small, -->
 <!--                                        spline_method="hyman", -->
 <!--                                        target_list=unique(small$target_variable), -->
 <!--                                        point_to_interpolate, -->

@@ -18,11 +18,18 @@ distance_pairwise <- function(modelA,modelB,quantiles=NULL, spline_method,
     A <- spline(x=quantiles, y=modelA, method = spline_method,xout=point_to_interpolate)
     B <- spline(x=quantiles, y=modelB, method = spline_method,xout=point_to_interpolate)
     if(distance=="CvM"){
-      metric <- cramer::cramer.test(A$y,B$y,just.statistic=TRUE)$statistic
+      n<-length(point_to_interpolate)
+      sample_factor <- (n^2)/(2*n)
+      metric <- (cramer::cramer.test(A$y,B$y,just.statistic=TRUE)$statistic)/sample_factor
       }
     else if (distance=="cramer"){
-      metric <- energy::eqdist.e(c(A$y,B$y), rep(length(point_to_interpolate),2))/2
-      } 
+      n<-length(point_to_interpolate)
+      sample_factor <- (n^2)/(2*n)
+      metric <- (energy::eqdist.e(as.matrix(c(A$y,B$y)), rep(n,2))/2)/sample_factor
+    } 
+    else if (distance=="CvM2"){
+      metric <- twosamples::cvm_stat(A$y,B$y,power=2)
+    } 
   } else if (distance=="approx_cramer"){
     metric<- approx_cd(modelA, modelB)
   }
@@ -130,7 +137,7 @@ build_distance_frame <- function(model_dataframe, spline_method=NULL,
 }
 
 # a function that takes a matrix and plot a heatmap
-distance_heatmap <- function(single_tarloc_cvm){
+distance_heatmap <- function(single_tarloc_cvm,name){
   dat <- data.frame(var1=rownames(single_tarloc_cvm)[row(single_tarloc_cvm)], 
                     var2=colnames(single_tarloc_cvm)[col(single_tarloc_cvm)], 
                     cvm=c(single_tarloc_cvm))
@@ -138,8 +145,7 @@ distance_heatmap <- function(single_tarloc_cvm){
   ggplot(dat, aes(var1, var2, fill= cvm)) + 
     geom_tile() +
     theme(axis.text.x=element_text(angle=-90,hjust=1))+
-    ylab("")+
-    xlab("")+
+    labs(title=name,xlab="",ylab="")+
     geom_text(aes(label=round(cvm,2))) 
 }
 
@@ -151,7 +157,9 @@ distance_comparision_pairwise <- function(modelA,modelB,quantiles=NULL, spline_m
   A <- spline(x=quantiles, y=modelA, method = spline_method,xout=point_to_interpolate)
   B <- spline(x=quantiles, y=modelB, method = spline_method,xout=point_to_interpolate)
   if(est_method==1){
-    value <- cramer::cramer.test(A$y,B$y,just.statistic=TRUE)$statistic
+    n<-length(point_to_interpolate)
+    sample_factor <- (n^2)/(2*n)
+    value <- (cramer::cramer.test(A$y,B$y,just.statistic=TRUE)$statistic)/sample_factor
   } 
   else if(est_method==2){
     value <- twosamples::cvm_stat(A$y,B$y,power=2)
@@ -163,7 +171,9 @@ distance_comparision_pairwise <- function(modelA,modelB,quantiles=NULL, spline_m
     value <- cvm(A$y,B$y)
   }
   else if(est_method==5){
-    value <- energy::eqdist.e(as.matrix(c(A$y,B$y)), rep(length(point_to_interpolate),2))/2
+    n<-length(point_to_interpolate)
+    sample_factor <- (n^2)/(2*n)
+    value <- (energy::eqdist.e(as.matrix(c(A$y,B$y)), rep(n,2))/2)/sample_factor
   }} else {
     value <- approx_cd(modelA, modelB)
   }
