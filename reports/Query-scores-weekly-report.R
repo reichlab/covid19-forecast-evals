@@ -5,6 +5,7 @@ library(scoringutils)
 library(covidHubUtils)
 library(zoltr)
 library(tidyverse)
+source("score_forecasts_eyc_update.R")
 
 #Get Date Boundaries
 
@@ -56,6 +57,7 @@ mondays <- seq(as.Date("2020-04-06"), last_eval_sat, by = "week")
 forecasts_case <- map_dfr(
   mondays, function(the_weeks) {
     load_latest_forecasts(
+      models = c(models_primary_secondary),
       last_forecast_date = the_weeks,
       forecast_date_window_size = 6,
       locations = the_locations,
@@ -69,6 +71,7 @@ forecasts_case <- map_dfr(
 forecasts_inc1 <- map_dfr(
   mondays[1:10], function(the_weeks) {
     load_latest_forecasts(
+      models = c(models_primary_secondary),
       last_forecast_date = the_weeks,
       forecast_date_window_size = 6,
       locations = the_locations,
@@ -81,6 +84,7 @@ forecasts_inc1 <- map_dfr(
 forecasts_inc2 <- map_dfr(
   mondays[11:20], function(the_weeks) {
     load_latest_forecasts(
+      models = c(models_primary_secondary),
       last_forecast_date = the_weeks,
       forecast_date_window_size = 6,
       locations = the_locations,
@@ -93,6 +97,7 @@ forecasts_inc2 <- map_dfr(
 forecasts_inc3 <- map_dfr(
   mondays[21:30], function(the_weeks) {
     load_latest_forecasts(
+      models = c(models_primary_secondary),
       last_forecast_date = the_weeks,
       forecast_date_window_size = 6,
       locations = the_locations,
@@ -105,6 +110,7 @@ forecasts_inc3 <- map_dfr(
 forecasts_inc4 <- map_dfr(
   mondays[31:length(mondays)], function(the_weeks) {
     load_latest_forecasts(
+      models = c(models_primary_secondary),
       last_forecast_date = the_weeks,
       forecast_date_window_size = 6,
       locations = the_locations,
@@ -123,12 +129,12 @@ forecasts_inc_update <- unique(forecasts_inc)
 
 #covidhub utils function to score the data
 
-score_case <- score_forecasts(forecasts = forecasts_case_update,
+score_case <- score_forecasts_eyc_update(forecasts = forecasts_case_update,
                               truth = truth_dat_case,
                               return_format = "long",
                               use_median_as_point = TRUE)
 
-score_inc <- score_forecasts(forecasts = forecasts_inc_update,
+score_inc <- score_forecasts_eyc_update(forecasts = forecasts_inc_update,
                              truth = truth_dat_inc,
                              return_format = "long",
                              use_median_as_point = TRUE)
@@ -139,7 +145,7 @@ mutate_scores <- function(x) {
   x %>%
     group_by(model, location, horizon, score_name) %>% #Add count of weeks
     mutate(n_weeks = n(),
-           n_weeks_3wksPrior = sum(target_end_date >= (last_eval_sat - 3*7) & horizon == "1"),
+           n_weeks_3wksPrior = sum(target_end_date >= (last_eval_sat - 2*7) & horizon == "1"),
            n_weeks_10wksPrior =sum(target_end_date >= first_eval_sat & horizon == "1")) %>%
     ungroup() %>%
     group_by(model, location, target_end_date, score_name) %>% #Add count of horizons
