@@ -1,6 +1,5 @@
 #Functions for use in weekly report 
 
-
 #Filter for inclusion in recent coverage table 
 ##Inclusion criteria: 
 ##1. Must have all quantiles
