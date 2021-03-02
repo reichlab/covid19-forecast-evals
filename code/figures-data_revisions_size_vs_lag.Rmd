@@ -1,0 +1,292 @@
+---
+title: "EDA of Revisions to COVID Data"
+author: "Evan L. Ray"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r echo = FALSE}
+library(tidyverse)
+library(MMWRweek)
+library(covidData)
+library(covidHubUtils)
+library(spatstat)
+library(plotly)
+library(knitr)
+library(DT)
+
+knitr::opts_chunk$set(echo = FALSE, cache.lazy = FALSE)
+
+ggplot2::theme_set(new = theme_bw())
+```
+
+```{r cache = TRUE}
+# load revisions as of one monday
+load_one_week <- function(as_of, measure)
+{
+  if (measure %in% c("cases", "deaths")) {
+    temporal_resolution <- "weekly"
+  } else {
+    temporal_resolution <- "daily"
+  }
+
+  load_data(
+    as_of = as_of,
+    spatial_resolution = "state",
+    temporal_resolution = temporal_resolution,
+    measure = measure) %>%
+    mutate(as_of = as_of) #add column listing Monday date
+}
+
+mondays <- covidData::jhu_deaths_data$issue_date
+mondays <- mondays[mondays %>%
+  lubridate::ymd() %>%
+  lubridate::wday(label = TRUE) %>%
+  `==`("Mon")]
+weekly_inc_deaths <- plyr::ldply(mondays,
+  load_one_week,
+  measure = "deaths")  #combine revisions into 1 dataframe
+
+mondays <- covidData::jhu_cases_data$issue_date
+mondays <- mondays[mondays %>%
+  lubridate::ymd() %>%
+  lubridate::wday(label = TRUE) %>%
+  `==`("Mon")]
+weekly_inc_cases <- plyr::ldply(mondays,
+  load_one_week,
+  measure = "cases")  #combine revisions into 1 dataframe
+
+mondays <- covidData::healthdata_hosp_data$issue_date
+mondays <- mondays[mondays %>%
+  lubridate::ymd() %>%
+  lubridate::wday(label = TRUE) %>%
+  `==`("Mon")]
+daily_inc_hosps <- plyr::ldply(mondays,
+  load_one_week,
+  measure = "hospitalizations")  #combine revisions into 1 dataframe
+
+weekly_inc_deaths$as_of <- lubridate::ymd(weekly_inc_deaths$as_of)
+weekly_inc_cases$as_of <- lubridate::ymd(weekly_inc_cases$as_of)
+daily_inc_hosps$as_of <- lubridate::ymd(daily_inc_hosps$as_of)
+```
+
+# Incident Deaths
+
+Note about timing:  We're going to look at weekly summaries of incident cases and deaths, aggregated over epidemic weeks ending on Saturdays.  However, we're pulling data that were available as of Mondays that forecasts are submitted, and will be summarizing the total size of revisions made over the course of that week.  In some instances there may be multiple revisions made during a week, and those revisions will typically affect multiple days; we can't see that kind of thing with the granularity of this analysis.
+
+The following plots display the timing and magnitude of revisions to previously reported incident deaths (really, differences in cumulative deaths).  Each facet is labelled with a location and a week a revision was made.  A vertical dashed line also indicates the week the revision was made.  Within a facet, the bar plot shows the magnitude and direction of updates to reported counts in past weeks.  For example, in the top left panel, we can see that over the course of the week ending Monday, 2020-04-27, updates were made to data in AZ relative to the values that had previously been reported as of Monday, 2020-04-20.  Specifically, 9 incident deaths that had previously been reported as occurring during the week ending Saturday, 2020-04-18 were shifted to now be reported as occurring during the week ending Saturday 2020-04-11.  In this case the size of the downward revision in one week is equal to the size of the upward revision in another week, but that is not always the case.
+
+Observations:
+
+ * Some revisions entail reshuffling a bunch of deaths that had previously been reported to other weeks; others entail directly adding previously unreported deaths to past weeks
+ * Note that these plots show absolute counts, but of course relatively small absolute counts could be a large shift in the curve in some locations.  I made plots of relative shifts but I didn't get much out of them so am not showing them here.  But see separate plots in another pdf.
+
+```{r fig.height=28, fig.width=10}
+as_ofs <- unique(weekly_inc_deaths$as_of)[-1]
+backfill_updates <- suppressMessages(purrr::map_dfr(
+  as_ofs,
+  function(as_of) {
+    updates <- weekly_inc_deaths %>%
+      dplyr::filter(as_of == UQ(as_of - 7)) %>%
+      dplyr::select(-as_of, -cum) %>%
+      dplyr::inner_join(
+        weekly_inc_deaths %>%
+          dplyr::filter(as_of == UQ(as_of)) %>%
+          dplyr::select(-cum),
+        by = c("location", "date")
+      ) %>%
+      dplyr::filter(inc.x != inc.y)
+  }) %>%
+  dplyr::left_join(covidData::fips_codes) %>%
+  dplyr::mutate(
+    location = abbreviation,
+    inc_delta = inc.y - inc.x,
+    relative_inc_delta = ifelse(
+      inc.x == 0,
+      5 * sign(inc.y),
+      inc_delta / inc.x)
+  ) %>%
+  dplyr::select(-location_name, -location_name_with_state, -abbreviation)
+)
+
+backfill_size_vs_lag <- suppressMessages(backfill_updates %>%
+  dplyr::filter(inc_delta > 0) %>%
+  dplyr::group_by(location, as_of) %>%
+  dplyr::summarize(
+    total_positive_revision = sum(inc_delta),
+    median_revision_lag = spatstat::weighted.median(as_of - date, w = inc_delta) / 7
+  )
+)
+
+
+ggplot(data = backfill_updates) +
+  geom_bar(
+    mapping = aes(x = date, y = inc_delta, color = (inc_delta > 0)),
+    stat = "identity") +
+  geom_vline(aes(xintercept = as_of), linetype = 2) +
+  facet_wrap(location ~ as_of, scales = "free_y", ncol = 4) +
+  ggtitle("Revisions to Incident Deaths -- Absolute Magnitude") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust = 0.5))
+```
+
+The following plot shows the total size of the positive revision on the vertical axis (so in the example we looked at for AZ above, the value is 9) and the median difference between the week the revision occurred and the week affected by the revision (in the AZ example, this would be roughly 2 weeks, the difference between 2020-04-27 and Saturday, 2020-04-18 were shifted to now be reported as occurring during the week ending Saturday 2020-04-11).  In cases where a revision updated multiple past weeks, the median is a weighted median over the past weeks with positive revisions, weighted by the size of the update.
+
+Observations:
+
+ * There doesn't appear to be a clear cut off where you're "safe" from revisions, or where you can be confident that most revisions will have been reported.
+
+```{r fig.width=10}
+p <- ggplot(data = backfill_size_vs_lag) +
+  geom_point(mapping = aes(x = median_revision_lag, y = total_positive_revision, color = location)) +
+  xlab("Median Difference Between Week of Revision and Week Affected by Revision (weeks)") +
+  ylab("Total Size of Positive Revisions\n(Sum of Upward Revisions to All Past Weeks)") +
+  scale_x_log10() +
+  scale_y_log10() +
+  theme_bw()
+
+plotly::ggplotly(p)
+```
+
+# Incident Cases
+
+Here are the same plots as above, but for weekly incident cases.
+
+```{r fig.height=48, fig.width=10}
+as_ofs <- unique(weekly_inc_cases$as_of)[-1]
+backfill_updates <- suppressMessages(purrr::map_dfr(
+  as_ofs,
+  function(as_of) {
+    updates <- weekly_inc_cases %>%
+      dplyr::filter(as_of == UQ(as_of - 7)) %>%
+      dplyr::select(-as_of, -cum) %>%
+      dplyr::inner_join(
+        weekly_inc_cases %>%
+          dplyr::filter(as_of == UQ(as_of)) %>%
+          dplyr::select(-cum),
+        by = c("location", "date")
+      ) %>%
+      dplyr::filter(inc.x != inc.y)
+  }) %>%
+  dplyr::left_join(covidData::fips_codes) %>%
+  dplyr::mutate(
+    location = abbreviation,
+    inc_delta = inc.y - inc.x,
+    relative_inc_delta = ifelse(
+      inc.x == 0,
+      5 * sign(inc.y),
+      inc_delta / inc.x)
+  ) %>%
+  dplyr::select(-location_name, -location_name_with_state, -abbreviation)
+)
+
+backfill_size_vs_lag <- suppressMessages(backfill_updates %>%
+  dplyr::filter(inc_delta > 0) %>%
+  dplyr::group_by(location, as_of) %>%
+  dplyr::summarize(
+    total_positive_revision = sum(inc_delta),
+    median_revision_lag = spatstat::weighted.median(as_of - date, w = inc_delta) / 7
+  )
+)
+
+
+ggplot(data = backfill_updates) +
+  geom_bar(
+    mapping = aes(x = date, y = inc_delta, color = (inc_delta > 0)),
+    stat = "identity") +
+  geom_vline(aes(xintercept = as_of), linetype = 2) +
+  facet_wrap(location ~ as_of, scales = "free_y", ncol = 4) +
+  ggtitle("Revisions to Incident Cases -- Absolute Magnitude") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust = 0.5))
+```
+
+Note the massive downward revision in reported cases for PR!
+
+```{r}
+ggplot(
+  data = weekly_inc_cases %>%
+    filter(location == "72", as.character(as_of) %in% c("2020-11-09", "2020-11-02"))
+) +
+  geom_line(mapping = aes(x = date, y = inc, color = factor(as_of)))
+```
+
+As with incident deaths, I don't see a "safe" time to cut things off:
+
+```{r fig.width=10}
+p <- ggplot(data = backfill_size_vs_lag) +
+  geom_point(mapping = aes(x = median_revision_lag, y = total_positive_revision, color = location)) +
+  xlab("Median Difference Between Week of Revision and Week Affected by Revision (weeks)") +
+  ylab("Total Size of Positive Revisions\n(Sum of Upward Revisions to All Past Weeks)") +
+  scale_x_log10() +
+  scale_y_log10() +
+  theme_bw()
+
+plotly::ggplotly(p)
+```
+
+# Incident Hospitalizations
+
+Same figures as above, but on a daily scale:
+
+```{r fig.height=48, fig.width=10}
+as_ofs <- unique(daily_inc_hosps$as_of)[-1]
+backfill_updates <- suppressMessages(purrr::map_dfr(
+  as_ofs,
+  function(as_of) {
+    updates <- daily_inc_hosps %>%
+      dplyr::filter(as_of == UQ(as_of - 7)) %>%
+      dplyr::select(-as_of, -cum) %>%
+      dplyr::inner_join(
+        daily_inc_hosps %>%
+          dplyr::filter(as_of == UQ(as_of)) %>%
+          dplyr::select(-cum),
+        by = c("location", "date")
+      ) %>%
+      dplyr::filter(inc.x != inc.y)
+  }) %>%
+  dplyr::left_join(covidData::fips_codes) %>%
+  dplyr::mutate(
+    location = abbreviation,
+    inc_delta = inc.y - inc.x,
+    relative_inc_delta = ifelse(
+      inc.x == 0,
+      5 * sign(inc.y),
+      inc_delta / inc.x)
+  ) %>%
+  dplyr::select(-location_name, -location_name_with_state, -abbreviation)
+)
+
+backfill_size_vs_lag <- suppressMessages(backfill_updates %>%
+  dplyr::filter(inc_delta > 0) %>%
+  dplyr::group_by(location, as_of) %>%
+  dplyr::summarize(
+    total_positive_revision = sum(inc_delta),
+    median_revision_lag = spatstat::weighted.median(as_of - date, w = inc_delta)
+  )
+)
+
+
+ggplot(data = backfill_updates) +
+  geom_bar(
+    mapping = aes(x = date, y = inc_delta, color = (inc_delta > 0)),
+    stat = "identity") +
+  geom_vline(aes(xintercept = as_of), linetype = 2) +
+  facet_wrap(location ~ as_of, scales = "free_y", ncol = 4) +
+  ggtitle("Revisions to Incident Hospitalizations -- Absolute Magnitude") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust = 0.5))
+```
+
+
+```{r fig.width=10}
+p <- ggplot(data = backfill_size_vs_lag) +
+  geom_point(mapping = aes(x = median_revision_lag, y = total_positive_revision, color = location)) +
+  xlab("Median Difference Between Day of Revision and Day Affected by Revision (days)") +
+  ylab("Total Size of Positive Revisions\n(Sum of Upward Revisions to All Past Days)") +
+  scale_x_log10() +
+  scale_y_log10() +
+  theme_bw()
+
+plotly::ggplotly(p)
+```
