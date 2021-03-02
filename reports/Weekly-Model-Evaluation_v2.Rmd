@@ -95,6 +95,14 @@ load(file = "score_case_all.rda")
 load(file = "score_inc_all.rda") 
 ```
 
+```{r}
+#Remove Ohio 
+score_case_all <- score_case_all %>% 
+  filter(location != "39")
+
+score_inc_all <- score_inc_all %>% 
+  filter(location != "39")
+```
 
 
 ```{r inclusion in accuracy table historical}
@@ -136,12 +144,12 @@ The second table evaluates models based on their prediction interval coverage at
 Inclusion criteria for each column are detailed below the table. 
 
 
-
 ### Accuracy Table 
 
 ```{r relative wis case}
 #at least 50% of recent WIS or 50% of recent MAE
 case_accuracy_recent <- recent_accuracy_filter(score_case_all)
+
 
 inc_scores <- case_accuracy_recent %>%
   filter(!is.na(score_value)) %>%
@@ -468,6 +476,7 @@ historical_mae <- tab %>%
   mutate(historical_relative_mae = round(ratios_baseline2, 2)) %>%
   select(model, historical_relative_mae) 
 ```
+ 
 
 ```{r}
 case_count_fcasts_recent <-  case_accuracy_recent %>% group_by(model,score_name) %>%
@@ -492,7 +501,7 @@ leaderboard_table <- case_count_fcasts_recent %>%
   full_join(pairwise_scores_mae) %>%
   full_join(historical_mae) %>%
   select(model, n_forecasts_recent, relative_wis, relative_mae,  n_forecasts_historical, relative_wis_historical, historical_relative_mae) %>%
-  arrange(relative_wis) %>% 
+  arrange(relative_wis) %>%
   filter(!is.na(relative_wis) | !is.na(relative_mae) | !is.na(relative_wis_historical) | !is.na(historical_relative_mae))
 
 render <- JS(
