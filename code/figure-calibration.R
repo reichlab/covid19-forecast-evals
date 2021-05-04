@@ -9,7 +9,7 @@ data("hub_locations")
 
 inc_scores <- read_csv("paper-inputs/inc-scores.csv") %>%
   filter(location_name %in% (hub_locations %>% filter(geo_type == "state") %>% pull(location_name))) %>%
-  filter(location_name != "United States" & location_name != "American Samoa") %>%
+  filter(location_name != "American Samoa" & location_name != "Northern Mariana Islands") %>%
   mutate(target = fct_relevel(target, 
     "1 wk ahead inc death",  "2 wk ahead inc death",  "3 wk ahead inc death",  "4 wk ahead inc death",
     "5 wk ahead inc death",  "6 wk ahead inc death",  "7 wk ahead inc death",  "8 wk ahead inc death",
