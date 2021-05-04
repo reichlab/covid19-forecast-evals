@@ -58,7 +58,7 @@ inc_scores_covidhub_utils <- map_dfr(
     models = colnames(model_eligibility_inc)[x],
     forecast_dates = model_eligibility_inc %>% pull(x),
     locations = hub_locations %>% filter(geo_type == "state") %>% pull(fips),
-    types <- c("quantile"), 
+    types <- c("quantile", "point"), 
     targets = c(paste(1:20, "wk ahead inc death"))
     )
     return(score_forecasts(forecasts, truth))
