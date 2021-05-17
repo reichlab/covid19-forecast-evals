@@ -107,11 +107,10 @@ sf1 <- ggplot(for_loc_figure, aes(y=model, x=sat_fcast_week, fill= n_loc < 25)) 
         axis.text.y = element_text(size = 8, colour = ifelse(levels(for_loc_figure$model) %in% scored_models, 'violetred', 'black')),
         title = element_text(size = 9)) +
   guides(size = "none", color = "none", alpha = "none") +
-  scale_y_discrete(labels=c("IHME-CurveFit" = "IHME-SEIR"))
-# + 
-#   geom_vline(xintercept  = first_timezero_spring, linetype = 2) +
-#   geom_vline(xintercept  = first_timezero_summer, linetype = 2) +
-#   geom_vline(xintercept  = first_timezero_winter, linetype = 2) 
+  scale_y_discrete(labels=c("IHME-CurveFit" = "IHME-SEIR")) +
+  geom_vline(xintercept  = first_timezero_spring, linetype = 2) +
+  geom_vline(xintercept  = first_timezero_summer, linetype = 2) +
+  geom_vline(xintercept  = first_timezero_winter, linetype = 2)
 
 
 
