@@ -66,9 +66,11 @@ for_loc_figure <- read.csv("paper-inputs/heatmap_data.csv") %>%
        model = fct_reorder(model, n_weeks_submit_forecast, max),
        model_numeric = as.numeric(model)) 
 
-scored_models <- read_csv("paper-inputs/table-overall-performance.csv") %>%
-                            arrange(desc(n_forecasts)) %>%
-                            pull(model)
+scored_models <- read_csv("paper-inputs/inc-scores.csv") %>%
+                        group_by(model) %>%
+                        summarise(n_forecasts = n()) %>%
+                        arrange(desc(n_forecasts)) %>%
+                        pull(model)
 
 #Plot of locations each model submitted to each week
 sf1 <- ggplot(for_loc_figure, aes(y=model, x=sat_fcast_week, fill= n_loc < 25)) + 
