@@ -40,3 +40,11 @@ NUM_UNITS <- 25
 last_date_evaluated <- as.Date(calc_target_week_end_date(truth_date, -2)) #last date evaluated
 
 
+#Important Dates for three phases of pandemic
+first_timezero_spring <- as.Date("2020-04-21") 
+first_timezero_summer <- as.Date("2020-06-30")
+first_timezero_winter <- as.Date("2020-11-17")
+
+first_forecast_date_spring <- as.Date("2020-05-02") 
+first_forecast_date_summer <- as.Date("2020-07-11")
+first_forecast_date_winter <- as.Date("2020-11-28")
