@@ -72,6 +72,12 @@ scored_models <- read_csv("paper-inputs/inc-scores.csv") %>%
                         arrange(desc(n_forecasts)) %>%
                         pull(model)
 
+range_fcast_dates <- c(
+  first_forecast_date_spring,
+  first_forecast_date_summer,
+  first_forecast_date_winter,
+  last_1wk_target_end_date)
+
 #Plot of locations each model submitted to each week
 sf1 <- ggplot(for_loc_figure, aes(y=model, x=sat_fcast_week, fill= n_loc < 25)) + 
   geom_tile() +
@@ -110,9 +116,7 @@ sf1 <- ggplot(for_loc_figure, aes(y=model, x=sat_fcast_week, fill= n_loc < 25)) 
         title = element_text(size = 9)) +
   guides(size = "none", color = "none", alpha = "none") +
   scale_y_discrete(labels=c("IHME-CurveFit" = "IHME-SEIR")) +
-  geom_vline(xintercept  = first_timezero_spring, linetype = 2) +
-  geom_vline(xintercept  = first_timezero_summer, linetype = 2) +
-  geom_vline(xintercept  = first_timezero_winter, linetype = 2)
+  geom_vline(xintercept  = range_fcast_dates, linetype = 2) 
 
 
 
