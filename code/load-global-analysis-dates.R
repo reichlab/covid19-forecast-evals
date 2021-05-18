@@ -22,8 +22,8 @@ the_timezeros_inc <- seq(from = first_timezero, to = last_timezero, by="days")
 the_timezeros_eligibility <- seq(from = first_timezero, to = last_timezero4wk, by="days")
 
 ## maximum number of weeks missing that we allow before disqualifying a model
-MAXIMUM_MISSING_WEEKS <- 17 # formerly 3
-UNITS_FOR_ELIGIBILITY <- covidHubUtils::hub_locations %>% 
+MAXIMUM_MISSING_WEEKS <- 46 #formerly 17 # formerly 3 
+UNITS_FOR_ELIGIBILITY <-covidHubUtils::hub_locations %>% 
   filter(geo_type == "state") %>% filter(location_name != "U.S. Minor Outlying Islands") %>% #added to remove counties
   mutate(for_scoring = abbreviation %in% c("US", datasets::state.abb)) %>%
   filter(for_scoring) %>%
