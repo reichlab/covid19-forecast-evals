@@ -152,3 +152,27 @@ ggplot(fake_scores, aes(y=model, x=rp, fill = factor(stat(quantile)))) +
   scale_x_continuous(name="rank percentile", 
     limits=c(0,1))    # for both axes to remove unneeded padding
 
+##Model Ranking by Phases of the Pandemic
+p2_phase <- ggplot(inc_scores %>%
+                mutate(seasonal_phase = case_when(forecast_date < first_forecast_date_summer ~ "spring",
+                                                  forecast_date >= first_forecast_date_summer & forecast_date  < first_forecast_date_winter ~ "summer",
+                                                  forecast_date >= first_forecast_date_winter ~ "winter")), 
+                aes(y=model, x=rev_rank, fill = factor(stat(quantile)))) +
+  facet_wrap(~ seasonal_phase) +
+  stat_density_ridges(
+    geom = "density_ridges_gradient", calc_ecdf = TRUE,
+    quantiles = 4, quantile_lines = TRUE) + 
+scale_fill_viridis_d(name = "Quartiles") +
+  scale_x_continuous(name="standardized rank", 
+                     #expand=expansion(add=c(2, 1)/max(inc_scores$n_models)), 
+                     limits=c(0,1)) +   # for both axes to remove unneeded padding +
+  scale_y_discrete(labels=c("IHME-CurveFit" = "IHME-SEIR"))
+
+
+pdf(file = "figures/fig-model-ranks_phase.pdf", width=8, height=5)
+print(p2_phase)
+dev.off()
+
+jpeg(file = "figures/fig-model-ranks_phase.jpg", width=8, height=5, units="in", res=300)
+print(p2_phase)
+dev.off()
