@@ -139,11 +139,12 @@ expected_locs <- inc_scores %>%
 
 ## by model, target, and week
 
-
-
 avg_wis_by_model_target_week <- inc_scores %>%
     filter(!(location_name %in% locs_to_exclude)) %>% 
-    group_by(model, target, target_end_date_1wk_ahead) %>%
+  mutate(seasonal_phase = case_when(forecast_date < first_forecast_date_summer ~ "spring",
+                                    forecast_date >= first_forecast_date_summer & forecast_date  < first_forecast_date_winter ~ "summer",
+                                    forecast_date >= first_forecast_date_winter ~ "winter")) %>%
+    group_by(model, target, seasonal_phase, target_end_date_1wk_ahead) %>%
     summarize(median_wis = median(wis), mean_wis = mean(wis, na.rm=TRUE), nlocs=n()) %>%
     left_join(expected_locs)%>%
     mutate(obs_exp_locs = nlocs == nlocs_expected)
@@ -164,13 +165,12 @@ p <- ggplot(avg_wis_by_model_target_week, aes(x=model, y=mean_wis)) +
     ##geom_point(aes(color=obs_exp_locs, fill=target_end_date_1wk_ahead), shape=21, position=position_jitter(width=.2, height=0), alpha=.8) +
     geom_point(data=avg_wis_by_model_target, shape=4, color="#DC3220", size=2, stroke=1)+
     theme_bw() +
-    theme(axis.text.x = element_text(angle=45, vjust=1, hjust=1,
-                                     color=ifelse(levels(avg_wis_by_model_target_week$model) %in% models_to_highlight,
-                                      "red", "black")), 
-          legend.position = c(.75, .9), legend.direction = "horizontal", plot.margin = margin(10, 10, 20, 20)) +
+    theme(axis.text.x = element_text(angle=45, vjust=1, hjust=1), 
+          legend.position = c(.75, .9), 
+          legend.direction = "horizontal", plot.margin = margin(10, 10, 20, 20)) +
     facet_wrap(.~target) + #, scales="free_y") +
     ylab("Average WIS") + xlab(NULL) +
-    expand_limits(y=0) +
+    #expand_limits(y=0) +
     scale_color_manual(name="all locations predicted", values=c("#9C3689", "#A8D695")) +
     scale_fill_date(name="forecast date") +
     scale_y_continuous(breaks=seq(0, 400, by=50)) +
@@ -212,6 +212,55 @@ dev.off()
 jpeg(file = "figures/overall-wis-boxplot.jpg", width=8, height=6, units="in", res=200)
 print(p1)
 dev.off()
+
+## supplemental figure by phase
+avg_wis_by_model_target_week_1and4wk <- avg_wis_by_model_target_week %>%
+  filter(target %in% c("1 wk ahead inc death", "4 wk ahead inc death")) %>%
+  mutate(target = as.factor(target)) %>% droplevels() 
+
+#median per phase 
+avg_phase <- avg_wis_by_model_target_week_1and4wk %>% 
+  group_by(model, seasonal_phase, target) %>%
+  summarize(mean_wis = mean(mean_wis))
+
+avg_wis_by_model_target_week_1and4wk$model <- reorder(avg_wis_by_model_target_week_1and4wk$model, avg_wis_by_model_target_week_1and4wk$mean_wis)
+
+p_phase <- ggplot(avg_wis_by_model_target_week_1and4wk,aes(x=model, y=mean_wis)) +
+  facet_wrap(~target + seasonal_phase, scales="free_y") +
+  #geom_hline(yintercept=ensemble_1wk_avg, linetype=2)+
+  geom_point(aes(color=obs_exp_locs), position=position_jitter(width=.2, height=0), alpha=.8) +
+  # geom_hline(data=baseline_avg %>% 
+  #              filter(target  %in% c("1 wk ahead inc death", "4 wk ahead inc death")),
+  #             aes(yintercept=mean_wis), linetype=2) +
+  ##geom_point(aes(color=obs_exp_locs, fill=target_end_date_1wk_ahead), shape=21, position=position_jitter(width=.2, height=0), alpha=.8) +
+  geom_point(data=avg_phase, shape=4, color="#DC3220", size=2, stroke=1) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle=90, vjust=1, hjust=1), 
+        legend.position = c(.75, .9), 
+        legend.direction = "horizontal", plot.margin = margin(10, 10, 20, 20)) +
+  ylab("Average WIS") + xlab(NULL) +
+  #expand_limits(y=0) +
+  scale_color_manual(name="all locations predicted", values=c("#9C3689", "#A8D695")) +
+  scale_fill_date(name="forecast date") +
+  scale_y_continuous(breaks=seq(0, 400, by=50)) +
+  scale_x_discrete(labels=c("IHME-CurveFit" = "IHME-SEIR"))
+
+pdf(file = "figures/model-target-week-wis-avgs_phase.pdf", width=10, height=6)
+print(p_phase)
+dev.off()
+
+jpeg(file = "figures/model-target-week-wis-avgs_phase.jpg", width=10, height=6, units="in", res=200)
+print(p_phase)
+dev.off()
+
+
+
+
+
+
+
+
+
 
 
 ##Figure 4 [average WIS over time]
