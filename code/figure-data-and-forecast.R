@@ -13,8 +13,10 @@ eval_dates <- c(
   last_1wk_target_end_date + 3.5) ## last four week ahead target end date
 
 range_fcast_dates <- c(
-  first_1wk_target_end_date - 7 - 3.5,
-  last_1wk_target_end_date - 7 + 3.5)
+  first_forecast_date_spring,
+  first_forecast_date_summer,
+  first_forecast_date_winter,
+  last_1wk_target_end_date)
 
 start_date <- as.Date("2020-02-22")
 end_date <- truth_date
@@ -26,18 +28,20 @@ data("hub_locations")
 
 fcast_data <- load_forecasts(
   models = "COVIDhub-ensemble", 
-  forecast_dates = "2020-07-20",
+  forecast_dates = c(as.Date("2020-05-11"), as.Date("2020-06-08"),  
+                      as.Date("2020-07-20"),  as.Date("2020-08-24"),  
+                       as.Date("2020-12-28"), as.Date("2021-02-22")),
   targets = paste(1:4, "wk ahead inc death"),
   locations = "US" 
   )
 
-p1 <- plot_forecast(forecast_data = fcast_data,
-  target_variable = "inc death", 
+p1 <- plot_forecasts(forecast_data = fcast_data,
+  target_variable = "inc death",
   truth_source = "JHU",
   intervals = c(0.2, 0.5, 0.8, 0.95, 0.98),
   show_caption = FALSE, 
   plot=FALSE) +
-  ggtitle("B: ensemble forecast for incident deaths at the national level from July 20, 2020", 
+  ggtitle("B: ensemble forecasts for incident deaths at the national level", 
     subtitle=element_blank())
 
 
@@ -49,6 +53,7 @@ p1_updated <- p1 +
     name=element_blank(), 
     expand=c(0,0)) +
   geom_vline(xintercept=range_fcast_dates, linetype=2) +
+  geom_vline(xintercept=last_date_evaluated, linetype=2) +
   theme(axis.ticks.length.x = unit(0.5, "cm"),
     axis.text.x = element_text(vjust = 5.5, hjust = -0.2))
 
@@ -90,7 +95,7 @@ p2_no_legend <- p2 + theme(legend.position='none')
 ## sequence of mondays starting with mid March near first time-zero
 weekly_forecast_dates <- seq.Date(as.Date("2020-03-16"), end_date, by="7 days")
 
-all_primary_models <- get_model_designations(source="local_hub_repo", hub_repo_path = "../covid19-forecast-hub/") %>%
+all_primary_models <- get_model_designations(source="zoltar") %>%
   filter(designation != "other") %>%
   pull(model)
 
@@ -102,7 +107,7 @@ n_models_per_week <- map_dfr(
       last_forecast_date = weekly_forecast_dates[x],
       forecast_date_window_size = 6,
       locations = hub_locations %>% filter(geo_type == "state") %>% pull(fips),
-      types <- c("point", "quantile"), 
+      types = c("point", "quantile"), 
       targets = "1 wk ahead inc death",
       source="zoltar") 
     n_models = length(unique(fcasts$model))
@@ -132,7 +137,7 @@ p3 <- ggplot(n_models_per_week, aes(x=target_end_date_0wk_ahead)) +
   
 
 heights <- c(5/8, 2/8, 1/8)
-jpeg(file = "figures/data-and-forecast.jpg", width=10, height=12, units="in", res=200)
+jpeg(file = "figures/data-and-forecast.jpg", width=10, height=11, units="in", res=200)
 ggdraw(
   plot_grid(
     plot_grid(p2_no_legend, p1_updated_no_legend, p3, ncol=1, align='v', rel_heights = heights),
@@ -141,7 +146,7 @@ ggdraw(
   ))
 dev.off()
 
-pdf(file = "figures/data-and-forecast.pdf", width=8, height=12)
+pdf(file = "figures/data-and-forecast.pdf", width=8, height=11)
 ggdraw(
   plot_grid(
     plot_grid(p2_no_legend, p1_updated_no_legend, p3, ncol=1, align='v', rel_heights = heights),
