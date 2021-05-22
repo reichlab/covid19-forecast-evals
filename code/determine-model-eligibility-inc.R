@@ -26,7 +26,7 @@ timezero_weeks <- tibble(
 
 # 1. subset models to "primary" and "secondary" designated models
 primary_models <- models(zoltar_connection, project_url) %>%
-    filter(notes %in% c("primary", "secondary"))
+    filter(notes %in% c("primary", "secondary")) 
 
 # 2. obtain timezeroes for remaining models, eliminate ones that don't have the right dates
 date_filtered_models <- tibble(model=character(), forecast_date=Date(), target_end_date_1wk_ahead=Date())
@@ -112,8 +112,7 @@ for(this_model in date_eligible_models){
     model_completes <- bind_rows(model_completes, this_model_completes)
 }
 
-inc_model_completes <- model_completes %>%
-    filter(target_group=="inc", forecast_date %in% the_timezeros_inc) %>%
+inc_model_overall <- model_completes %>%
     ## calculate how many weeks had the eligible number of units
     group_by(model) %>%
     ## sum number of weeks with minimum locations and in core evaluation period 
@@ -121,9 +120,31 @@ inc_model_completes <- model_completes %>%
     ungroup() %>%
     ## filter so that we only have models with eligible number of weeks
     filter(num_eligible_weeks >= NUM_WEEKS_INC, num_units_eligible >= NUM_UNITS) %>%
-    select(-num_eligible_weeks) 
+    select(-num_eligible_weeks) %>%
+  mutate(include_overall = "YES")
 
 
+#filter models eligible for inclusion in phases 
+inc_model_completes_phases <- model_completes %>%
+  mutate(seasonal_phase = case_when(forecast_date < first_forecast_date_summer ~ "spring", #set dates based on forecast date 
+                                    forecast_date >= first_forecast_date_summer & forecast_date  < first_forecast_date_winter ~ "summer",
+                                    forecast_date >= first_forecast_date_winter ~ "winter")) %>%
+  ## calculate how many weeks had the eligible number of units in each phase 
+  group_by(model,seasonal_phase) %>%
+  ## sum number of weeks with minimum locations and in core evaluation period 
+  mutate(num_eligible_weeks_phase = sum(num_units_eligible >= NUM_UNITS & forecast_date <= last_timezero4wk)) %>%
+  ungroup() %>% group_by(seasonal_phase) %>%
+  ## filter so that we only have models with eligible number of weeks
+  filter(num_eligible_weeks_phase >= max(num_eligible_weeks_phase)*.66, num_units_eligible >= NUM_UNITS) %>% ungroup() %>%
+  select(-num_eligible_weeks_phase)  %>%
+  mutate(include_phases = "YES")
+
+#write_csv(inc_model_completes_phases, file="paper-inputs/model-eligibility-inc_phases.csv")
+
+inc_model_completes <- inc_model_overall %>% 
+  full_join(inc_model_completes_phases) 
+  
 write_csv(inc_model_completes, file="paper-inputs/model-eligibility-inc.csv")
+
 
 ## output data.frame with list of models and eligibility
