@@ -24,7 +24,7 @@ model_eligibility_inc <- read.csv("paper-inputs/model-eligibility-inc.csv") %>%
 # load data from covidData (to get versioned truths)
 truth_CD <-
   load_jhu_data(
-    issue_date = truth_date,
+    # issue_date = Sys.Date(),
     spatial_resolution = c("state", "national"),
     temporal_resolution = "weekly",
     measure = "deaths") %>%
@@ -58,7 +58,7 @@ inc_scores_covidhub_utils <- map_dfr(
     models = colnames(model_eligibility_inc)[x],
     forecast_dates = model_eligibility_inc %>% pull(x),
     locations = hub_locations %>% filter(geo_type == "state") %>% pull(fips),
-    types <- c("quantile", "point"), 
+    types = c("quantile", "point"), 
     targets = c(paste(1:20, "wk ahead inc death"))
     )
     return(score_forecasts(forecasts, truth))
@@ -73,5 +73,7 @@ inc_scores_covidhub_utils <- inc_scores_covidhub_utils %>%
   left_join(truth %>% select(location, target_end_date, value)) %>%
   rename(truth_value = value)
 
+#add in phase eligibility  
+inc_scores_covidhub_utils <- inc_scores_covidhub_utils %>% left_join(inc_model_completes) %>% ungroup()
   
 write.csv(inc_scores_covidhub_utils, "paper-inputs/inc-scores.csv", row.names = FALSE)
