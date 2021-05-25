@@ -95,7 +95,12 @@ inc_scores_sum <- inc_scores %>%
 #   coord_cartesian(clip = "off") + # to avoid clipping of the very top of the top ridgeline
 #   theme_ridges()
 
-p2 <- ggplot(inc_scores, aes(y=model, x=rev_rank, fill = factor(stat(quantile)))) +
+inc_scores_overall <- inc_scores %>%
+  filter(include_overall == "YES") %>%
+  group_by(model, location, horizon) %>% 
+  mutate(n_overall = n()) %>% ungroup() %>% filter(n_overall > 0.66*max(n_overall)) 
+
+p2 <- ggplot(inc_scores_overall, aes(y=model, x=rev_rank, fill = factor(stat(quantile)))) +
   stat_density_ridges(
     geom = "density_ridges_gradient", calc_ecdf = TRUE,
     quantiles = 4, quantile_lines = TRUE
@@ -152,8 +157,9 @@ ggplot(fake_scores, aes(y=model, x=rp, fill = factor(stat(quantile)))) +
   scale_x_continuous(name="rank percentile", 
     limits=c(0,1))    # for both axes to remove unneeded padding
 
+
 ##Model Ranking by Phases of the Pandemic
-p2_phase <- ggplot(inc_scores %>%
+p2_phase <- ggplot(inc_scores %>% filter(include_phases == "YES") %>%
                 mutate(seasonal_phase = case_when(forecast_date < first_forecast_date_summer ~ "spring",
                                                   forecast_date >= first_forecast_date_summer & forecast_date  < first_forecast_date_winter ~ "summer",
                                                   forecast_date >= first_forecast_date_winter ~ "winter")), 
