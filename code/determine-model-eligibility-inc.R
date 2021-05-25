@@ -26,7 +26,7 @@ timezero_weeks <- tibble(
 
 # 1. subset models to "primary" and "secondary" designated models
 primary_models <- models(zoltar_connection, project_url) %>%
-    filter(notes %in% c("primary", "secondary")) 
+    filter(notes %in% c("primary", "secondary"))
 
 # 2. obtain timezeroes for remaining models, eliminate ones that don't have the right dates
 date_filtered_models <- tibble(model=character(), forecast_date=Date(), target_end_date_1wk_ahead=Date())
@@ -113,6 +113,7 @@ for(this_model in date_eligible_models){
 }
 
 inc_model_overall <- model_completes %>%
+    filter(target_group=="inc", forecast_date %in% the_timezeros_inc) %>%
     ## calculate how many weeks had the eligible number of units
     group_by(model) %>%
     ## sum number of weeks with minimum locations and in core evaluation period 
@@ -121,7 +122,7 @@ inc_model_overall <- model_completes %>%
     ## filter so that we only have models with eligible number of weeks
     filter(num_eligible_weeks >= NUM_WEEKS_INC, num_units_eligible >= NUM_UNITS) %>%
     select(-num_eligible_weeks) %>%
-  mutate(include_overall = "YES")
+  mutate(include_overall = TRUE)
 
 
 #filter models eligible for inclusion in phases 
@@ -137,14 +138,16 @@ inc_model_completes_phases <- model_completes %>%
   ## filter so that we only have models with eligible number of weeks
   filter(num_eligible_weeks_phase >= max(num_eligible_weeks_phase)*.66, num_units_eligible >= NUM_UNITS) %>% ungroup() %>%
   select(-num_eligible_weeks_phase)  %>%
-  mutate(include_phases = "YES")
-
-#write_csv(inc_model_completes_phases, file="paper-inputs/model-eligibility-inc_phases.csv")
+  mutate(include_phases = TRUE)
 
 inc_model_completes <- inc_model_overall %>% 
-  full_join(inc_model_completes_phases) 
+  full_join(inc_model_completes_phases) %>%
+  mutate(seasonal_phase = case_when(forecast_date < first_forecast_date_summer ~ "spring", #set dates based on forecast date 
+                                    forecast_date >= first_forecast_date_summer & forecast_date  < first_forecast_date_winter ~ "summer",
+                                    forecast_date >= first_forecast_date_winter ~ "winter")) %>%
+  mutate(include_overall = ifelse(include_overall == TRUE, include_overall, FALSE),
+         include_phases = ifelse(include_phases == TRUE, include_phases, FALSE))
   
-write_csv(inc_model_completes, file="paper-inputs/model-eligibility-inc.csv")
-
 
 ## output data.frame with list of models and eligibility
+write_csv(inc_model_completes, file="paper-inputs/model-eligibility-inc.csv")
