@@ -4,8 +4,9 @@ library(ggrepel)
 source("code/load-global-analysis-dates.R")
 
 model_levels <- read_csv("paper-inputs/table-overall-performance.csv") %>%
-  arrange(desc(relative_wis)) %>%
+  arrange(relative_wis) %>%
   pull(model)
+
 
 theme_set(theme_bw())
 
@@ -30,6 +31,7 @@ locs_to_exclude <- c("United States", "American Samoa", "Guam", "Northern Marian
 
 
 
+
 #Count number of weeks a model has submitted 
 models_to_highlight <- inc_scores %>%
   group_by(model, target_end_date_1wk_ahead, horizon) %>%
@@ -48,9 +50,7 @@ models_to_highlight <- inc_scores %>%
 #     summarize(nforecasts = n_distinct(location_name)) %>%
 #     group_by(model) %>%
 #     mutate(total_fcasts = sum(nforecasts))
-# 
-# nforecasts_by_model_week$model = reorder(nforecasts_by_model_week$model, nforecasts_by_model_week$total_fcasts)
-# 
+# # 
 # ggplot(nforecasts_by_model_week, aes(x=target_end_date_1wk_ahead, y=model)) +
 #     geom_tile(aes(fill=nforecasts)) +
 #     geom_text(aes(label=nforecasts)) +
@@ -140,6 +140,7 @@ expected_locs <- inc_scores %>%
 ## by model, target, and week
 
 avg_wis_by_model_target_week <- inc_scores %>%
+    filter(include_complete == "YES") %>%
     filter(!(location_name %in% locs_to_exclude)) %>% 
   mutate(seasonal_phase = case_when(forecast_date < first_forecast_date_summer ~ "spring",
                                     forecast_date >= first_forecast_date_summer & forecast_date  < first_forecast_date_winter ~ "summer",
@@ -188,7 +189,8 @@ dev.off()
 
 ## supplemental figure overall boxplot
 
-p1 <- inc_scores %>%
+p1 <- inc_scores %>% 
+    filter(include_overall== "YES") %>%
     filter(!(location_name %in% c("United States", "American Samoa", "Guam", "Northern Mariana Islands", "Virgin Islands", "Puerto Rico", "District of Columbia"))) %>% 
     ggplot(aes(x=model, y=wis, color=target_end_date_1wk_ahead)) +
     geom_boxplot() +
@@ -203,8 +205,6 @@ p1 <- inc_scores %>%
   scale_x_discrete(labels=c("IHME-CurveFit" = "IHME-SEIR"))
 
 
-
-
 pdf(file = "figures/overall-wis-boxplot.pdf", width=8, height=6)
 print(p1)
 dev.off()
@@ -213,37 +213,73 @@ jpeg(file = "figures/overall-wis-boxplot.jpg", width=8, height=6, units="in", re
 print(p1)
 dev.off()
 
-## supplemental figure by phase
-avg_wis_by_model_target_week_1and4wk <- avg_wis_by_model_target_week %>%
-  filter(target %in% c("1 wk ahead inc death", "4 wk ahead inc death")) %>%
-  mutate(target = as.factor(target)) %>% droplevels() 
 
-#median per phase 
-avg_phase <- avg_wis_by_model_target_week_1and4wk %>% 
+
+
+
+## by model, target, and week
+
+## by model and target
+avg_wis_by_model_target_phase <- inc_scores %>%
+  filter(!(location_name %in% locs_to_exclude)) %>%
+  group_by(model, target, seasonal_phase) %>%
+  summarize(nweeks = length(unique(target_end_date)), median_wis = median(wis), mean_wis = mean(wis, na.rm=TRUE))
+
+
+ensemble_1wk_avg <- avg_wis_by_model_target_phase %>%
+  filter(model=="COVIDhub-ensemble", target=="1 wk ahead inc death") %>%
+  .$mean_wis
+
+baseline_avg <- avg_wis_by_model_target_phase %>%
+  filter(model=="COVIDhub-baseline") %>%
+  filter(target %in% c("1 wk ahead inc death", "4 wk ahead inc death")) %>%
   group_by(model, seasonal_phase, target) %>%
   summarize(mean_wis = mean(mean_wis))
 
-avg_wis_by_model_target_week_1and4wk$model <- reorder(avg_wis_by_model_target_week_1and4wk$model, avg_wis_by_model_target_week_1and4wk$mean_wis)
+avg_wis_by_model_target_week_1and4wk_phase <- avg_wis_by_model_target_week %>% 
+  filter(target %in% c("1 wk ahead inc death", "4 wk ahead inc death"))
 
-p_phase <- ggplot(avg_wis_by_model_target_week_1and4wk,aes(x=model, y=mean_wis)) +
-  facet_wrap(~target + seasonal_phase, scales="free_y") +
+model_levels <- inc_scores %>%
+  filter(include_phases == "YES") %>%
+  filter(!is.na(model)) %>%
+  group_by(model) %>% summarise(mean_wis = mean(wis)) %>%
+  pull(model)
+
+avg_wis_by_model_target_week_1and4wk_phase <- avg_wis_by_model_target_week_1and4wk_phase %>% 
+  mutate(model = factor(model, levels= model_levels, ordered = TRUE)) %>%
+  filter(!is.na(model)) 
+
+avg_phase <- inc_scores %>%
+  filter(include_phases== "YES") %>%
+  filter(target %in% c("1 wk ahead inc death","4 wk ahead inc death")) %>%
+  filter(!(location_name %in% locs_to_exclude)) %>% 
+  mutate(seasonal_phase = case_when(forecast_date < first_forecast_date_summer ~ "spring",
+                                    forecast_date >= first_forecast_date_summer & forecast_date  < first_forecast_date_winter ~ "summer",
+                                    forecast_date >= first_forecast_date_winter ~ "winter")) %>%
+  group_by(target, seasonal_phase, model) %>%
+  summarize(median_wis = median(wis, na.rm = T), mean_wis = mean(wis, na.rm=TRUE), nlocs=n())  %>%
+  mutate(model = factor(model, levels= model_levels, ordered = TRUE)) %>%
+  filter(!is.na(model)) 
+
+
+p_phase <- ggplot(avg_wis_by_model_target_week_1and4wk_phase, aes(x = model, y= scales::oob_squish(mean_wis, range = c(0,500)))) +
+  facet_wrap(~target + seasonal_phase) + #, scales="free_y") +
   #geom_hline(yintercept=ensemble_1wk_avg, linetype=2)+
-  geom_point(aes(color=obs_exp_locs), position=position_jitter(width=.2, height=0), alpha=.8) +
+  geom_point(aes(color= ifelse(mean_wis < 500,  obs_exp_locs, "red")), position=position_jitter(width=.2, height=0), alpha=.8) +
   # geom_hline(data=baseline_avg %>% 
   #              filter(target  %in% c("1 wk ahead inc death", "4 wk ahead inc death")),
   #             aes(yintercept=mean_wis), linetype=2) +
   ##geom_point(aes(color=obs_exp_locs, fill=target_end_date_1wk_ahead), shape=21, position=position_jitter(width=.2, height=0), alpha=.8) +
-  geom_point(data=avg_phase, shape=4, color="#DC3220", size=2, stroke=1) +
+  geom_point(data=avg_phase, shape=4, color="black", size=2, stroke=1) +
   theme_bw() +
   theme(axis.text.x = element_text(angle=90, vjust=1, hjust=1), 
-        legend.position = c(.75, .9), 
-        legend.direction = "horizontal", plot.margin = margin(10, 10, 20, 20)) +
+        legend.position = "none") +
   ylab("Average WIS") + xlab(NULL) +
   #expand_limits(y=0) +
-  scale_color_manual(name="all locations predicted", values=c("#9C3689", "#A8D695")) +
+  scale_color_manual(name="all locations predicted", values=c("#9C3689","red", "#A8D695")) +
   scale_fill_date(name="forecast date") +
   scale_y_continuous(breaks=seq(0, 400, by=50)) +
-  scale_x_discrete(labels=c("IHME-CurveFit" = "IHME-SEIR"))
+  scale_x_discrete(labels=c("IHME-CurveFit" = "IHME-SEIR")) 
 
 pdf(file = "figures/model-target-week-wis-avgs_phase.pdf", width=10, height=6)
 print(p_phase)
@@ -254,13 +290,58 @@ print(p_phase)
 dev.off()
 
 
+#violin plot 
+p_phase_violin <- ggplot(avg_wis_by_model_target_week_1and4wk_phase, aes(x = model, y= scales::oob_squish(mean_wis, range = c(0,500)), color = obs_exp_locs)) +
+  facet_wrap(~target + seasonal_phase) + #, scales="free_y") +
+  geom_violin() +
+  #geom_hline(yintercept=ensemble_1wk_avg, linetype=2)+
+  theme_bw() +
+  theme(axis.text.x = element_text(angle=90, vjust=1, hjust=1), 
+        legend.position = "none") +
+  ylab("Average WIS") + xlab(NULL) +
+  #expand_limits(y=0) +
+  scale_color_manual(name="all locations predicted", values=c("#9C3689","#A8D695")) +
+  scale_fill_date(name="forecast date") +
+  scale_y_continuous(trans = "log10") +
+  scale_x_discrete(labels=c("IHME-CurveFit" = "IHME-SEIR")) 
+
+pdf(file = "figures/model-target-week-wis-avgs_phase_violin.pdf", width=10, height=6)
+print(p_phase_violin)
+dev.off()
+
+jpeg(file = "figures/model-target-week-wis-avgs_phase_violin.jpg", width=10, height=6, units="in", res=200)
+print(p_phase_violin)
+dev.off()
 
 
 
+p_phase_log <- ggplot(avg_wis_by_model_target_week_1and4wk_phase, aes(x = model, y= scales::oob_squish(mean_wis, range = c(0,500)))) +
+  geom_hline(data = baseline_avg, aes(yintercept = mean_wis), color = "red", linetype = 'dotted') +
+  facet_wrap(~target + seasonal_phase) + #, scales="free_y") +
+  #geom_hline(yintercept=ensemble_1wk_avg, linetype=2)+
+  geom_point(aes(color= ifelse(mean_wis < 500,  obs_exp_locs, "red")), position=position_jitter(width=.2, height=0), alpha=.8) +
+  # geom_hline(data=baseline_avg %>% 
+  #              filter(target  %in% c("1 wk ahead inc death", "4 wk ahead inc death")),
+  #             aes(yintercept=mean_wis), linetype=2) +
+  ##geom_point(aes(color=obs_exp_locs, fill=target_end_date_1wk_ahead), shape=21, position=position_jitter(width=.2, height=0), alpha=.8) +
+  geom_point(data=avg_phase, shape=4, color="black", size=2, stroke=1) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle=90, hjust = 1), 
+        legend.position = "none") +
+  ylab("Average WIS") + xlab(NULL) +
+  #expand_limits(y=0) +
+  scale_color_manual(name="all locations predicted", values=c("#9C3689","red", "#A8D695")) +
+  scale_fill_date(name="forecast date") +
+  scale_y_continuous(trans = "log10") +
+  scale_x_discrete(labels=c("IHME-CurveFit" = "IHME-SEIR")) 
 
+pdf(file = "figures/model-target-week-wis-avgs_phase_log.pdf", width=10, height=6)
+print(p_phase_log)
+dev.off()
 
-
-
+jpeg(file = "figures/model-target-week-wis-avgs_phase_log.jpg", width=10, height=6, units="in", res=200)
+print(p_phase_log)
+dev.off()
 
 
 ##Figure 4 [average WIS over time]
@@ -335,10 +416,17 @@ filter(avg_scores_byweek, target_end_date=="2020-12-05", nlocs==50) %>%
 #   facet_wrap(~ target, scales="free_y", ncol = 1) +
 #   guides(color=FALSE,  group = FALSE)
 
+range_fcast_dates <- c(
+  first_forecast_date_spring,
+  first_forecast_date_summer,
+  first_forecast_date_winter,
+  last_1wk_target_end_date)
+
 f4b <- ggplot(filter(avg_scores_byweek, target=="1 wk ahead inc death"), aes(x = target_end_date, y = mean_wis)) +
   geom_line(aes(group = model), color="darkgray", alpha=.5) +
   geom_point(aes(group = model), color="darkgray", alpha=.5, size = 2) +
   stat_summary(fun=mean, geom="line", aes(color="blue")) +
+  geom_vline(xintercept  = range_fcast_dates, linetype = 2) +
   stat_summary(fun=mean, geom="point", aes(color="blue")) +
   geom_line(data=filter(avg_scores_byweek, model=="COVIDhub-ensemble",  target=="1 wk ahead inc death"), aes(group = model, color="red")) +
   geom_point(data=filter(avg_scores_byweek, model=="COVIDhub-ensemble",  target=="1 wk ahead inc death"), aes(group = model, color="red")) +
@@ -359,10 +447,11 @@ f4b <- ggplot(filter(avg_scores_byweek, target=="1 wk ahead inc death"), aes(x =
     axis.text.x = element_text(vjust = 7, hjust = -0.2))
       
 
-f4c <- ggplot(filter(avg_scores_byweek, target=="4 wk ahead inc death"), aes(x = target_end_date, y = mean_wis)) +
+f4c <- ggplot(filter(avg_scores_byweek, target=="4 wk ahead inc death"), aes(x = target_end_date, y = scales::oob_squish(mean_wis, range = c(-1, 2000)))) +
   geom_line(aes(group = model), color="darkgray", alpha=.5) +
   geom_point(aes(group = model), color="darkgray", alpha=.5, size = 2) +
   stat_summary(fun=mean, geom="line", aes(colour="blue")) +
+  geom_vline(xintercept  = range_fcast_dates, linetype = 2) +
   stat_summary(fun=mean, geom="point", aes(colour="blue")) +
   geom_line(data=filter(avg_scores_byweek, model=="COVIDhub-ensemble",  target=="4 wk ahead inc death"), aes(group = model, color="red")) +
   geom_point(data=filter(avg_scores_byweek, model=="COVIDhub-ensemble",  target=="4 wk ahead inc death"), aes(group = model, color="red")) +
