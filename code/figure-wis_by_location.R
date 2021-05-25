@@ -3,6 +3,7 @@ library(tidyverse)
 library(covidHubUtils)
 library(surveillance)
 
+#reorder states, reorder models 
 
 source("code/load-global-analysis-dates.R")
 
@@ -184,10 +185,11 @@ fig_wis_loc <- ggplot(average_by_loc_to_plot,
                        breaks = c(-2,-1,0,1,2), 
                        labels =c("0.25", 0.5, 1, 2, 4)) + 
   xlab(NULL) + ylab(NULL) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 9, 
-                                   color=ifelse(
-                                       levels(average_by_loc_to_plot$model) %in% models_to_highlight,
-                                            "red", "black")),
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 9), 
+    #                                color=ifelse(
+    #                                    levels(average_by_loc_to_plot$model) %in% models_to_highlight,
+    #                                         "red", "black")),
       axis.title.x = element_text(size = 9),
       axis.text.y = element_text(size = 9),
       title = element_text(size = 9)) +

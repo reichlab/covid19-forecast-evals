@@ -29,22 +29,22 @@ UNITS_FOR_ELIGIBILITY <-covidHubUtils::hub_locations %>%
   filter(for_scoring) %>%
   pull(fips)
 
-## minimum number of weeks for eligibility
-num_weeks_forecasted <- length(seq.Date(first_1wk_target_end_date, last_4wk_target_end_date, by="7 days"))
-NUM_WEEKS_INC <- num_weeks_forecasted - MAXIMUM_MISSING_WEEKS
 
-## minumum number of models in a week to be considered eligible in a given week
+## max number of weeks missing for overall analysis (not stratified by phase)
+MAXIMUM_MISSING_WEEKS_OVERALL <- 17 #formerly 17 # formerly 3 
+
+num_weeks_forecasted <- length(seq.Date(first_1wk_target_end_date, last_4wk_target_end_date, by="7 days"))
+NUM_WEEKS_INC <- num_weeks_forecasted - MAXIMUM_MISSING_WEEKS_OVERALL  #for inclusion overall, must have submitted this many weeks
+
+
+## minumum number of locations in a week to be considered eligible in a given week
 NUM_UNITS <- 25
 
 #Important dates
-last_date_evaluated <- as.Date(calc_target_week_end_date(truth_date, -2)) #last date evaluated
-
+#last_date_evaluated <- as.Date(calc_target_week_end_date(truth_date, -2)) #last date evaluated
 
 #Important Dates for three phases of pandemic
-first_timezero_spring <- as.Date("2020-04-21") 
-first_timezero_summer <- as.Date("2020-06-30")
-first_timezero_winter <- as.Date("2020-11-17")
+first_forecast_date_spring  <- as.Date("2020-04-21") 
+first_forecast_date_summer  <- as.Date("2020-06-30")
+first_forecast_date_winter  <- as.Date("2020-11-17")
 
-first_forecast_date_spring <- as.Date("2020-05-02") 
-first_forecast_date_summer <- as.Date("2020-07-11")
-first_forecast_date_winter <- as.Date("2020-11-28")
