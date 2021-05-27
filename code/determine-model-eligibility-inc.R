@@ -145,8 +145,8 @@ inc_model_completes <- inc_model_overall %>%
   mutate(seasonal_phase = case_when(forecast_date < first_forecast_date_summer ~ "spring", #set dates based on forecast date 
                                     forecast_date >= first_forecast_date_summer & forecast_date  < first_forecast_date_winter ~ "summer",
                                     forecast_date >= first_forecast_date_winter ~ "winter")) %>%
-  mutate(include_overall = ifelse(include_overall == TRUE, include_overall, FALSE),
-         include_phases = ifelse(include_phases == TRUE, include_phases, FALSE))
+  mutate(include_overall = ifelse(is.na(include_overall),  "FALSE", "TRUE"),
+         include_phases = ifelse(is.na(include_phases), "FALSE", "TRUE"))
   
 
 ## output data.frame with list of models and eligibility
