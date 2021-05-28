@@ -67,7 +67,7 @@ for_loc_figure <- read.csv("paper-inputs/heatmap_data.csv") %>%
        model_numeric = as.numeric(model)) 
 
 scored_models <- read_csv("paper-inputs/inc-scores.csv") %>%
-                        filter(include_overall == "YES") %>%
+                        filter(include_overall == "TRUE") %>%
                         group_by(model) %>%
                         summarise(n_forecasts = n()) %>%
                         arrange(desc(n_forecasts)) %>%

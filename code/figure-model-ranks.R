@@ -159,11 +159,27 @@ ggplot(fake_scores, aes(y=model, x=rp, fill = factor(stat(quantile)))) +
 
 
 ##Model Ranking by Phases of the Pandemic
-p2_phase <- ggplot(inc_scores %>% filter(include_phases == "YES") %>%
-                mutate(seasonal_phase = case_when(forecast_date < first_forecast_date_summer ~ "spring",
-                                                  forecast_date >= first_forecast_date_summer & forecast_date  < first_forecast_date_winter ~ "summer",
-                                                  forecast_date >= first_forecast_date_winter ~ "winter")), 
-                aes(y=model, x=rev_rank, fill = factor(stat(quantile)))) +
+inc_scores_phase <- read_csv("paper-inputs/inc-scores.csv") %>%
+  filter(!(location_name %in%  c("American Samoa", "Northern Mariana Islands")), 
+         target %in% paste(1:4, "wk ahead inc death")) %>%
+  mutate(id = paste(target_end_date_1wk_ahead, target, location_name)) %>%
+  group_by(target_end_date_1wk_ahead, target, location_name) %>%
+  mutate(n_models = n()) %>%
+  ##filter(n_models >= 15) %>%
+  arrange(wis) %>%
+  mutate(model_rank = row_number(), rank_percentile = model_rank/n_models) %>%
+  arrange(-wis) %>%
+  mutate(rev_rank = (row_number()-1)/(n_models-1)) %>%
+  ungroup() %>%
+  mutate(model = reorder(model, rev_rank, FUN=function(x) quantile(x, probs=0.25, na.rm=TRUE))) %>%
+  filter(include_phases == "TRUE") %>%
+  mutate(seasonal_phase = case_when(forecast_date < first_forecast_date_summer ~ "spring",
+                                    forecast_date >= first_forecast_date_summer & forecast_date  < first_forecast_date_winter ~ "summer",
+                                    forecast_date >= first_forecast_date_winter ~ "winter")) 
+
+
+
+p2_phase <- ggplot(inc_scores_phase,aes(y= model, x=rev_rank, fill = factor(stat(quantile)))) +
   facet_wrap(~ seasonal_phase) +
   stat_density_ridges(
     geom = "density_ridges_gradient", calc_ecdf = TRUE,

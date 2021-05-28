@@ -21,7 +21,7 @@ inc_scores <- read_csv("paper-inputs/inc-scores.csv") %>%
 
 ## compute nice table
 calibration_scores_inc <- inc_scores %>%
-  filter(include_overall == "YES") %>%
+  filter(include_overall == "TRUE") %>%
   group_by(model, target, horizon) %>%
   summarise(percent_calib50 = mean(coverage_50, na.rm = T),
             percent_calib95 = mean(coverage_95, na.rm = T)) %>% 
@@ -98,7 +98,7 @@ dev.off()
 
 #Calibration table (table 2)
 calib_table <- inc_scores %>%
-  filter(include_overall == "YES") %>%
+  filter(include_overall == "TRUE") %>%
   filter(location_name %in% datasets::state.name) %>%
   filter(target %in% c("1 wk ahead inc death",  "2 wk ahead inc death",  "3 wk ahead inc death",  "4 wk ahead inc death")) %>% 
   group_by(model) %>%
@@ -113,7 +113,7 @@ calib_table <- inc_scores %>%
 #Compute Table by Phase
 
 calibration_scores_inc_phase <- inc_scores %>%
-  filter(include_phases == "YES") %>%
+  filter(include_phases == "TRUE") %>%
   mutate(seasonal_phase = case_when(forecast_date < first_forecast_date_summer ~ "spring",
                                     forecast_date >= first_forecast_date_summer & forecast_date  < first_forecast_date_winter ~ "summer",
                                     forecast_date >= first_forecast_date_winter ~ "winter")) %>%

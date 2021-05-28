@@ -425,14 +425,15 @@ average_by_loc_to_plot$model <- reorder(average_by_loc_to_plot$model, average_by
 #   summarise_by = c("model", "location_name")) %>%
 #   mutate(seasonal_phase = "winter")
 
-order_models <- average_by_loc %>% 
-  group_by(model) %>% summarise(wis = mean(relative_wis, na.rm = T))  %>%
-  arrange((wis)) %>% pull(model)
+phase_model_order <- read.csv("paper-inputs/phase-performance_order.csv") %>%
+  arrange(relative_wis) %>% 
+  mutate(model = fct_reorder(model, relative_wis)) %>% pull(model) %>% as.vector()
+
 
 to_plot_phase <- rbind(average_by_loc_spring, average_by_loc_summer,average_by_loc_winter) 
 
 to_plot_phase <- to_plot_phase %>%
-  mutate(model = fct_relevel(model, order_models))
+  mutate(model = fct_relevel(model, phase_model_order))
 
 fig_wis_loc <- ggplot(to_plot_phase,  aes(x=model, y=location_name, 
                           fill= scales::oob_squish(log_relative_wis, range = c(- 2.584963, 2.584963)))) +
