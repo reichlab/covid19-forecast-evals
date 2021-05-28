@@ -42,7 +42,7 @@ panelA <- plot_forecasts(longterm_dat,
 
 ## panel B with mean_wis over time
 inc_scores <- read_csv("paper-inputs/inc-scores.csv") %>%
-  filter(include_overall == "YES")
+  filter(include_overall == "TRUE")
 
 expected_locs <- inc_scores %>%
   filter(!(location_name %in% locs_to_exclude)) %>%

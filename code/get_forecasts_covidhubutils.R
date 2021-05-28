@@ -9,7 +9,6 @@ data("hub_locations")
 
 ##Read in eligible data 
 model_eligibility_inc <- read.csv("paper-inputs/model-eligibility-inc.csv") %>%
-  filter(target_group == "inc") %>%
   select(model, forecast_date) %>% 
   mutate(forecast_date = as.Date(forecast_date)) %>%
   group_by(model) %>%
@@ -24,7 +23,7 @@ model_eligibility_inc <- read.csv("paper-inputs/model-eligibility-inc.csv") %>%
 # load data from covidData (to get versioned truths)
 truth_CD <-
   load_jhu_data(
-    # issue_date = Sys.Date(),
+    issue_date = truth_date,
     spatial_resolution = c("state", "national"),
     temporal_resolution = "weekly",
     measure = "deaths") %>%
