@@ -24,11 +24,7 @@ inc_scores <- read_csv("paper-inputs/inc-scores.csv") %>%
   filter(location_name %in% (hub_locations %>% filter(geo_type == "state") %>% pull(location_name))) %>%
   filter(location_name != "American Samoa" & location_name != "Northern Mariana Islands") %>%
   filter(horizon %in% c(1:4)) %>%
-  filter(forecast_date <= last_timezero4wk)  %>%
-  mutate(seasonal_phase = case_when(forecast_date < first_forecast_date_summer ~ "spring",
-                                    forecast_date >= first_forecast_date_summer & forecast_date  < first_forecast_date_winter ~ "summer",
-                                    forecast_date >= first_forecast_date_winter ~ "winter"))
-
+  filter(forecast_date <= last_timezero4wk) 
 
 #Count number of weeks a model has submitted 
 models_to_highlight <- inc_scores %>%
@@ -105,7 +101,9 @@ pairwise_comparison <- function(scores, mx, my, subset = rep(TRUE, nrow(scores))
 ###phases chart
 library(scoringutils)
 
-spring_phase <- inc_scores %>% filter(seasonal_phase == "spring")
+spring_phase <- inc_scores %>%
+  filter(include_phases == TRUE) %>%
+  filter(seasonal_phase == "spring")
 
 scores <- spring_phase %>% select("model", "forecast_date", "location", "location_name", "horizon", "abs_error", "wis") %>%
   mutate(model = factor(model))
@@ -167,7 +165,9 @@ average_by_loc_spring <- average_by_loc %>%
 
 
 #Summer
-summer_phase <- inc_scores %>% filter(seasonal_phase == "summer")  %>%
+summer_phase <- inc_scores %>% 
+  filter(include_phases == TRUE) %>%
+  filter(seasonal_phase == "summer")  %>%
   mutate(model = factor(model))
 
 scores <- summer_phase %>% 
@@ -230,7 +230,9 @@ average_by_loc_summer <- average_by_loc %>%
 
 
 #Winter
-winter_phase <- inc_scores %>% filter(seasonal_phase == "winter") 
+winter_phase <- inc_scores %>%
+  filter(include_phases == TRUE) %>%
+  filter(seasonal_phase == "winter") 
 
 scores <- winter_phase %>%
   select("model", "forecast_date", "location", "location_name", "horizon", "abs_error", "wis") %>%
