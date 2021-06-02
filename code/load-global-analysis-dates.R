@@ -17,14 +17,10 @@ last_1wk_target_end_date <- as.Date(calc_target_week_end_date(last_timezero, 1))
 last_4wk_target_end_date <- as.Date(calc_target_week_end_date(last_timezero4wk, 1)) #last end date for 4 week ahead forecast 
 
 
-#last evaluation date 
-last_date_evaluated  <- as.Date(calc_target_week_end_date(last_4wk_target_end_date, 4))
-
-
 ## All possible dates considered forecasts could have been made
 ## these include start/end dates for each inc targets 
 the_timezeros_inc <- seq(from = first_timezero, to = last_timezero, by="days")
-the_timezeros_eligibility <- seq(from = first_timezero, to = last_timezero4wk, by="days")
+the_timezeros_eligibility <- seq(from = first_timezero, to = last_timezero4wk, by="days") #confirm this. EYC
 
 ## maximum number of weeks missing that we allow before disqualifying a model
 MAXIMUM_MISSING_WEEKS <- 46 #formerly 17 # formerly 3 
@@ -36,7 +32,7 @@ UNITS_FOR_ELIGIBILITY <-covidHubUtils::hub_locations %>%
 
 
 ## max number of weeks missing for overall analysis (not stratified by phase)
-MAXIMUM_MISSING_WEEKS_OVERALL <- 17 #formerly 17 # formerly 3 
+MAXIMUM_MISSING_WEEKS_OVERALL <- 17 #formerly 3 
 
 num_weeks_forecasted <- length(seq.Date(first_1wk_target_end_date, last_4wk_target_end_date, by="7 days"))
 NUM_WEEKS_INC <- num_weeks_forecasted - MAXIMUM_MISSING_WEEKS_OVERALL  #for inclusion overall, must have submitted this many weeks
@@ -49,7 +45,7 @@ NUM_UNITS <- 25
 #last_date_evaluated <- as.Date(calc_target_week_end_date(truth_date, -2)) #last date evaluated
 
 #Important Dates for three phases of pandemic
-first_forecast_date_spring  <- as.Date("2020-04-21") 
-first_forecast_date_summer  <- as.Date("2020-06-30")
-first_forecast_date_winter  <- as.Date("2020-11-17")
+first_target_end_date_spring  <- as.Date("2020-05-02") 
+first_target_end_date_summer  <- as.Date("2020-07-11")
+first_target_end_date_winter  <- as.Date("2020-11-28")
 
