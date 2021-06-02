@@ -12,11 +12,6 @@ eval_dates <- c(
   first_1wk_target_end_date - 3.5, ## first one-week-ahead target end date 
   last_1wk_target_end_date + 3.5) ## last four week ahead target end date
 
-range_fcast_dates <- c(
-  first_forecast_date_spring,
-  first_forecast_date_summer,
-  first_forecast_date_winter,
-  last_1wk_target_end_date)
 
 start_date <- as.Date("2020-02-22")
 end_date <- truth_date
