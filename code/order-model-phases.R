@@ -6,7 +6,7 @@ scores <- read_csv("paper-inputs/inc-scores.csv") %>%
   filter(include_phases == TRUE) %>%
   filter(location_name %in% datasets::state.name) %>%
   filter(horizon %in% c(1:4)) %>%
-  filter(!is.na(wis)) #there are a few columbia-UNC models with a WIS of zero
+  filter(!is.na(wis)) %>% #there are a few columbia-UNC models with a WIS of zero
   select("model", "forecast_date", "location", "horizon", "abs_error", "wis")
 
 
