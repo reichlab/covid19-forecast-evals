@@ -48,7 +48,6 @@ p1_updated <- p1 +
     name=element_blank(), 
     expand=c(0,0)) +
   geom_vline(xintercept=range_fcast_dates, linetype=2) +
-  geom_vline(xintercept=last_date_evaluated, linetype=2) +
   theme(axis.ticks.length.x = unit(0.5, "cm"),
     axis.text.x = element_text(vjust = 5.5, hjust = -0.2))
 
