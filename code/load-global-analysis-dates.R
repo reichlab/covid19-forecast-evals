@@ -50,3 +50,9 @@ first_target_end_date_spring  <- as.Date("2020-05-02")
 first_target_end_date_summer  <- as.Date("2020-07-11")
 first_target_end_date_winter  <- as.Date("2020-11-28")
 
+#range of target_end_dates 
+range_fcast_dates <- c(
+  first_target_end_date_spring,
+  first_target_end_date_summer,
+  first_target_end_date_winter,
+  last_1wk_target_end_date)
