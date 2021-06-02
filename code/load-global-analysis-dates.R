@@ -44,6 +44,7 @@ NUM_UNITS <- 25
 #Important dates
 #last_date_evaluated <- as.Date(calc_target_week_end_date(truth_date, -2)) #last date evaluated
 
+
 #Important Dates for three phases of pandemic
 first_target_end_date_spring  <- as.Date("2020-05-02") 
 first_target_end_date_summer  <- as.Date("2020-07-11")
