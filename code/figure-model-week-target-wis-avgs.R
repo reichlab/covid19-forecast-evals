@@ -256,13 +256,12 @@ model_levels <- inc_scores %>%
   group_by(model) %>% summarise(mean_wis = mean(wis)) %>%
   pull(model)
 
-
 phase_model_order <- read.csv("paper-inputs/phase-performance_order.csv") %>%
   arrange(relative_wis) %>% 
   mutate(model = fct_reorder(model, relative_wis)) %>% pull(model) %>% as.vector()
 
 avg_wis_by_model_target_week_1and4wk_phase <- avg_wis_by_model_target_week_1and4wk_phase %>% 
-  mutate(model = factor(model, levels= model_levels, ordered = TRUE)) %>%
+  mutate(model = factor(model, levels= phase_model_order, ordered = TRUE)) %>%
   filter(!is.na(model)) %>%
   mutate(model = fct_relevel(model, phase_model_order))
 
@@ -306,7 +305,7 @@ print(p_phase_boxplot)
 dev.off()
 
 
-# 
+
 # p_phase_log <- ggplot(avg_wis_by_model_target_week_1and4wk_phase, aes(x = model, y= scales::oob_squish(mean_wis, range = c(0,500)))) +
 #   geom_hline(data = baseline_avg, aes(yintercept = mean_wis), color = "red", linetype = 'dotted') +
 #   facet_wrap(~target + seasonal_phase) + #, scales="free_y") +
@@ -338,6 +337,19 @@ dev.off()
 
 ##Figure 4 [average WIS over time]
 
+
+avg_wis_by_model_target_week <- inc_scores %>%
+  filter(include_overall == "TRUE") %>%
+  filter(!(location_name %in% locs_to_exclude)) %>% 
+  mutate(seasonal_phase = case_when(forecast_date < first_forecast_date_summer ~ "spring",
+                                    forecast_date >= first_forecast_date_summer & forecast_date  < first_forecast_date_winter ~ "summer",
+                                    forecast_date >= first_forecast_date_winter ~ "winter")) %>%
+  group_by(model, target, seasonal_phase, target_end_date_1wk_ahead) %>%
+  summarize(median_wis = median(wis), mean_wis = mean(wis, na.rm=TRUE), nlocs=n()) %>%
+  left_join(expected_locs)%>%
+  mutate(obs_exp_locs = nlocs == nlocs_expected)
+
+
 ## assemble truth data observations for US level
 obs_inc_deaths <- load_truth("JHU", "inc death", locations="US") %>%
   filter(target_end_date >= first_1wk_target_end_date, 
@@ -361,7 +373,8 @@ avg_scores_byweek <- avg_wis_by_model_target_week %>%
   group_by(target_end_date_1wk_ahead, target) %>%
   mutate_at(vars("mean_wis"), funs(relative_wis = (. / .[model=="COVIDhub-baseline"]))) %>%
   ungroup() %>%  group_by(model) %>%
-  mutate(label = if_else(target_end_date_1wk_ahead  == max(target_end_date_1wk_ahead), model, factor(NA_character_, ordered = TRUE))) %>% ungroup()
+  mutate(model = factor(model)) %>%
+  mutate(label = if_else(target_end_date_1wk_ahead  == max(target_end_date_1wk_ahead), model, factor(NA_character_, ordered = FALSE))) %>% ungroup()
 
 avg_scores_byweek$model <- factor(as.character(avg_scores_byweek$model))
 
@@ -408,11 +421,6 @@ filter(avg_scores_byweek, target_end_date=="2020-12-05", nlocs==50) %>%
 #   facet_wrap(~ target, scales="free_y", ncol = 1) +
 #   guides(color=FALSE,  group = FALSE)
 
-range_fcast_dates <- c(
-  first_forecast_date_spring,
-  first_forecast_date_summer,
-  first_forecast_date_winter,
-  last_1wk_target_end_date)
 
 f4b <- ggplot(filter(avg_scores_byweek, target=="1 wk ahead inc death"), aes(x = target_end_date, y = mean_wis)) +
   geom_line(aes(group = model), color="darkgray", alpha=.5) +
