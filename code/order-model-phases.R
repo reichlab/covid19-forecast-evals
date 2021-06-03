@@ -1,14 +1,16 @@
 #Create order of relative WIS for the models included in phase analysis 
+library(tidyverse)
 
 #TABLES BY PHASE 
 
-scores <- read_csv("paper-inputs/inc-scores.csv") %>%
+inc_scores <- read_csv("paper-inputs/inc-scores.csv") %>%
   filter(include_phases == TRUE) %>%
   filter(location_name %in% datasets::state.name) %>%
   filter(horizon %in% c(1:4)) %>%
-  filter(!is.na(wis)) %>% #there are a few columbia-UNC models with a WIS of zero
-  select("model", "forecast_date", "location", "horizon", "abs_error", "wis")
+  filter(!is.na(wis)) %>% 
+  select("model", "forecast_date", "target_end_date_1wk_ahead", "location", "horizon", "abs_error", "wis")
 
+models <- unique(inc_scores$model)
 
 # function for pairwise comparison of models
 pairwise_comparison_NA <- function(scores, mx, my, subset = rep(TRUE, nrow(scores)),
@@ -17,7 +19,7 @@ pairwise_comparison_NA <- function(scores, mx, my, subset = rep(TRUE, nrow(score
   subx <- subset(scores, model == mx)
   suby <- subset(scores, model == my)
   # merge together and restrict to overlap:
-  sub <- merge(subx, suby, by = c("forecast_date", "location", "horizon"),
+  sub <- merge(subx, suby, by = c("target_end_date_1wk_ahead", "location", "horizon"),
                all.x = FALSE, all.y = FALSE)
   ##### catch common problems:
   ##### no overlap between targets covered by x and y:
@@ -58,26 +60,21 @@ pairwise_comparison_NA <- function(scores, mx, my, subset = rep(TRUE, nrow(score
 }
 
 
-results_ratio <- results_pval <- results_pval_fcd <- matrix(ncol = length(models),
-                                                            nrow = length(models),
-                                                            dimnames = list(models, models))
-
-set.seed(123) # set seed for permutation tests
+## compute the pairwise rel WIS
+results_ratio <- matrix(ncol = length(models),
+                        nrow = length(models),
+                        dimnames = list(models, models))
 
 for(mx in seq_along(models)){
   for(my in 1:mx){
-    pwc <- pairwise_comparison_NA(scores = scores, mx = models[mx], my = models[my],
+    pwc <- pairwise_comparison_NA(scores = inc_scores, mx = models[mx], my = models[my],
                                   permutation_test = FALSE)
     results_ratio[mx, my] <- pwc$ratio
     results_ratio[my, mx] <- 1/pwc$ratio
-    # results_pval[mx, my] <-
-    #   results_pval[my, mx] <- pwc$pval
-    # # results_pval_fcd[mx, my] <-
-    #   results_pval_fcd[my, mx] <- pwc$pval_fcd
   }
 }
 
-
+## standardize relWIS relative to baseline
 ind_baseline <- which(rownames(results_ratio) == "COVIDhub-baseline")
 geom_mean_ratios <- exp(rowMeans(log(results_ratio[, -ind_baseline]), na.rm = TRUE))
 ratios_baseline <- results_ratio[, "COVIDhub-baseline"]
@@ -90,11 +87,10 @@ tab <- data.frame(model = names(geom_mean_ratios),
 
 tab <- tab[order(tab$ratios_baseline2), ]
 
-
 pairwise_scores <- tab %>%
   mutate(relative_wis = round(ratios_baseline2, 2)) %>%
   select(model, relative_wis) %>%
-  mutate(relative_wis = ifelse(is.na(relative_wis), "1", relative_wis)) %>% #SOMETHING IS WRONG WITH COLUMBIA_UNC
+  mutate(relative_wis = ifelse(is.na(relative_wis), "1", relative_wis)) %>% 
   arrange(relative_wis)
 
 write_csv(pairwise_scores, file = "paper-inputs/phase-performance_order.csv")
