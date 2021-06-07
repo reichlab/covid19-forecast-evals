@@ -118,7 +118,6 @@ tab <- tab[order(tab$ratios_baseline2), ]
 pairwise_scores <- tab %>%
   mutate(relative_wis = round(ratios_baseline2, 2)) %>%
   select(model, relative_wis) %>%
-  mutate(relative_wis = ifelse(is.na(relative_wis), "1", relative_wis)) %>% #SOMETHING IS WRONG WITH COLUMBIA_UNC
   arrange(relative_wis)
 
 

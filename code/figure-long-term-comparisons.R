@@ -21,7 +21,7 @@ longterm_dat <- load_latest_forecasts(models = "IHME-CurveFit",
 
 truth_dat <- load_truth(truth_source = "JHU", target_variable = "inc death", locations = "US")
 
-f1 <- plot_forecast(longterm_dat, 
+f1 <- plot_forecasts(longterm_dat, 
   truth_data = truth_dat, 
   model = "IHME-CurveFit", 
   target_variable = "inc death", 
