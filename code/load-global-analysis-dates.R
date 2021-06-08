@@ -2,12 +2,14 @@ require(covidHubUtils)
 require(tidyverse)
 
 ## retrieval date for truth data used in score calculation
-truth_date <- as.Date("2021-01-03")
+truth_date <- as.Date("2021-05-03")
 
 ## important dates for score calculations
-first_timezero <- as.Date("2020-05-12") ## earliest forecast_date in an eligible file 
-last_timezero4wk <- as.Date("2020-11-23") ## latest forecast_date in an eligible file, formerly was as.Date("2020-08-24"). Formerly as.Date("2020-10-26")
-last_timezero <- as.Date("2020-12-14") ## latest forecast_date in an eligible file, based on 1 wk ahead. Formerly as.Date("2020-11-16")
+first_timezero <- as.Date("2020-04-21") ## earliest forecast_date in an eligible file 
+
+## NR: there was some distinction between these two in the first version that is not present anymore?
+last_timezero4wk <- as.Date("2021-04-05") ## latest forecast_date for 4 wk ahead in an eligible file
+last_timezero <- as.Date("2021-04-26") ## latest forecast_date for 1 wk ahead in an eligible file, based on 1 wk ahead. 
 
 ## range of target_week_end_dates
 first_1wk_target_end_date <- as.Date(calc_target_week_end_date(first_timezero, 1))
@@ -20,7 +22,7 @@ the_timezeros_inc <- seq(from = first_timezero, to = last_timezero, by="days")
 the_timezeros_eligibility <- seq(from = first_timezero, to = last_timezero4wk, by="days")
 
 ## maximum number of weeks missing that we allow before disqualifying a model
-MAXIMUM_MISSING_WEEKS <- 9 # formerly 3
+MAXIMUM_MISSING_WEEKS <- 17 # formerly 3
 UNITS_FOR_ELIGIBILITY <- covidHubUtils::hub_locations %>% 
   filter(geo_type == "state") %>% filter(location_name != "U.S. Minor Outlying Islands") %>% #added to remove counties
   mutate(for_scoring = abbreviation %in% c("US", datasets::state.abb)) %>%

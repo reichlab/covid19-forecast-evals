@@ -67,8 +67,9 @@ inc_scores <- read_csv("paper-inputs/inc-scores.csv") %>%
 #   summarize(max_horizon = max(horizon)) %>%
 #   ungroup() %>%
 #   mutate(model = reorder(model, max_horizon, FUN = max)) %>%
-#   ggplot(aes(x=factor(target_end_date), y=model, fill=max_horizon)) +
-#   geom_tile()
+#   ggplot(aes(x=factor(target_end_date), y=model, fill=factor(max_horizon))) +
+#   geom_tile() +
+#   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 
 avg_scores <- inc_scores %>%

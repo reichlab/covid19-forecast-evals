@@ -40,8 +40,6 @@ output:
 #load libraries
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 library(lubridate)
-#library(covidcast)
-#library(evalcast)
 library(scoringutils)
 library(RColorBrewer)
 library(DT)
@@ -49,11 +47,11 @@ library(surveillance)
 library(htmltools)
 library(kableExtra)
 library(covidHubUtils)
-#library(zoltr)
 library(plotly)
 library(tidyverse)
 theme_set(theme_bw())
 
+source("functions_weekly_evaluation.R")
 data("hub_locations")
 ```
 
@@ -85,32 +83,8 @@ first_4wk_target_end_date  <- as.Date(calc_target_week_end_date(first_submission
 last_4wk_target_end_date <- as.Date(calc_target_week_end_date(last_submission_date, horizon = 4))
 
 eval_sat <- c(first_eval_sat, last_eval_sat) #range of dates evaluated 
-
-n_weeks_missing <- 5
 ```
 
-<!-- ```{r}  -->
-<!-- #only use after writing truth data for the day  -->
-<!-- truth_dat_case <- read.csv("truth_dat_case.csv") %>% mutate(target_end_date = as.Date(target_end_date)) -->
-<!-- truth_dat_inc <- read.csv("truth_dat_inc.csv") %>% mutate(target_end_date = as.Date(target_end_date)) -->
-<!-- ``` -->
-
-
-```{r}
-# score_case_edit_all <- read.csv("score_case_edit.csv") %>%
-#   mutate(target_end_date = as.Date(target_end_date),
-#          forecast_date = as.Date(forecast_date),
-#          submission_sat = as.Date(submission_sat),
-#          horizon = as.factor(horizon)) %>%
-#   filter(!model %in% c("CU-scenario_high","CU-scenario_mid","CU-scenario_low","CU-nochange"))
-# 
-# score_inc_edit_all <- read.csv("score_inc_edit.csv") %>%
-#   mutate(target_end_date = as.Date(target_end_date),
-#          forecast_date = as.Date(forecast_date),
-#          submission_sat = as.Date(submission_sat),
-#          horizon = as.factor(horizon)) %>%
-#   filter(!model %in% c("CU-scenario_high","CU-scenario_mid","CU-scenario_low","CU-nochange"))
-```
 
 ```{r load data}
 #load files generated in query-scores-weekly-report.R
@@ -388,192 +362,17 @@ for(i in seq_along(locations)){
  # cat("Finished", loc_name, "\n")
 }
 
-
-average_by_loc_to_plot <- average_by_loc %>%
-  filter(location_name != "American Samoa" & location_name != "Northern Mariana Islands") %>%
-  mutate(relative_wis_text = sprintf("%.1f", round(relative_wis, 1)),
-         log_relative_wis = log2(relative_wis)) %>%
-  filter(!is.na(relative_wis)) %>%
-  mutate(model = fct_relevel(model, order))
-
-
-# plot:
-ggplot(average_by_loc_to_plot, 
-  aes(x=model, y=location_name, 
-    fill= scales::oob_squish(log_relative_wis, range = c(- 2.584963, 2.584963)))) +
-  geom_tile() +
-  geom_text(aes(label = relative_wis_text), size = 2.5) + # I adapted the rounding
-  scale_fill_gradient2(low = "steelblue", high = "red", midpoint = 0, na.value = "grey50", 
-                       name = "Relative WIS", 
-                       breaks = c(-2,-1,0,1,2), 
-                       labels =c("0.25", 0.5, 1, 2, 4)) + 
-  xlab(NULL) + ylab(NULL) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 9),
-      axis.title.x = element_text(size = 9),
-      axis.text.y = element_text(size = 9),
-      title = element_text(size = 9)) 
-}
+score_inc_all <- score_inc_all %>% 
+  filter(location != "39")
 ```
 
 
-```{r plot by location mae}
-# select relevant columns:
-
-plot_by_location_mae <- function(df) {
-  
-scores <-  df %>%
-  filter(horizon %in% c(1:4)) %>%
-  filter(score_name == "abs_error") %>%
-  filter(n_horizons == max(n_horizons),
-         n_weeks >= max(n_weeks)*0.5 | n_weeks_3wksPrior >= 2 ) %>%
-  rename(abs_error = score_value) %>%
-  left_join(hub_locations %>% select(location = fips, abbreviation, location_name))
-
-
-# the included models and locations:
-models <- unique(scores$model)
-locations <- unique(scores$location)
-location_names <- unique(scores$location_name)
-
-# function for pairwise comparison of models
-pairwise_comparison_location_mae <- function(scores, mx, my, subset = rep(TRUE, nrow(scores)),
-                                permutation_test = FALSE){
-  
-  ############## This line had been deleted, but needs to be included ##########################
-  # apply subset:
-  scores <- scores[subset, ]
-  
-  # subsets of available scores for both models:
-  subx <- subset(scores, model == mx)
-  suby <- subset(scores, model == my)
-  
-  # merge together and restrict to overlap:
-  sub <- merge(subx, suby, by = c("forecast_date", "location", "horizon"),
-               all.x = FALSE, all.y = FALSE)
-  
-  # compute ratio:
-  ratio <- sum(sub$abs_error.x) / sum(sub$abs_error.y)
-  
-  # perform permutation tests:
-  if(permutation_test){
-    pval <- permutationTest(sub$abs_error.x, sub$abs_error.y,
-                            nPermutation = 999)$pVal.permut
-    
-    # aggregate by forecast date:
-    sub_fcd <- aggregate(cbind(abs_error.x, abs_error.y) ~ forecast_date, data = sub, FUN = mean) 
-    pval_fcd <- permutationTest(sub_fcd$abs_error.x, sub_fcd$abs_error.y,
-                                nPermutation = 999)$pVal.permut
-  }else{
-    pval <- NULL
-    pval_fcd <- NULL
-  }
-  
-  return(list(ratio = ratio, pval = pval, pval_fcd = pval_fcd, mx = mx, my = my))
-}
-
-
-# compute pairwise and relative abs error for each location separately:
-for(i in seq_along(locations)){
-  
-  # select location:
-  loc <- locations[i]
-  loc_name <- location_names[i]
-  
-  # matrix to store:
-  results_ratio_temp <- matrix(ncol = length(models),
-                          nrow = length(models),
-                          dimnames = list(models, models)) 
-  
-  # run pairwise comparison for chosen location:
-  for(mx in seq_along(models)){
-    for(my in 1:mx){
-      pwc <- pairwise_comparison_location_mae(scores = scores, mx = models[mx], my = models[my],
-                                 permutation_test = FALSE, # disable permutation test to speed up things
-                                 subset = scores$location == loc) # this will subset to the respective location inside the function
-      results_ratio_temp[mx, my] <- pwc$ratio
-      results_ratio_temp[my, mx] <- 1/pwc$ratio
-    }
-  }
-  
-  # compute the geometric means etc
-  ind_baseline <- which(rownames(results_ratio_temp) == "COVIDhub-baseline")
-  geom_mean_ratios_temp <- exp(rowMeans(log(results_ratio_temp[, -ind_baseline]), na.rm = TRUE))
-  ratios_baseline_temp <- results_ratio_temp[, "COVIDhub-baseline"]
-  ratios_baseline2_temp <- geom_mean_ratios_temp/geom_mean_ratios_temp["COVIDhub-baseline"]
-  
-  # summarize results:
-  to_add <- data.frame(model = names(ratios_baseline2_temp),
-                       location = loc,
-                       location_name = loc_name,
-                       relative_mae = ratios_baseline2_temp,
-                       log_relative_mae = log(ratios_baseline2_temp))
-  
-  # append to already stored:
-  if(i == 1){ # initialize at first location
-    average_by_loc <- to_add
-  }else{
-    average_by_loc <- rbind(average_by_loc, to_add)
-  }
-  
-  #cat("Finished", loc_name, "\n")
-}
-
-
-average_by_loc_to_plot <- average_by_loc %>%
-  filter(location_name != "American Samoa" & location_name != "Northern Mariana Islands") %>%
-  mutate(relative_mae_text = sprintf("%.1f", round(relative_mae, 1)),
-         log_relative_mae = log2(relative_mae)) %>%
-  filter(!is.na(relative_mae)) 
-
-average_by_loc_to_plot$model <- reorder(average_by_loc_to_plot$model, -average_by_loc_to_plot$log_relative_mae)
-
-# plot:
-avg_by_loc <- ggplot(average_by_loc_to_plot, 
-  aes(x=model, y=location_name, 
-    fill= scales::oob_squish(log_relative_mae, range = c(- 2.584963, 2.584963)))) +
-  geom_tile() +
-  geom_text(aes(label = relative_mae_text), size = 2.5) + # I adapted the rounding
-  scale_fill_gradient2(low = "steelblue", high = "red", midpoint = 0, na.value = "grey50", 
-                       name = "Relative MAE", 
-                       breaks = c(-2,-1,0,1,2), 
-                       labels =c("0.25", 0.5, 1, 2, 4)) + 
-  xlab(NULL) + ylab(NULL) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 9),
-      axis.title.x = element_text(size = 9),
-      axis.text.y = element_text(size = 9),
-      title = element_text(size = 9)) 
-
-print(avg_by_loc)
-}
+```{r inclusion in accuracy table historical}
+#at least 50% of historical WIS or historical MAE
+case_accuracy_historical <- historical_accuracy_filter(score_case_all)
+inc_accuracy_historical <- historical_accuracy_filter(score_inc_all)
 ```
 
-
-```{r}
-wis_plot_function <- function(x,y,order) {
-wis_plot <- x %>% 
-  filter(target_end_date >= first_eval_sat) %>%
-  filter(score_name %in% c("sharpness","overprediction", "underprediction")) %>% 
-  group_by(model, score_name) %>% 
-  summarise(mean_values = mean(score_value,na.rm = T)) %>% 
-  mutate(n_forecasts = n()) %>%
-  ungroup() %>%
-  #filter(n_forecasts >= (max(n_forecasts)*0.5)) %>% 
-  droplevels()  %>%
-  filter(model %in% y$model)
-   
-
-wis_plot <- wis_plot %>%
-  mutate(model = fct_relevel(model, order))
-
-
-ggplot(wis_plot, aes(fill=score_name, y=mean_values, x=model)) + 
-    geom_bar(position="stack", stat="identity", width = .75) +
-   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
-         legend.title = element_blank(),
-         axis.title.x =  element_blank()) +
-  labs(y = "WIS components")
-}
-```
 
 
 # Overview
@@ -607,26 +406,14 @@ The second table evaluates models based on their prediction interval coverage at
 Inclusion criteria for each column are detailed below the table. 
 
 
-
 ### Accuracy Table 
 
-```{r}
-#calibration table 
-case_calibration <- calib_table(score_case_leaderboard)
-```
-
 ```{r relative wis case}
-#Calculate pairwise WIS
-# # helper function
-# next_monday <- function(date){
-#   nm <- rep(NA, length(date))
-#   for(i in seq_along(date)){
-#     nm[i] <- date[i] + (0:6)[weekdays(date[i] + (0:6)) == "Monday"]
-#   }
-#   return(as.Date(nm, origin = "1970-01-01"))
-# }
+#at least 50% of recent WIS or 50% of recent MAE
+case_accuracy_recent <- recent_accuracy_filter(score_case_all)
 
-inc_scores <- score_case_10wks %>%
+
+inc_scores <- case_accuracy_recent %>%
   filter(!is.na(score_value)) %>%
   filter(n_locations >= 25) %>% 
   droplevels()
@@ -842,7 +629,7 @@ pairwise_scores_mae <- tab %>%
 
 
 ```{r permutation test for historical data}
-inc_scores <- score_case_historical %>%
+inc_scores <- case_accuracy_historical %>%
   filter(n_locations >= 25) %>%
   filter(n_weeks >= 4) %>%
   droplevels()
@@ -951,15 +738,32 @@ historical_mae <- tab %>%
   mutate(historical_relative_mae = round(ratios_baseline2, 2)) %>%
   select(model, historical_relative_mae) 
 ```
+ 
 
 ```{r}
-leaderboard_table <- case_calibration %>%
+case_count_fcasts_recent <-  case_accuracy_recent %>% group_by(model,score_name) %>%
+    summarise(n_forecasts_wis = sum(score_name == "wis" & !is.na(score_value)),
+           n_forecasts_mae = sum(score_name == "abs_error" & !is.na(score_value))) %>% ungroup() %>%
+  mutate(n_fcast = ifelse(n_forecasts_wis > 0, n_forecasts_wis, n_forecasts_mae)) %>%
+  group_by(model) %>%
+  summarise(n_forecasts_recent = max(n_fcast))
+
+case_count_fcasts_historical <-  case_accuracy_historical %>% group_by(model,score_name) %>%
+    summarise(n_forecasts_wis = sum(score_name == "wis" & !is.na(score_value)),
+           n_forecasts_mae = sum(score_name == "abs_error" & !is.na(score_value))) %>% ungroup() %>%
+  mutate(n_fcast = ifelse(n_forecasts_wis > 0, n_forecasts_wis, n_forecasts_mae)) %>%
+  group_by(model) %>%
+  summarise(n_forecasts_historical = max(n_fcast))
+
+  
+leaderboard_table <- case_count_fcasts_recent %>%
+  full_join(case_count_fcasts_historical) %>%
   full_join(pairwise_scores) %>%
   full_join(historical_wis) %>%
   full_join(pairwise_scores_mae) %>%
   full_join(historical_mae) %>%
   select(model, n_forecasts_recent, relative_wis, relative_mae,  n_forecasts_historical, relative_wis_historical, historical_relative_mae) %>%
-  arrange(relative_wis) %>% 
+  arrange(relative_wis) %>%
   filter(!is.na(relative_wis) | !is.na(relative_mae) | !is.na(relative_wis_historical) | !is.na(historical_relative_mae))
 
 render <- JS(
@@ -1000,61 +804,16 @@ To calculate each column in our table, different inclusion criteria were applied
 
 ### Coverage Table 
 
-```{r}
-(coverage_table  <- coverage_function(case_calibration))
+For inclusion in this table, a model most have contributed forecasts for 5 or more weeks total since the beginning of April, or have submitted forecasts during at least 2 out of the last 3 evaluated weeks. This inclusion criteria was applied in order to score models that submitted for a substantial amount of weeks at any point during the pandemic but may no longer be submitting, while also evaluating new teams that have recently joined our forecasting efforts. 
+
+```{r inclusion in coverage table recent}
+#Filtered to include only models in scoreboard (coverage table) 
+#at least 5 weeks overall or at least 2 out of the last 3 weeks 
+
+#calibration table 
+case_calib <- calib_table(score_case_all)
+case_calib
 ```
-
-
-For inclusion in this table, a model most have contributed forecasts for 5 or more weeks total since the beginning of April, or have submitted forecasts during at least 2 out of the last 3 evaluated weeks. This inclusion criteria was applied in order to score models that submitted for a substantial amount of weeks at any point during the pandemic but may no longer be submitting, but also to evaluate new teams that have recently joined our forecasting efforts. 
-
-
-
-<!-- ## Number of Locations -->
-
-<!-- ```{r filters for analysis inc case, fig.width=8, fig.height=10} -->
-<!-- #counts of case submissions for the week -->
-
-<!-- #Count of models that have submitted for last 10 evaluated weeks -->
-<!-- n_unique_models_case <- score_case_10wks  %>% -->
-<!--   pull(model) %>% unique() -->
-
-<!--  <- score_case_10wks  %>% -->
-<!--   filter(n_weeks_10wksPrior == max(n_weeks_10wksPrior)) %>% -->
-<!--   pull(model) %>% unique() %>% length() -->
-
-<!-- n_models_all_locations <- score_case_10wks  %>% -->
-<!--   filter(n_locations >= 50) %>% -->
-<!--   pull(model) %>% unique() %>% length() -->
-
-<!-- <- score_case_10wks  %>% -->
-<!--   group_by(horizon) %>% -->
-<!--   filter(n_horizons == max(n_horizons)) %>% -->
-<!--   pull(model) %>% unique() %>% length() -->
-<!-- ``` -->
-
-
-<!-- This figure shows the number of locations each model submitted a weekly incidence case forecast for the last 10 evaluated weeks. The maximum number of locations is 57, which includes all 50 states, a National level forecast, and 6 US territories. -->
-
-<!-- The dates listed on the x-axis are the Saturday before the first horizon. This is the Saturday associated with the target submission week. If a model is submitted on Tuesday - Friday, the Saturday listed occurs after the submission. If the model is submitted on a Sunday or Monday, the Saturday occurs before the submission date. -->
-
-<!--  The number of models that submitted forecasts for all `r n_weeks_eval` weeks was `. -->
-
-
-<!-- ```{r,fig.width=20, fig.height=20} -->
-<!-- for_loc_figure_case <- score_inc_leaderboard   %>% -->
-<!--   filter(score_name == "wis") %>% -->
-<!--   filter(horizon == "1") %>% -->
-<!--   filter(submission_sat >= first_submission_date) %>% -->
-<!--   group_by(model, submission_sat) %>% -->
-<!--   summarise(n_location = n()) %>% -->
-<!--   ungroup() %>% -->
-<!--   group_by(model, n_location) %>% -->
-<!--   mutate(n_weeks = n()) -->
-
-<!-- for_loc_figure_case$model <- reorder(for_loc_figure_case$model, for_loc_figure_case$n_weeks) -->
-
-<!-- plot_location(for_loc_figure_case) -->
-<!-- ``` -->
 
 ## WIS components
 
@@ -1064,7 +823,7 @@ The data in this graph has been aggregated over all locations and submission wee
 The sum of the bars adds up to the WIS score. Of note, these values may not be exactly the same as the relative WIS scores shown in the leaderboard table because these are not adjusted for weeks or locations missing. 
 
 ```{r wis bar function, fig.height= 8, fig.width=13}
-wis_plot_function(x = score_case_all, y = pairwise_scores, order = case_model_order)
+wis_barplot_function(x = score_case_all, y = pairwise_scores, order = case_model_order)
 ```
 
 
@@ -1078,39 +837,9 @@ For the first 2 figures, WIS is used as a metric. The first figure shows the mea
 
 ### 1 Week Horizon WIS
 ```{r,fig.width=10, fig.height=6}
-by_week_function <- function(df, var) {
-  df %>%
-  filter(score_name == var) %>%
-  filter(location %in% c(US_fips)) %>%
-  group_by(model, target_end_date, horizon) %>%
-  mutate(n_US_location = n()) %>%
-  ungroup() %>%
-  filter(n_US_location == max(n_US_location)) %>%
-  group_by(model,horizon, target_end_date) %>%
-  summarise(mean_score = mean(score_value))
-}
-
-plot_byweek_function <- function(df, var, horizon_num) {
-  ggplot(data =  df %>% filter(horizon == horizon_num), aes(label = model, 
-                                     labelx = target_end_date,
-                                     labely = mean_score,
-                                     x = target_end_date, 
-                                     y = mean_score, color = model)) +
-  geom_line(aes(group = model), alpha=.5) +
-  geom_point(aes(group = model), alpha=.5, size = 2) +
-  expand_limits(y=0) +
-  scale_y_continuous(name = paste("Average",var)) +
-  guides(color=FALSE, group = FALSE) +
-  ggtitle(paste0("Average ", horizon_num,"-week ahead ",var," by model")) +
-  xlab("Target End Date") +
-  theme(axis.ticks.length.x = unit(0.5, "cm"),
-    axis.text.x = element_text(vjust = 7, hjust = -0.2))
-}
-
 byweek_case <- by_week_function(score_case_all, var = "wis") %>% ungroup()
 by_week_wis_1wk <- plot_byweek_function(byweek_case, var = "wis", horizon_num = "1")
 ggplotly(by_week_wis_1wk, tooltip = c("label", "labelx", "labely"))
-
 ```
 
 ### 4 Week Horizon WIS
@@ -1158,48 +887,6 @@ ggplotly(by_week_wis_4wk, tooltip = c("label", "labelx", "labely"))
 ```
 
 
-<!-- ## Location Specific WIS -->
-
-
-<!-- ```{r fig.height=10, fig.width= 11} -->
-
-<!-- plot_avg_by_loc <- function(df) { -->
-
-<!--   average_by_loc <- df %>% -->
-<!--   filter(horizon %in% c(1:4)) %>% -->
-<!--   filter(score_name == "wis") %>% -->
-<!--   filter(n_horizons == max(n_horizons), -->
-<!--          n_weeks >= max(n_weeks)*0.5 | n_weeks_3wksPrior >= 2 ) %>% -->
-<!--   group_by(model, location) %>% -->
-<!--   summarise(avg_wis = round(mean(score_value),1)) %>% -->
-<!--   group_by(location) %>% -->
-<!--   mutate(relative_wis = avg_wis / avg_wis[model == "COVIDhub-baseline"]) %>% -->
-<!--   ungroup() %>% -->
-<!--   mutate(log_relative_wis = ifelse(relative_wis == 0, 0, log2(relative_wis)), -->
-<!--     log_relative_wis = ifelse(log_relative_wis > 3, 3, log_relative_wis)) %>% -->
-<!--     filter(!is.na(relative_wis)) %>% -->
-<!--   left_join(hub_locations %>% select(location = fips, abbreviation)) -->
-
-
-<!-- average_by_loc$model<- reorder(average_by_loc$model, -average_by_loc$log_relative_wis) #sort models by WIS for plot -->
-<!-- average_by_loc$abbreviation <- reorder(average_by_loc$abbreviation, average_by_loc$avg_wis) -->
-
-<!-- ggplot(average_by_loc, aes(x=model, y=abbreviation ,fill= log_relative_wis)) + -->
-<!--   geom_tile() + -->
-<!--   geom_text(aes(label=round(avg_wis)), size = 3) + -->
-<!--   scale_fill_gradient2(low = "steelblue", high = "red", midpoint = 0, na.value = "grey50", name = "Relative WIS", -->
-<!--                        breaks = c(-2,-1,0,1,2), labels =c(0.25, 0.5, 1, 2, 4)) + -->
-<!--   xlab("Scored Models") + ylab("Location") + -->
-<!--   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10), -->
-<!--       axis.title.x = element_text(size = 9), -->
-<!--       axis.text.y = element_text(size = 9), -->
-<!--       title = element_text(size = 9)) -->
-<!-- } -->
-
-
-<!-- plot_avg_by_loc(score_case_10wks) -->
-<!-- ``` -->
-
 
 ## Evaluation by location {.tabset .tabset-fade}
 
@@ -1207,18 +894,9 @@ This figures below show model performance stratified by location. We have only i
 
 The color scheme shows the WIS score relative to the baseline. The only locations evaluated are 50 states and a national level forecast.
 
-<!-- ### Evaluation by WIS -->
-
 ```{r, width=16, fig.height=10}
-plot_by_location_wis(score_case_10wks, order = case_model_order)
+plot_by_location_wis(case_accuracy_recent, order = case_model_order)
 ```
-
-
-<!-- ### Evaluation by MAE -->
-<!-- ``````{r, width=15, fig.height=11} -->
-<!-- plot_by_location_mae(score_case_10wks) -->
-<!-- ``` -->
-
 
 ## Observed data 
 
@@ -1255,16 +933,15 @@ The second table evaluates models based on their prediction interval coverage at
  
 Inclusion criteria for each column are detailed below the table. 
 
-```{r}
-#calibration table 
-inc_calibration <- calib_table(score_inc_leaderboard)
-```
-
 
 
 ### Accuracy Table
+
 ```{r}
-inc_scores <- score_inc_10wks %>%
+#at least 50% of recent WIS or 50% of recent MAE
+inc_accuracy_recent <- recent_accuracy_filter(score_inc_all)
+
+inc_scores <- inc_accuracy_recent %>%
   filter(n_locations >= 25) %>%
   filter(n_weeks >= 4) %>%
   droplevels()
@@ -1374,7 +1051,7 @@ pairwise_scores_mae <- tab %>%
 
 
 ```{r}
-inc_scores <- score_inc_historical %>%
+inc_scores <- inc_accuracy_historical %>%
   filter(n_locations >= 25) %>%
   filter(n_weeks >= 4) %>%
   droplevels()
@@ -1433,7 +1110,7 @@ historical_wis <- tab %>%
 ```
 
 ```{r}
-inc_scores <- score_inc_historical %>%
+inc_scores <- inc_accuracy_historical %>%
   filter(n_locations >= 25) %>%
   filter(n_weeks >= 4) %>%
   droplevels()
@@ -1494,7 +1171,23 @@ historical_mae <- tab %>%
 
 
 ```{r}
-leaderboard_table <- inc_calibration %>%
+inc_count_fcasts_recent <-  inc_accuracy_recent %>% group_by(model,score_name) %>%
+    summarise(n_forecasts_wis = sum(score_name == "wis" & !is.na(score_value)),
+           n_forecasts_mae = sum(score_name == "abs_error" & !is.na(score_value))) %>% ungroup() %>%
+  mutate(n_fcast = ifelse(n_forecasts_wis > 0, n_forecasts_wis, n_forecasts_mae)) %>%
+  group_by(model) %>%
+  summarise(n_forecasts_recent = max(n_fcast))
+
+inc_count_fcasts_historical <-  inc_accuracy_historical %>% group_by(model,score_name) %>%
+    summarise(n_forecasts_wis = sum(score_name == "wis" & !is.na(score_value)),
+           n_forecasts_mae = sum(score_name == "abs_error" & !is.na(score_value))) %>% ungroup() %>%
+  mutate(n_fcast = ifelse(n_forecasts_wis > 0, n_forecasts_wis, n_forecasts_mae)) %>%
+  group_by(model) %>%
+  summarise(n_forecasts_historical = max(n_fcast))
+
+
+leaderboard_table <- inc_count_fcasts_recent %>%
+  full_join(inc_count_fcasts_historical) %>%
   full_join(pairwise_scores) %>%
   full_join(historical_wis) %>%
   full_join(pairwise_scores_mae) %>%
@@ -1525,53 +1218,19 @@ In order to be eligible for the historical calculation of MAE or WIS, a model mu
 
 ### Coverage Table 
 
+
+
+For inclusion in this table, a model most have contributed forecasts for 5 or more weeks total since the beginning of April, or have submitted forecasts during at least 2 out of the last 3 evaluated weeks. This inclusion criteria was applied in order to score models that submitted for a substantial amount of weeks at any point during the pandemic but may no longer be submitting, while also evaluating new teams that have recently joined our forecasting efforts. 
+
 ```{r}
-(coverage_table  <- coverage_function(inc_calibration))
+#Filtered to include only models in scoreboard (coverage table) 
+#at least 5 weeks overall or at least 2 out of the last 3 weeks 
+
+#calibration table 
+inc_tab <- calib_table(score_inc_all)
+inc_tab
 ```
 
-For inclusion in this table, a model most have contributed forecasts for 5 or more weeks total since the beginning of April, or have submitted forecasts during at least 2 out of the last 3 evaluated weeks. This inclusion criteria was applied in order to score models that submitted for a substantial amount of weeks at any point during the pandemic but may no longer be submitting, but also to evaluate new teams that have recently joined our forecasting efforts. 
-
-
-
-<!-- ## Number of Locations -->
-
-<!-- ```{r filters for analysis inc death} -->
-<!-- n_unique_models_inc <- length(unique(score_inc_10wks$model)) #Total models submitted during this time period -->
-
-<!--   n_models_all_weeks <- score_inc_10wks %>%  -->
-<!--   group_by(horizon) %>% -->
-<!--   filter(n_weeks == max(n_weeks)) %>% -->
-<!--   pull(model) %>% unique() %>% length() -->
-
-<!--  n_models_all_locations <- score_inc_10wks %>%  -->
-<!--   filter(n_locations == max(n_locations)) %>% -->
-<!--   pull(model) %>% unique() %>% length() -->
-
-<!--    score_inc_10wks %>%  -->
-<!--   group_by(horizon) %>% -->
-<!--   filter(n_horizons == max(n_horizons)) %>% -->
-<!--   pull(model) %>% unique() %>% length() -->
-<!-- ``` -->
-
-<!-- The figure below shows the number of locations that each model submitted incident death forecasts for during this evaluation period. The dates listed on the X axis are the Saturday before the first horizon. This is the Saturday associated with the target submission week. If a model is submitted on a Tuesday - Friday, the Saturday listed occurs after the submission. If the model is submitted on a Sunday or Monday, the Saturday occurs before the submission date.  -->
-
-
-<!--  The number of models that submitted forecasts for all `r n_weeks_eval` weeks was n_models_all_weeks. -->
-
-<!-- ```{r,fig.width=20, fig.height=20} -->
-<!-- for_loc_figure_inc <- score_inc_10wks %>% -->
-<!--   filter(score_name == "wis") %>% -->
-<!--   filter(horizon == "1") %>% -->
-<!--   group_by(model, submission_sat) %>% -->
-<!--   summarise(n_location = n()) %>% -->
-<!--   ungroup() %>% -->
-<!--   group_by(model, n_location) %>% -->
-<!--   mutate(n_weeks = n()) -->
-
-<!-- for_loc_figure_inc$model <- reorder(for_loc_figure_inc$model, for_loc_figure_inc$n_weeks) -->
-
-<!-- plot_location(for_loc_figure_inc) -->
-<!-- ``` -->
 
 
 ## WIS components
@@ -1583,7 +1242,7 @@ The sum of the bars adds up to the WIS score. Of note, these values may not be e
 The data are ordered on the x axis based on their relative WIS score shown in the accuracy table. 
 
 ```{r, fig.height=8, fig.width=13}
-wis_plot_function(score_inc_all, y = pairwise_scores, order = inc_model_order)
+wis_barplot_function(score_inc_all, y = pairwise_scores, order = inc_model_order)
 ```
 
 
@@ -1654,14 +1313,9 @@ The color scheme shows the WIS score relative to the baseline. The only location
 
 <!-- ### Evaluation by WIS -->
 ```{r, width=16, fig.height=10}
-plot_by_location_wis(score_inc_10wks, order = inc_model_order)
+plot_by_location_wis(inc_accuracy_recent, order = inc_model_order)
 ```
 
-
-<!-- ### Evaluation by MAE -->
-<!-- ```{r, width=15, fig.height=11} -->
-<!-- plot_by_location_mae(score_inc_10wks) -->
-<!-- ``` -->
 
 
 ## Observed data

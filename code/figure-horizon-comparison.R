@@ -58,11 +58,22 @@ avg_wis_by_model_target_week <- inc_scores %>%
   left_join(expected_locs)%>%
   mutate(obs_exp_locs = nlocs == nlocs_expected,
     horizon = factor(horizon, levels=horizon_levels, ordered=TRUE),
-    baseline = ifelse(model=="COVIDhub-baseline", "baseline", "other models"))
+    baseline = ifelse(model=="COVIDhub-baseline", "baseline", "other models")) %>%
+  filter(obs_exp_locs)
+
+
+## for results in manuscript not in table
+avg_wis_by_model_target_week %>% 
+  filter(model %in% c("IHME-CurveFit", "Covid19Sim-Simulator")) %>%
+  group_by(model, horizon) %>%
+  summarize(avg_wis = mean(mean_wis)) %>%
+  group_by(model) %>%
+  mutate(h1_avg_wis = min(avg_wis), rel_wis = avg_wis/h1_avg_wis)
+
 
 panelB <- ggplot(filter(avg_wis_by_model_target_week, model!="COVIDhub-baseline"), 
   aes(x=target_end_date, y=mean_wis, color=horizon, linetype=baseline)) +
-  geom_point(aes(group = model), alpha=.3, size = 2) +
+  geom_point(aes(group = model), alpha=.3) +
   geom_smooth(se=FALSE) +
   # stat_summary(fun=mean, geom="smooth", aes(color=factor(horizon), group=horizon)) +
   ## stat_summary(fun=mean, geom="point", aes(color=factor(horizon), group=horizon)) +
@@ -80,11 +91,12 @@ panelB <- ggplot(filter(avg_wis_by_model_target_week, model!="COVIDhub-baseline"
     #legend.box = "horizontal",
     legend.justification = c(0,1),
     axis.ticks.length.x = unit(0.5, "cm"),
-    axis.text.x = element_text(vjust = 7.5, hjust = -0.4))
+    axis.text.x = element_text(vjust = 7.5, hjust = -0.4)) +
+  guides(linetype=guide_legend(keywidth = 2))
 
 panelC <- ggplot(filter(avg_wis_by_model_target_week, model!="COVIDhub-baseline"), 
   aes(x=target_end_date, y=pi_cov_95, color=horizon, linetype=baseline)) +
-  geom_point(aes(group = model), alpha=.3, size = 2) +
+  geom_point(aes(group = model), alpha=.3) +
   geom_smooth(se=FALSE) +
   # stat_summary(fun=mean, geom="smooth", aes(color=factor(horizon), group=horizon)) +
   ## stat_summary(fun=mean, geom="point", aes(color=factor(horizon), group=horizon)) +
