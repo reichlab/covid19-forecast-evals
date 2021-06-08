@@ -1,5 +1,5 @@
-# make figures
-figures: figures/data-and-forecast.jpg figures/pi-coverage.jpg figures/model-target-week-wis-avgs.jpg figures/inc-loc-heatmap.jpg figures/fig-by-horizon-week.jpg figures/fig-wis-location.jpg figures/fig-model-ranks.jpg
+# make paper-inputs
+paper-inputs: figures/data-and-forecast.jpg figures/pi-coverage.jpg figures/model-target-week-wis-avgs.jpg figures/inc-loc-heatmap.jpg figures/fig-by-horizon-week.jpg figures/fig-wis-location.jpg figures/fig-model-ranks.jpg figures/calibration_plot_diagonal.jpg paper-inputs/table-overall-performance.csv
 
 # processes scores after updates to anomaly dates, eligibility changes or new scores
 paper-inputs/inc-scores.csv: paper-inputs/model-eligibility-inc.csv code/load-global-analysis-dates.R code/get_forecasts_covidhubutils.R
@@ -10,8 +10,9 @@ paper-inputs/model-eligibility-inc.csv: code/determine-model-eligibility-inc.R c
 	Rscript code/determine-model-eligibility-inc.R
 
 # update table for model ranking
-paper-inputs/table-overall-performance.csv: paper-inputs/inc-scores.csv code/Table-PI_relative_WIS.R
+paper-inputs/table-overall-performance.csv: paper-inputs/inc-scores.csv code/Table-PI_relative_WIS.R Rscript code/Table-PI_relative_WIS_phase.R
 	Rscript code/Table-PI_relative_WIS.R
+	Rscript code/Table-PI_relative_WIS_phase.R
 
 # update calibration scores, after score_forecasts transition, this may not be needed anymore.
 # paper-inputs/inc-calibration.csv: paper-inputs/model-eligibility-inc.csv code/get-calibration-scores-inc.R code/load-global-analysis-dates.R
@@ -39,6 +40,9 @@ figures/fig-model-ranks.jpg: code/figure-model-ranks.R paper-inputs/inc-scores.c
 
 figures/fig-wis-location.jpg: code/figure-wis_by_location.R paper-inputs/inc-scores.csv code/load-global-analysis-dates.R paper-inputs/table-overall-performance.csv
 	Rscript code/figure-wis_by_location.R
+
+figures/calibration_plot_diagonal.jpg: code/figure-calibration_plot_diagonal.R paper-inputs/inc-scores.csv code/load-global-analysis-dates.R
+	Rscript code/figure-calibration_plot_diagonal.R
 
 network-graph: 
 	make -Bnd |  ~/Applications/makefile2graph/make2graph | dot -Tpng -o makefile-network-graph.png
