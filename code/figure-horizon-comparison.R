@@ -19,7 +19,7 @@ longterm_dat <- load_latest_forecasts(models = c("IHME-CurveFit", "Covid19Sim-Si
 
 truth_dat <- load_truth(truth_source = "JHU", target_variable = "inc death", locations = "US")
 
-panelA <- plot_forecast(longterm_dat, 
+panelA <- plot_forecasts(longterm_dat, 
   truth_data = truth_dat, 
   #model = "IHME-CurveFit", 
   target_variable = "inc death", 
@@ -41,7 +41,8 @@ panelA <- plot_forecast(longterm_dat,
 
 
 ## panel B with mean_wis over time
-inc_scores <- read_csv("paper-inputs/inc-scores.csv")
+inc_scores <- read_csv("paper-inputs/inc-scores.csv") %>%
+  filter(include_overall == "TRUE")
 
 expected_locs <- inc_scores %>%
   filter(!(location_name %in% locs_to_exclude)) %>%

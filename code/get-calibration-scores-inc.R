@@ -1,6 +1,6 @@
 ## get calibration for incident death forecasts
 #Estee Cramer, Nick Reich
-#Script Created 2020-10-14, updated 2020-11-09
+#Script Created 2020-10-14, updated 2020-11-09, updated 2021-05-20
 
 #Load Libraries
 library(lubridate)
@@ -53,7 +53,7 @@ inc_forecasts <- map_dfr(
       models = colnames(model_eligibility_inc)[x],
       forecast_dates = model_eligibility_inc %>% pull(x),
       locations = hub_locations %>% filter(geo_type == "state") %>% pull(fips),
-      types <- c("quantile"), 
+      types = c("quantile"), 
       targets = c(paste(1:20, "wk ahead inc death")))
   }
 )

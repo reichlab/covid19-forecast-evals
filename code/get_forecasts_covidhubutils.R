@@ -9,7 +9,6 @@ data("hub_locations")
 
 ##Read in eligible data 
 model_eligibility_inc <- read.csv("paper-inputs/model-eligibility-inc.csv") %>%
-  filter(target_group == "inc") %>%
   select(model, forecast_date) %>% 
   mutate(forecast_date = as.Date(forecast_date)) %>%
   group_by(model) %>%
@@ -58,7 +57,7 @@ inc_scores_covidhub_utils <- map_dfr(
     models = colnames(model_eligibility_inc)[x],
     forecast_dates = model_eligibility_inc %>% pull(x),
     locations = hub_locations %>% filter(geo_type == "state") %>% pull(fips),
-    types <- c("quantile", "point"), 
+    types = c("quantile", "point"), 
     targets = c(paste(1:20, "wk ahead inc death"))
     )
     return(score_forecasts(forecasts, truth))
@@ -73,5 +72,10 @@ inc_scores_covidhub_utils <- inc_scores_covidhub_utils %>%
   left_join(truth %>% select(location, target_end_date, value)) %>%
   rename(truth_value = value)
 
+
+
+#add in phase eligibility  
+inc_model_completes <- read.csv("paper-inputs/model-eligibility-inc.csv")
+inc_scores_covidhub_utils <- inc_scores_covidhub_utils %>% left_join(inc_model_completes) %>% ungroup() %>% filter(!is.na(WIS))
   
 write.csv(inc_scores_covidhub_utils, "paper-inputs/inc-scores.csv", row.names = FALSE)

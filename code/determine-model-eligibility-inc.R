@@ -112,7 +112,7 @@ for(this_model in date_eligible_models){
     model_completes <- bind_rows(model_completes, this_model_completes)
 }
 
-inc_model_completes <- model_completes %>%
+inc_model_overall <- model_completes %>%
     filter(target_group=="inc", forecast_date %in% the_timezeros_inc) %>%
     ## calculate how many weeks had the eligible number of units
     group_by(model) %>%
@@ -121,9 +121,33 @@ inc_model_completes <- model_completes %>%
     ungroup() %>%
     ## filter so that we only have models with eligible number of weeks
     filter(num_eligible_weeks >= NUM_WEEKS_INC, num_units_eligible >= NUM_UNITS) %>%
-    select(-num_eligible_weeks) 
+    select(-num_eligible_weeks) %>%
+  mutate(include_overall = TRUE)
 
 
-write_csv(inc_model_completes, file="paper-inputs/model-eligibility-inc.csv")
+#filter models eligible for inclusion in phases 
+inc_model_completes_phases <- model_completes %>%
+  mutate(seasonal_phase = case_when(forecast_date < first_target_end_date_summer ~ "spring", #set dates based on forecast date 
+                                    forecast_date >= first_target_end_date_summer & forecast_date  < first_target_end_date_winter ~ "summer",
+                                    forecast_date >= first_target_end_date_winter ~ "winter")) %>%
+  ## calculate how many weeks had the eligible number of units in each phase 
+  group_by(model,seasonal_phase) %>%
+  ## sum number of weeks with minimum locations and in core evaluation period 
+  mutate(num_eligible_weeks_phase = sum(num_units_eligible >= NUM_UNITS & forecast_date <= last_timezero4wk)) %>%
+  ungroup() %>% group_by(seasonal_phase) %>%
+  ## filter so that we only have models with eligible number of weeks
+  filter(num_eligible_weeks_phase >= max(num_eligible_weeks_phase)*.66, num_units_eligible >= NUM_UNITS) %>% ungroup() %>%
+  select(-num_eligible_weeks_phase)  %>%
+  mutate(include_phases = TRUE)
+
+inc_model_completes <- inc_model_overall %>% 
+  full_join(inc_model_completes_phases) %>%
+  mutate(seasonal_phase = case_when(forecast_date < first_target_end_date_summer ~ "spring", #set dates based on forecast date 
+                                    forecast_date >= first_target_end_date_summer & forecast_date  < first_target_end_date_winter ~ "summer",
+                                    forecast_date >= first_target_end_date_winter ~ "winter")) %>%
+  mutate(include_overall = ifelse(is.na(include_overall),  "FALSE", "TRUE"),
+         include_phases = ifelse(is.na(include_phases), "FALSE", "TRUE"))
+  
 
 ## output data.frame with list of models and eligibility
+write_csv(inc_model_completes, file="paper-inputs/model-eligibility-inc.csv")
