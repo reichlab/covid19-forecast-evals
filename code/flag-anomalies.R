@@ -2,6 +2,8 @@
 library(tidyverse)
 library(covidHubUtils)
 
+## TODO: filter revisions file so we only consider revisions made on or prior to the ground-truth retrieval date
+
 inc_scores <- read_csv("paper-inputs/inc-scores.csv") %>%
   mutate(forecast_week_end_date = as.Date(calc_forecast_week_end_date(forecast_date)))
 
