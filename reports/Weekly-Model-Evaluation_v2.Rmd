@@ -95,10 +95,272 @@ load(file = "score_case_all.rda")
 load(file = "score_inc_all.rda") 
 ```
 
-```{r}
-#Remove Ohio 
-score_case_all <- score_case_all %>% 
-  filter(location != "39")
+```{r inclusion in leaderboard recent}
+#Filtered to include only models in scoreboard (coverage table)
+score_case_leaderboard <- score_case_all %>%
+  filter(n_weeks >= n_weeks_submitted |  n_weeks_3wksPrior >= 2) %>% 
+  filter(!is.na(score_value)) 
+# %>%
+#   filter(!model %in% c("CU-scenario_high","CU-scenario_mid","CU-scenario_low","CU-nochange"))
+
+#Filtered to include only models in scoreboard (coverage table)
+score_inc_leaderboard <- score_inc_all %>%
+  filter(n_weeks >= n_weeks_submitted |  n_weeks_3wksPrior >= 2) %>% #filter if missing more than half of forecasts or if missing more than 2 forecasts in the last 3 weeks 
+  filter(!is.na(score_value)) 
+# %>%
+#   filter(!model %in% c("CU-scenario_high","CU-scenario_mid","CU-scenario_low","CU-nochange"))
+```
+
+```{r only 10 weeks back}
+#filter for 10 weeks back accuracy table
+score_case_10wks <- score_case_all %>%
+  filter(!is.na(score_value)) %>% 
+  filter(target_end_date >= first_eval_sat) %>%
+  group_by(model, score_name) %>% 
+  mutate(n_forecasts_wis = sum(score_name == "wis"),
+         n_forecasts_mae = sum(score_name == "abs_error")) %>% ungroup() %>%
+  filter(n_forecasts_wis >= (max(n_forecasts_wis)*0.5) | n_forecasts_mae >= (max(n_forecasts_mae)*0.5)) %>% 
+  #filter(!model %in% c("CU-scenario_high","CU-scenario_mid","CU-scenario_low","CU-nochange")) %>%
+  droplevels()
+
+#filter for 10 weeks back accuracy table
+score_inc_10wks <- score_inc_all %>%
+  filter(!is.na(score_value)) %>% 
+  filter(target_end_date >= first_eval_sat) %>%
+  group_by(model, score_name) %>% mutate(n_forecasts_wis = sum(score_name == "wis" & !is.na(score_value)),
+                                         n_forecasts_mae = sum(score_name == "abs_error" & !is.na(score_value))) %>% ungroup() %>%
+  filter(n_forecasts_wis >= (max(n_forecasts_wis)*0.5) | n_forecasts_mae >= (max(n_forecasts_mae)*0.5)) %>% 
+ # filter(!model %in% c("CU-scenario_high","CU-scenario_mid","CU-scenario_low","CU-nochange")) %>%
+  droplevels()
+
+```
+
+```{r inclusion in leaderboard historical}
+#filter for historical accuracy table
+score_case_historical <- score_case_all %>%
+  #filter(!model %in% c("CU-scenario_high","CU-scenario_mid","CU-scenario_low","CU-nochange")) %>%
+  group_by(model, score_name) %>% mutate(n_forecasts_wis = sum(score_name == "wis" & !is.na(score_value)),
+                                         n_forecasts_mae = sum(score_name == "abs_error" & !is.na(score_value))) %>% ungroup() %>%
+  filter(n_forecasts_wis >= (max(n_forecasts_wis)*0.5) | n_forecasts_mae >= (max(n_forecasts_mae)*0.5)) %>% 
+  filter(!is.na(score_value)) %>% droplevels()
+
+#filter for historical accuracy table
+score_inc_historical <- score_inc_all %>%
+  #filter(!model %in% c("CU-scenario_high","CU-scenario_mid","CU-scenario_low","CU-nochange")) %>%
+  group_by(model, score_name) %>% mutate(n_forecasts_wis = sum(score_name == "wis" & !is.na(score_value)),
+                                         n_forecasts_mae = sum(score_name == "abs_error" & !is.na(score_value))) %>% ungroup() %>%
+  filter(n_forecasts_wis >= (max(n_forecasts_wis)*0.5) | n_forecasts_mae >= (max(n_forecasts_mae)*0.5)) %>% 
+  filter(!is.na(score_value)) %>% droplevels()
+```
+
+
+```{r inclusion in relative recent calculations}
+#Filtered to include only models that have submitted a forecast in recent weeks and the recent forecasts
+# score_case_recent <- score_case_10wks  %>%
+#   filter(n_weeks_10wksPrior >= max(n_weeks_10wksPrior)*0.5) %>%
+#   filter(!is.na(score_value)) %>% ## remove NA scores for comparison to go through
+#   droplevels()
+# 
+# score_inc_recent <- score_inc_10wks %>%
+#   filter(n_weeks_10wksPrior >= max(n_weeks_10wksPrior)*0.5) %>%
+#   filter(!is.na(score_value)) %>% ## remove NA scores for comparison to go through
+#   droplevels()
+```
+
+
+```{r truth data plot}
+#function to Plot truth data 
+plot_truth <- function(dat) {
+ggplot(data = dat, aes(x = target_end_date, y = value)) +
+  #geom_line(color = "black") +
+  geom_point() +
+  geom_line(color = "black") +
+  scale_x_date(name = NULL, date_breaks="1 month", date_labels = "%b %d") +
+  ylab("incident cases") +
+  labs(title = paste("Weekly reported COVID-19 data: \n Models evaluated from", first_eval_sat, "to", last_eval_sat, sep = " "),
+                          caption="source: JHU CSSE (observed data)")+
+  theme(legend.position = c(.05,.95), legend.justification = c(0,1)) +
+  #geom_vline(aes(xintercept= c(first_submission_date -3.5), color = "Submission Date Boundaries"), linetype=2) +
+  #geom_vline(aes(xintercept= c(last_submission_date + 3.5), color = "Submission Date Boundaries"), linetype=2) +  
+  geom_vline(aes(xintercept= c(first_eval_sat -3.5), color = "Evaluated Date Boundaries"), linetype=2) +
+  geom_vline(aes(xintercept= c(last_eval_sat + 3.5), color = "Evaluated Date Boundaries"), linetype=2) +    
+  scale_color_manual(name = "", values = c("Evaluated Date Boundaries" = "blue"))# , "Submission Date Boundaries" = "red"))
+}
+```
+
+```{r location heatmap plot}
+#function to plot number of locations
+
+plot_location <- function(x){
+  ggplot(x, aes(y=model, x= submission_sat, fill=n_location)) +
+    geom_tile() +
+    geom_text(aes(label=n_location), size = 7) +
+  scale_fill_steps(low="white", high="blue", name = "Number of Locations") +
+   xlab("Submission Saturday") + ylab(NULL) +
+  scale_x_date(date_labels = "%Y-%m-%d", breaks = c(x$submission_sat)) +
+   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 20),
+         axis.title.x = element_text(size = 30),
+         axis.text.y = element_text(size = 25),
+         title = element_text(size = 20)) +
+    guides(fill=FALSE)
+}
+```
+
+```{r calibration table function}
+calib_table <- function(x){
+  
+ historical_calib <-  x  %>% 
+  filter(score_name %in% c("coverage_50","coverage_95")) %>%
+  pivot_wider(names_from = score_name, values_from = score_value) %>%
+  group_by(model) %>%
+  summarise(n_forecasts_historical = n(),
+            mean_PI50 = round(sum(coverage_50, na.rm = TRUE) / n(),2),
+            mean_PI95 = round(sum(coverage_95, na.rm = TRUE) / n(),2)) %>% ungroup() 
+  
+  
+ recent_calib  <- x  %>%
+    filter(score_name %in% c("coverage_50","coverage_95")) %>%
+    filter(target_end_date >= first_eval_sat) %>%  droplevels() %>%
+  pivot_wider(names_from = score_name, values_from = score_value) %>%
+  group_by(model) %>%
+   summarise(n_forecasts_recent = n(),
+            mean_PI50_recent = round(sum(coverage_50, na.rm = TRUE) / n(),2),
+            mean_PI95_recent = round(sum(coverage_95, na.rm = TRUE) / n(),2)) %>%
+  ungroup() 
+ 
+ merge(historical_calib, recent_calib, by = "model")
+}
+```
+
+```{r coverage table}
+coverage_function <- function(x) {
+  calibration_table <-  x  %>%
+  select(model, n_forecasts_recent, mean_PI50_recent, mean_PI95_recent, n_forecasts_historical, mean_PI50, mean_PI95) %>%
+  arrange(-mean_PI50_recent)
+
+render <- JS(
+  "function(data, type, row) {",
+  "  if(type === 'sort' && data === null) {",
+  "    return 999999;",
+  "  }",
+  "  return data;",
+  "}"
+)
+
+
+print(datatable(calibration_table, rownames= FALSE, colnames = c("Model", "n recent forecasts", "Recent 50% coverage", "Recent 95% coverage","n historical forecasts" , "Historical 50% coverage", "Historical 95% coverage"), 
+              options =  list(pageLength = 5, 
+                             autoWidth = TRUE,
+                             columnDefs = list(list(width = '200px', targets = "_all", render = render)), 
+                             ordering = TRUE),
+              filter = c("top")))
+  
+}
+```
+
+
+
+```{r plot by location wis}
+# select relevant columns:
+
+plot_by_location_wis <- function(df, order) {
+scores <- df %>%
+  filter(horizon %in% c(1:4)) %>%
+  filter(score_name == "wis") %>%
+  filter(n_horizons == max(n_horizons),
+         n_weeks >= max(n_weeks)*0.5) %>%
+  rename(wis = score_value) %>%
+  left_join(hub_locations %>% select(location = fips, abbreviation, location_name)) 
+
+
+# the included models and locations:
+models <- unique(scores$model)
+locations <- unique(scores$location)
+location_names <- unique(scores$location_name)
+
+# function for pairwise comparison of models
+pairwise_comparison_location <- function(scores, mx, my, subset = rep(TRUE, nrow(scores)),
+                                permutation_test = FALSE){
+  
+  ############## This line had been deleted, but needs to be included ##########################
+  # apply subset:
+  scores <- scores[subset, ]
+  
+  # subsets of available scores for both models:
+  subx <- subset(scores, model == mx)
+  suby <- subset(scores, model == my)
+  
+  # merge together and restrict to overlap:
+  sub <- merge(subx, suby, by = c("forecast_date", "location", "horizon"),
+               all.x = FALSE, all.y = FALSE)
+  
+  # compute ratio:
+  ratio <- sum(sub$wis.x) / sum(sub$wis.y)
+  
+  # perform permutation tests:
+  if(permutation_test){
+    pval <- permutationTest(sub$wis.x, sub$wis.y,
+                            nPermutation = 999)$pVal.permut
+    
+    # aggregate by forecast date:
+    sub_fcd <- aggregate(cbind(wis.x, wis.y) ~ forecast_date, data = sub, FUN = mean) 
+    pval_fcd <- permutationTest(sub_fcd$wis.x, sub_fcd$wis.y,
+                                nPermutation = 999)$pVal.permut
+  }else{
+    pval <- NULL
+    pval_fcd <- NULL
+  }
+  
+  return(list(ratio = ratio, pval = pval, pval_fcd = pval_fcd, mx = mx, my = my))
+}
+
+
+
+# compute pairwise and relative WIS for each location separately:
+for(i in seq_along(locations)){
+  
+  # select location:
+  loc <- locations[i]
+  loc_name <- location_names[i]
+  
+  # matrix to store:
+  results_ratio_temp <- matrix(ncol = length(models),
+                          nrow = length(models),
+                          dimnames = list(models, models)) 
+  
+  # run pairwise comparison for chosen location:
+  for(mx in seq_along(models)){
+    for(my in 1:mx){
+      pwc <- pairwise_comparison_location(scores = scores, mx = models[mx], my = models[my],
+                                 permutation_test = FALSE, # disable permutation test to speed up things
+                                 subset = scores$location == loc) # this will subset to the respective location inside the function
+      results_ratio_temp[mx, my] <- pwc$ratio
+      results_ratio_temp[my, mx] <- 1/pwc$ratio
+    }
+  }
+  
+  # compute the geometric means etc
+  ind_baseline <- which(rownames(results_ratio_temp) == "COVIDhub-baseline")
+  geom_mean_ratios_temp <- exp(rowMeans(log(results_ratio_temp[, -ind_baseline]), na.rm = TRUE))
+  ratios_baseline_temp <- results_ratio_temp[, "COVIDhub-baseline"]
+  ratios_baseline2_temp <- geom_mean_ratios_temp/geom_mean_ratios_temp["COVIDhub-baseline"]
+  
+  # summarize results:
+  to_add <- data.frame(model = names(ratios_baseline2_temp),
+                       location = loc,
+                       location_name = loc_name,
+                       relative_wis = ratios_baseline2_temp,
+                       log_relative_wis = log(ratios_baseline2_temp))
+  
+  # append to already stored:
+  if(i == 1){ # initialize at first location
+    average_by_loc <- to_add
+  }else{
+    average_by_loc <- rbind(average_by_loc, to_add)
+  }
+  
+ # cat("Finished", loc_name, "\n")
+}
 
 score_inc_all <- score_inc_all %>% 
   filter(location != "39")
