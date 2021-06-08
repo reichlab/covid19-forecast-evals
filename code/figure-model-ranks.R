@@ -9,7 +9,11 @@ data("hub_locations")
 inc_scores <- read_csv("paper-inputs/inc-scores.csv") %>%
   filter(!(location_name %in%  c("American Samoa", "Northern Mariana Islands")), 
     target %in% paste(1:4, "wk ahead inc death")) %>%
-  mutate(id = paste(target_end_date_1wk_ahead, target, location_name)) %>%
+  mutate(id = paste(target_end_date_1wk_ahead, target, location_name)) 
+
+
+inc_scores_overall <- inc_scores %>%
+  filter(include_overall == "TRUE") %>%
   group_by(target_end_date_1wk_ahead, target, location_name) %>%
   mutate(n_models = n()) %>%
   ##filter(n_models >= 15) %>%
@@ -21,23 +25,23 @@ inc_scores <- read_csv("paper-inputs/inc-scores.csv") %>%
   mutate(model = reorder(model, rev_rank, FUN=function(x) quantile(x, probs=0.25, na.rm=TRUE)))
 
 ## number of unique opportunities for a prediction
-inc_scores %>%
-  group_by(target_end_date_1wk_ahead, location_name, target) %>%
-  summarize(n()) %>%
-  nrow()
+# inc_scores %>%
+#   group_by(target_end_date_1wk_ahead, location_name, target) %>%
+#   summarize(n()) %>%
+#   nrow()
 
 ## number of unique opportunities for a prediction by model
-inc_scores %>%
-  group_by(model) %>%
-  summarize(n()) 
+# inc_scores %>%
+#   group_by(model) %>%
+#   summarize(n()) 
 
-table(inc_scores$n_models)
+# table(inc_scores$n_models)
 
 ## average rank
-inc_scores %>%
-  group_by(model) %>%
-  summarize(average_rank = mean(model_rank), total_n = n(), n_top_rank = sum(model_rank==1), pct_top = n_top_rank/total_n*100) %>%
-  print(n=Inf)
+# inc_scores %>%
+#   group_by(model) %>%
+#   summarize(average_rank = mean(model_rank), total_n = n(), n_top_rank = sum(model_rank==1), pct_top = n_top_rank/total_n*100) %>%
+#   print(n=Inf)
 
 
 # ggplot(inc_scores, aes(y=id, x=model, fill=model_rank)) +
@@ -51,24 +55,24 @@ inc_scores %>%
 #     axis.text.y=element_blank(),
 #     axis.ticks.y=element_blank())
 
-p1 <- ggplot(inc_scores, aes(x=model, fill=factor(model_rank))) +
-  # geom_bar(position="fill") + ## for percentages
-  geom_bar() +
-  scale_y_continuous(expand = expansion(mult=c(0, 0.05))) +
-  scale_fill_viridis(discrete=TRUE, direction = -1, name="model rank") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  xlab(NULL)
-  
+# p1 <- ggplot(inc_scores, aes(x=model, fill=factor(model_rank))) +
+#   # geom_bar(position="fill") + ## for percentages
+#   geom_bar() +
+#   scale_y_continuous(expand = expansion(mult=c(0, 0.05))) +
+#   scale_fill_viridis(discrete=TRUE, direction = -1, name="model rank") +
+#   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+#   xlab(NULL)
+#   
 
 # ggplot(inc_scores, aes(y=model, x=rank_percentile)) +
 #   geom_boxplot()
 
-inc_scores_sum <- inc_scores %>%
-  group_by(model) %>%
-  summarize(mean_rp = mean(rev_rank), 
-    q25_rp = quantile(rev_rank, probs=0.25),
-    median_rp = median(rev_rank), 
-    q75_rp = quantile(rev_rank, probs=0.75)) 
+# inc_scores_sum <- inc_scores %>%
+#   group_by(model) %>%
+#   summarize(mean_rp = mean(rev_rank), 
+#     q25_rp = quantile(rev_rank, probs=0.25),
+#     median_rp = median(rev_rank), 
+#     q75_rp = quantile(rev_rank, probs=0.75)) 
 
 # ggplot(inc_scores, aes(y=model, x=rank_percentile, height = ..density..)) +
 #   geom_density_ridges(scale = 1, stat = "density", trim = TRUE) + 
@@ -95,7 +99,8 @@ inc_scores_sum <- inc_scores %>%
 #   coord_cartesian(clip = "off") + # to avoid clipping of the very top of the top ridgeline
 #   theme_ridges()
 
-p2 <- ggplot(inc_scores, aes(y=model, x=rev_rank, fill = factor(stat(quantile)))) +
+
+p2 <- ggplot(inc_scores_overall, aes(y=model, x=rev_rank, fill = factor(stat(quantile)))) +
   stat_density_ridges(
     geom = "density_ridges_gradient", calc_ecdf = TRUE,
     quantiles = 4, quantile_lines = TRUE
@@ -152,3 +157,38 @@ ggplot(fake_scores, aes(y=model, x=rp, fill = factor(stat(quantile)))) +
   scale_x_continuous(name="rank percentile", 
     limits=c(0,1))    # for both axes to remove unneeded padding
 
+
+##Model Ranking by Phases of the Pandemic
+
+
+inc_scores_phase <- inc_scores %>%
+  filter(include_phases == "TRUE") %>%
+  group_by(target_end_date_1wk_ahead, target, location_name, seasonal_phase) %>%
+  mutate(n_models = n()) %>%
+  arrange(wis) %>%
+  mutate(model_rank = row_number(), rank_percentile = model_rank/n_models) %>%
+  arrange(-wis) %>%
+  mutate(rev_rank = (row_number()-1)/(n_models-1)) %>%
+  ungroup() %>%
+  mutate(model = reorder(model, rev_rank, FUN=function(x) quantile(x, probs=0.25, na.rm=TRUE)))
+
+
+p2_phase <- ggplot(inc_scores_phase,aes(y= model, x=rev_rank, fill = factor(stat(quantile)))) +
+  facet_wrap(~ seasonal_phase) +
+  stat_density_ridges(
+    geom = "density_ridges_gradient", calc_ecdf = TRUE,
+    quantiles = 4, quantile_lines = TRUE) + 
+scale_fill_viridis_d(name = "Quartiles") +
+  scale_x_continuous(name="standardized rank", 
+                     #expand=expansion(add=c(2, 1)/max(inc_scores$n_models)), 
+                     limits=c(0,1)) +   # for both axes to remove unneeded padding +
+  scale_y_discrete(labels=c("IHME-CurveFit" = "IHME-SEIR"))
+
+
+pdf(file = "figures/fig-model-ranks_phase.pdf", width=8, height=5)
+print(p2_phase)
+dev.off()
+
+jpeg(file = "figures/fig-model-ranks_phase.jpg", width=8, height=5, units="in", res=300)
+print(p2_phase)
+dev.off()
