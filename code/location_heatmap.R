@@ -40,7 +40,7 @@ the_targets_inc <- c("4 wk ahead inc death")
 
 
 inc_tmp <- load_forecasts(
-  forecast_dates = the_timezeros_inc,
+  forecast_dates = the_timezeros,
   locations = the_locations,
   types = "quantile",
   targets = the_targets_inc) %>%
@@ -77,7 +77,7 @@ num_loc <- inc_tmp_unique %>%
 for_loc_figure <- num_loc %>%
   group_by(model) %>%
   filter(max(n_loc) >= NUM_UNITS) %>% #remove models with fewer than 25 locations at all times
-  filter(min(sat_fcast_week) <= last_1wk_target_end_date) %>% #filter models that have start date before end of scored period
+  filter(min(sat_fcast_week) <= last_target_end_date) %>% #filter models that have start date before end of scored period
   filter(!(model %in% c( "CU-nochange", "CU-scenario_high", "CU-scenario_low", "CU-scenario_mid"))) %>% #remove models that aren't secondary or primary 
   ungroup() 
 
