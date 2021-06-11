@@ -9,8 +9,8 @@ source("code/load-global-analysis-dates.R")
 theme_set(theme_bw())
 
 eval_dates <- c(
-  first_1wk_target_end_date - 3.5, ## first one-week-ahead target end date 
-  last_1wk_target_end_date + 3.5) ## last four week ahead target end date
+  first_target_end_date - 3.5, ## first one-week-ahead target end date 
+  last_target_end_date + 3.5) ## last four week ahead target end date
 
 
 start_date <- as.Date("2020-02-22")

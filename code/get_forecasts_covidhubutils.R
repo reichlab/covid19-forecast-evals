@@ -39,7 +39,7 @@ truth_CD <-
 truth_CHU <- load_truth(
   truth_source = "JHU",
   target_variable = "inc death",
-  truth_end_date = last_1wk_target_end_date, 
+  truth_end_date = last_target_end_date, 
   temporal_resolution = "weekly",
   locations = hub_locations %>% filter(geo_type == "state") %>% pull(fips)) %>%
   select(-value)
@@ -65,7 +65,7 @@ inc_scores_covidhub_utils <- map_dfr(
 )
 
 inc_scores_covidhub_utils <- inc_scores_covidhub_utils %>%
-  filter(target_end_date <= last_date_evaluated) %>%
+  filter(target_end_date <= last_target_end_date) %>%
   left_join(hub_locations %>% select(location = fips, location_name)) %>%
   mutate(target_end_date_1wk_ahead = as.Date(calc_target_week_end_date(forecast_date, 1))) %>%
   mutate(target = paste(horizon, temporal_resolution, "ahead", target_variable)) %>%
@@ -75,7 +75,9 @@ inc_scores_covidhub_utils <- inc_scores_covidhub_utils %>%
 
 
 #add in phase eligibility  
-inc_model_completes <- read.csv("paper-inputs/model-eligibility-inc.csv")
-inc_scores_covidhub_utils <- inc_scores_covidhub_utils %>% left_join(inc_model_completes) %>% ungroup() %>% filter(!is.na(WIS))
+inc_model_completes <- read.csv("paper-inputs/model-eligibility-inc.csv") %>%
+  mutate(forecast_date = as.Date(forecast_date),
+         target_end_date_1wk_ahead = as.Date(target_end_date_1wk_ahead)) 
+inc_scores_covidhub_utils <- inc_scores_covidhub_utils %>% left_join(inc_model_completes) %>% ungroup() %>% filter(!is.na(wis))
   
 write.csv(inc_scores_covidhub_utils, "paper-inputs/inc-scores.csv", row.names = FALSE)

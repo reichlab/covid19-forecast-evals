@@ -73,11 +73,6 @@ scored_models <- read_csv("paper-inputs/inc-scores.csv") %>%
                         arrange(desc(n_forecasts)) %>%
                         pull(model)
 
-range_fcast_dates <- c(
-  first_forecast_date_spring,
-  first_forecast_date_summer,
-  first_forecast_date_winter,
-  last_1wk_target_end_date)
 
 #Plot of locations each model submitted to each week
 sf1 <- ggplot(for_loc_figure, aes(y=model, x=sat_fcast_week, fill= n_loc < 25)) + 

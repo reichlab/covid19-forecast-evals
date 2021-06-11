@@ -30,7 +30,7 @@ panelA <- plot_forecasts(longterm_dat,
   subtitle = "none",
   show_caption=FALSE, 
   plot = FALSE) +
-  scale_x_date(name=NULL, date_breaks = "1 month", date_labels = "%b", limits=c(first_1wk_target_end_date, last_1wk_target_end_date)) + 
+  scale_x_date(name=NULL, date_breaks = "1 month", date_labels = "%b", limits=c(first_target_end_date, last_target_end_date)) + 
   theme(legend.position = c(.01,.95), 
     legend.justification = c(0,1), 
     legend.box = "horizontal", 

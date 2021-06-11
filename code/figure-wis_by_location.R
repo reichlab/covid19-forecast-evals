@@ -2,6 +2,7 @@ library(lubridate)
 library(tidyverse)
 library(covidHubUtils)
 library(surveillance)
+library(tidytext)
 
 #reorder states, reorder models 
 
