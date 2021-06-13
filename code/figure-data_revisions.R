@@ -5,7 +5,8 @@ library(covidHubUtils)
 
 source("code/load-global-analysis-dates.R")
 
-mondays <- c(seq(from = as.Date("2020-06-01"), to = version_date-1, by = "week"), as.Date(version_date-1))  #currently subtracting 1 b/c 12/07 isn't a submitted forecast revision date
+mondays <- c(seq(from = as.Date("2020-06-01"), to = version_date-1, by = "week"), as.Date(version_date-1)) 
+#currently subtracting 1 b/c 12/07 isn't a submitted forecast revision date
 
 
 #load revisions as of each monday 
@@ -32,7 +33,8 @@ weekly_inc_deaths <- weekly_inc_deaths %>%
 pdf('figures/data_revisions.pdf')
 
 for(i in 1:7) {
-  fig_revisions <- ggplot(data = weekly_inc_deaths, aes(x = MMWRweek, y = inc, color = factor(revision_date))) +
+  fig_revisions <- ggplot(data = weekly_inc_deaths, aes(x = MMWRweek, y = inc, 
+                                                        color = factor(revision_date))) +
     geom_line() +
     geom_point(size = 1) +
     theme_bw() +

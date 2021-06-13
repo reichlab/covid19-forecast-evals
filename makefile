@@ -10,7 +10,7 @@ paper-inputs/model-eligibility-inc.csv: code/determine-model-eligibility-inc.R c
 	Rscript code/determine-model-eligibility-inc.R
 
 # update table for model ranking
-paper-inputs/table-overall-performance.csv: paper-inputs/inc-scores.csv code/Table-PI_relative_WIS.R Rscript code/Table-PI_relative_WIS_phase.R
+paper-inputs/table-overall-performance.csv: paper-inputs/inc-scores.csv code/Table-PI_relative_WIS.R code/Table-PI_relative_WIS_phase.R
 	Rscript code/Table-PI_relative_WIS.R
 	Rscript code/Table-PI_relative_WIS_phase.R
 

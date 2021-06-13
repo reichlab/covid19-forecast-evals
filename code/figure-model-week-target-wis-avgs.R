@@ -1,5 +1,6 @@
 library(tidyverse)
 library(ggrepel)
+library(tidytext)
 
 source("code/load-global-analysis-dates.R")
 
@@ -24,8 +25,8 @@ theme_set(theme_bw())
 
 inc_scores <- read_csv("paper-inputs/inc-scores.csv") %>%
   filter(target %in% paste(c(1,4), "wk ahead inc death"),
-        target_end_date_1wk_ahead >= first_1wk_target_end_date,
-        target_end_date_1wk_ahead <= last_1wk_target_end_date) 
+        target_end_date_1wk_ahead >= first_target_end_date,
+        target_end_date_1wk_ahead <= last_target_end_date) 
 
 locs_to_exclude <- c("United States", "American Samoa", "Guam", "Northern Mariana Islands", "Virgin Islands", "Puerto Rico", "District of Columbia")
 
@@ -141,6 +142,15 @@ expected_locs <- inc_scores_overall %>%
 #     scale_y_continuous(breaks=seq(0, 400, by=50))
 
 
+avg_wis_by_model_target_week <- inc_scores %>%
+  filter(include_overall == "TRUE") %>%
+  filter(!(location_name %in% locs_to_exclude)) %>% 
+  group_by(model, target, seasonal_phase, target_end_date_1wk_ahead) %>%
+  summarize(median_wis = median(wis), mean_wis = mean(wis, na.rm=TRUE), nlocs=n()) %>%
+  left_join(expected_locs) %>%
+  mutate(obs_exp_locs = nlocs == nlocs_expected) %>%
+  left_join(model_levels_phases) %>%
+  mutate(model = fct_reorder(model, relative_wis)) 
 
 ## by model, target, and week
 avg_wis_by_model_target_week <- inc_scores_overall %>%
@@ -159,7 +169,7 @@ baseline_avg <- avg_wis_by_model_target %>%
     group_by(model, target) %>%
     summarize(mean_wis = mean(mean_wis))
 
-avg_wis_by_model_target_week <- avg_wis_by_model_target_week %>%
+avg_wis_by_model_target_week <-  avg_wis_by_model_target_week  %>%
   mutate(model = fct_relevel(model, model_levels))
 
 p_boxplot <- ggplot(avg_wis_by_model_target_week, aes(x = model, y= scales::oob_squish(mean_wis, range = c(0,500)))) +
@@ -333,20 +343,11 @@ dev.off()
 
 ##Figure 4 [average WIS over time]
 
-
-avg_wis_by_model_target_week <- inc_scores %>%
-  filter(include_overall == "TRUE") %>%
-  filter(!(location_name %in% locs_to_exclude)) %>% 
-  group_by(model, target, seasonal_phase, target_end_date_1wk_ahead) %>%
-  summarize(median_wis = median(wis), mean_wis = mean(wis, na.rm=TRUE), nlocs=n()) %>%
-  left_join(expected_locs) %>%
-  mutate(obs_exp_locs = nlocs == nlocs_expected)
-
-
 ## assemble truth data observations for US level
 obs_inc_deaths <- load_truth("JHU", "inc death", locations="US") %>%
-  filter(target_end_date >= first_1wk_target_end_date, 
-    target_end_date <= last_1wk_target_end_date)
+  filter(target_end_date >= first_target_end_date, 
+         target_end_date <= last_target_end_date)
+
 
 f4a <- ggplot(obs_inc_deaths, aes(x=target_end_date, y=value)) +
   geom_point() +
