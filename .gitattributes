@@ -1,8 +1,4 @@
 *.rds filter=lfs diff=lfs merge=lfs -text
 *.html filter=lfs diff=lfs merge=lfs -text
-data-raw/inc-scores-from-zoltar.csv
-paper-inputs/inc-calibration.csv
-paper-inputs/inc-scores.csv
-paper-inputs/model-eligibility-inc.csv
-paper-inputs/table-overall-performance.csv
-paper-inputs/table-phase-performance.csv
+paper-inputs/model-eligibility-inc.csv filter=lfs diff=lfs merge=lfs -text
+paper-inputs/inc-scores.csv filter=lfs diff=lfs merge=lfs -text
