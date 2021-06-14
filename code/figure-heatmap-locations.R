@@ -66,12 +66,19 @@ for_loc_figure <- read.csv("paper-inputs/heatmap_data.csv") %>%
        model = fct_reorder(model, n_weeks_submit_forecast, max),
        model_numeric = as.numeric(model)) 
 
-scored_models <- read_csv("paper-inputs/inc-scores.csv") %>%
+scored_models_overall <- read_csv("paper-inputs/inc-scores.csv") %>%
                         filter(include_overall == "TRUE") %>%
                         group_by(model) %>%
                         summarise(n_forecasts = n()) %>%
                         arrange(desc(n_forecasts)) %>%
                         pull(model)
+
+scored_models_phase <- read_csv("paper-inputs/inc-scores.csv") %>%
+  filter(include_phases == "TRUE") %>%
+  group_by(model) %>%
+  summarise(n_forecasts = n()) %>%
+  arrange(desc(n_forecasts)) %>%
+  pull(model)
 
 
 #Plot of locations each model submitted to each week
@@ -79,36 +86,13 @@ sf1 <- ggplot(for_loc_figure, aes(y=model, x=sat_fcast_week, fill= n_loc < 25)) 
   geom_tile() +
   theme_bw() +
   scale_x_date(date_labels = "%Y-%m-%d", date_breaks = "2 weeks") +
-  #geom_text(aes(label = num_units_eligible), size = 3.5) +
-  # geom_rect(color="#ED42FA",
-  #           xmin= (first_1wk_target_end_date -7) - 3.5, #color of box, start date 3 days before actual date so rectangle covers entire box
-  #           xmax= (last_4wk_target_end_date -7) + 3.5 ,
-  #           ymax= unique(for_loc_figure$model_numeric[for_loc_figure$model == "JHU_IDD-CovidSP"]) + .5,
-  #           ymin= unique(for_loc_figure$model_numeric[for_loc_figure$model == "IHME-CurveFit"]) - .5,  
-  #           size = .75, fill=alpha("grey",0)) +
-  # geom_rect(color="#ED42FA",
-  #           xmin= (first_1wk_target_end_date -7) - 3.5, #color of box, start date 3 days before actual date so rectangle covers entire box
-  #           xmax= (last_4wk_target_end_date -7) + 3.5 ,
-  #           ymax= unique(for_loc_figure$model_numeric[for_loc_figure$model == "UMich-RidgeTfReg"]) + .5,
-  #           ymin= unique(for_loc_figure$model_numeric[for_loc_figure$model == "UMich-RidgeTfReg"]) - .5,
-  #           size = .75, fill=alpha("grey",0)) +
-  # geom_rect(color="#340EC3",
-  #           xmin= (last_4wk_target_end_date) - 3.5, #color of box, start date 3 days before actual date so rectangle covers entire box
-  #           xmax= (last_date_evaluated  -7) + 3.5 ,
-  #           ymax= unique(for_loc_figure$model_numeric[for_loc_figure$model == "JHU_IDD-CovidSP"]) + .5,
-  #           ymin= unique(for_loc_figure$model_numeric[for_loc_figure$model == "IHME-CurveFit"]) - .5,  
-  #           size = .75, fill=alpha("grey",0)) +
-  # geom_rect(color="#340EC3",
-  #           xmin= (last_4wk_target_end_date) - 3.5, #color of box, start date 3 days before actual date so rectangle covers entire box
-  #           xmax= (last_date_evaluated  -7) + 3.5 ,
-  #           ymax= unique(for_loc_figure$model_numeric[for_loc_figure$model == "UMich-RidgeTfReg"]) + .5,
-  #           ymin= unique(for_loc_figure$model_numeric[for_loc_figure$model == "UMich-RidgeTfReg"]) - .5,
-  #           size = .75, fill=alpha("grey",0)) +
   scale_fill_manual(name = " ", values = c( "turquoise3","lightgrey"),labels = c("Eligible","Ineligible" )) +
   xlab("Saturday of Forecast Submission Week") + ylab(NULL) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8),
         axis.title.x = element_text(size = 9),
-        axis.text.y = element_text(size = 8, colour = ifelse(levels(for_loc_figure$model) %in% scored_models, 'violetred', 'black')),
+        axis.text.y = element_text(size = 8, 
+                                   color = ifelse(levels(for_loc_figure$model) %in% scored_models,"#4B0092",
+                                                  ifelse(levels(for_loc_figure$model) %in% scored_models_phase,"#E66100", "black"))), 
         title = element_text(size = 9)) +
   guides(size = "none", color = "none", alpha = "none") +
   scale_y_discrete(labels=c("IHME-CurveFit" = "IHME-SEIR")) +
@@ -116,15 +100,11 @@ sf1 <- ggplot(for_loc_figure, aes(y=model, x=sat_fcast_week, fill= n_loc < 25)) 
 
 
 
-
-# ggsave("../figures/inc_loc_heatmap.jpg", width=3, height=5)
-# ggsave("../figures/incidence_loc_heatmap.png", width=3, height=5)
-
-pdf(file = "figures/inc-loc-heatmap.pdf",width=11, height=6)
+pdf(file = "figures/inc-loc-heatmap.pdf",width=11, height=7)
 print(sf1)
 dev.off()
 
-jpeg(file = "figures/inc-loc-heatmap.jpg", width=11, height=6, units="in", res=300)
+jpeg(file = "figures/inc-loc-heatmap.jpg", width=11, height=7, units="in", res=300)
 print(sf1)
 dev.off()
 

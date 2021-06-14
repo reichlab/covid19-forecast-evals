@@ -5,29 +5,7 @@ library(tidyverse)
 library(lubridate)
 #source("code/unit_timezero_forecast_complete.R")
 source("code/load-global-analysis-dates.R")
-
-
-# 
-# ## connect to Zoltar
-# zoltar_connection <- new_connection()
-# zoltar_authenticate(zoltar_connection, Sys.getenv("Z_USERNAME"), Sys.getenv("Z_PASSWORD"))
-# 
-# the_projects <- projects(zoltar_connection)
-# project_url <- the_projects[the_projects$name == "COVID-19 Forecasts", "url"]
-# 
-# ## table to help organize and choose forecasts
-# timezero_weeks <- tibble(
-#     ## every possible timezero
-#     forecast_date = the_timezeros_inc, 
-#     ## the associated target_end_date for 1-week ahead targets
-#     target_end_date_1wk_ahead = as.Date(covidHubUtils::calc_target_week_end_date(forecast_date, horizon=1)))
-
-##determine eligible models based on elibility criteria
-
-# # 1. subset models to "primary" and "secondary" designated models
-# primary_models <- models(zoltar_connection, project_url) %>%
-#     filter(notes %in% c("primary", "secondary"))
-
+source("code/unit_timezero_forecast_complete.R")
 
 #1. Load all forecasts 
 the_models <- get_model_designations(source = "zoltar") %>% 
@@ -38,15 +16,17 @@ the_locations <- hub_locations %>% filter(geo_type == "state") %>% pull(fips)
 
 the_targets_inc <- c("4 wk ahead inc death")
 
-
 inc_tmp <- load_forecasts(
   forecast_dates = the_timezeros,
   locations = the_locations,
   types = "quantile",
   targets = the_targets_inc) %>%
-  filter(quantile == 0.5)
+  
+inc_tmp_edit <- inc_tmp %>%
+  group_by(model, forecast_date, location, horizon) %>%
+  summarise(n_quant = n()) %>% ungroup() %>% filter(n_quant == 23)
 
-inc_tmp_unique <-  inc_tmp %>%
+inc_tmp_unique <-  inc_tmp_edit %>%
   mutate(sat_fcast_week = as.Date(calc_target_week_end_date(forecast_date, horizon = 0))) %>%
   group_by(model, location, sat_fcast_week) %>%
   mutate(forecast_in_wk = row_number(), 
