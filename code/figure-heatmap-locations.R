@@ -91,7 +91,7 @@ sf1 <- ggplot(for_loc_figure, aes(y=model, x=sat_fcast_week, fill= n_loc < 25)) 
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8),
         axis.title.x = element_text(size = 9),
         axis.text.y = element_text(size = 8, 
-                                   color = ifelse(levels(for_loc_figure$model) %in% scored_models,"#4B0092",
+                                   color = ifelse(levels(for_loc_figure$model) %in% scored_models_overall,"#4B0092",
                                                   ifelse(levels(for_loc_figure$model) %in% scored_models_phase,"#E66100", "black"))), 
         title = element_text(size = 9)) +
   guides(size = "none", color = "none", alpha = "none") +
