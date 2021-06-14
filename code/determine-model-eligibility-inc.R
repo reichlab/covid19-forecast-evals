@@ -127,14 +127,14 @@ inc_model_overall <- model_completes %>%
 
 #filter models eligible for inclusion in phases 
 inc_model_completes_phases <- model_completes %>%
-  mutate(seasonal_phase_timezero = case_when(forecast_date < first_timezero_summer ~ "spring", #set dates based on forecast date 
+  mutate(seasonal_phase = case_when(forecast_date < first_timezero_summer ~ "spring", #set dates based on forecast date 
                                     forecast_date >= first_timezero_summer & forecast_date  < first_timezero_winter ~ "summer",
                                     forecast_date >= first_timezero_winter ~ "winter")) %>%
   ## calculate how many weeks had the eligible number of units in each phase 
-  group_by(model,seasonal_phase_timezero) %>%
+  group_by(model,seasonal_phase) %>%
   ## sum number of weeks with minimum locations and in core evaluation period 
   mutate(num_eligible_weeks_phase = sum(num_units_eligible >= NUM_UNITS & forecast_date <= last_timezero)) %>%
-  ungroup() %>% group_by(seasonal_phase_timezero) %>%
+  ungroup() %>% group_by(seasonal_phase) %>%
   ## filter so that we only have models with eligible number of weeks
   filter(num_eligible_weeks_phase >= max(num_eligible_weeks_phase)*.65, num_units_eligible >= NUM_UNITS) %>% ungroup() %>%
   select(-num_eligible_weeks_phase)  %>%
@@ -142,12 +142,9 @@ inc_model_completes_phases <- model_completes %>%
 
 inc_model_completes <- inc_model_overall %>% 
   full_join(inc_model_completes_phases) %>%
-  mutate(seasonal_phase_timezero = case_when(forecast_date < first_timezero_summer ~ "spring", #set dates based on forecast date 
+  mutate(seasonal_phase = case_when(forecast_date < first_timezero_summer ~ "spring", #set dates based on forecast date 
                                                forecast_date >= first_timezero_summer & forecast_date  < first_timezero_winter ~ "summer",
                                                forecast_date >= first_timezero_winter ~ "winter")) %>%
-  mutate(seasonal_phase = case_when(forecast_date < first_target_end_date_summer ~ "spring", #set dates based on end date
-                                    forecast_date >= first_target_end_date_summer & forecast_date  < first_target_end_date_winter ~ "summer",
-                                    forecast_date >= first_target_end_date_winter ~ "winter")) %>%
   mutate(include_overall = ifelse(is.na(include_overall),  "FALSE", "TRUE"),
          include_phases = ifelse(is.na(include_phases), "FALSE", "TRUE"))
   
