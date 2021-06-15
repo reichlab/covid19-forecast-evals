@@ -152,16 +152,13 @@ for(i in seq_along(locations)){
 
 ## plot of true data by state, tiled
 truth_dat <- load_truth(truth_source = "JHU",
-                        target_variable = "inc death") %>%
-  filter(geo_type == "state") %>%
-  filter(!is.na(value), target_end_date <= truth_date) %>%
-  select(target_end_date, value, location_name, abbreviation) %>%
-  filter(location_name != "American Samoa" & location_name != "Northern Mariana Islands") %>%
-  mutate(location_name = reorder(location_name, X=value, FUN=function(x) max(x, na.rm=TRUE))) %>% 
-  select(location_name) %>%
-  unique() %>%
+                        target_variable = "cum death",
+                        truth_end_date = last_target_end_date,
+                        locations = c(hub_locations %>% filter(geo_type == "state") %>% pull(fips))) %>%
+  filter(target_end_date == last_target_end_date) %>%
+  filter(! location_name %in% c("American Samoa", "Northern Mariana Islands")) %>%
+  mutate(location_name = reorder(location_name, value)) %>%
   pull(location_name)
-
 
 
 average_by_loc_to_plot <- average_by_loc %>%
@@ -504,7 +501,8 @@ model_levels_phases <- read_csv("paper-inputs/table-phase-performance.csv") %>%
 
 to_plot_phase <- rbind(average_by_loc_spring, average_by_loc_summer,average_by_loc_winter) %>%
   left_join(model_levels_phases) %>%
-  mutate(model = fct_reorder(model, order_wis)) 
+  mutate(model = fct_reorder(model, order_wis), 
+         location_name = fct_relevel(location_name, levels(truth_dat)))
     
 fig_wis_loc <- ggplot(to_plot_phase, aes(x = reorder_within(model,order_wis,seasonal_phase),
                                          y=location_name, fill= scales::oob_squish(log_relative_wis, 
