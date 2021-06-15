@@ -47,6 +47,7 @@ calib_ensemble <- calib_data_long %>%
 
 calib_graph <- ggplot(calib_data_long, aes(x=expected_cov, y=emperical_cov)) + 
   geom_line(aes(group=model), color = "darkgray", alpha = 0.5)+
+  theme_bw() +
   geom_point(aes(group=model),color = "darkgray", alpha = 0.5, size = 2) + 
   facet_wrap(~target) + 
   geom_abline(slope = 1, intercept = 0, size = 0.8, linetype = "dashed") +
@@ -64,8 +65,8 @@ calib_graph <- ggplot(calib_data_long, aes(x=expected_cov, y=emperical_cov)) +
   guides(group = FALSE) +
   scale_x_continuous(labels = seq(0,1,0.2), breaks = seq(0,1,0.2)) +
   scale_y_continuous(labels = seq(0,1,0.2), breaks = seq(0,1,0.2)) + 
-  theme(legend.position = c(0.0, 0.29), legend.justification = c(0,-.1)) +
-  theme(legend.background=element_blank())
+  theme(legend.position = c(0.0, 0.29), legend.justification = c(0,-.1),
+        legend.background=element_blank()) 
   
   
   pdf(file = "figures/calibration_plot_diagonal.pdf",width=6, height=6)
