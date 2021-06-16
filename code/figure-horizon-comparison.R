@@ -46,7 +46,8 @@ inc_scores <- read_csv("paper-inputs/inc-scores.csv") %>%
 
 expected_locs <- inc_scores %>%
   filter(!(location_name %in% locs_to_exclude)) %>%
-  group_by(target_end_date_1wk_ahead) %>%
+  ## grouping by target end date ensures that we do not expect predictions for removed observations
+  group_by(target_end_date) %>% 
   summarize(nlocs_expected = n_distinct(location_name))
 
 horizon_levels <- c(1, 4, 8, 12, 16, 20)
@@ -81,7 +82,7 @@ panelB <- ggplot(filter(avg_wis_by_model_target_week, model!="COVIDhub-baseline"
   ## add baseline
   geom_smooth(data=filter(avg_wis_by_model_target_week, model=="COVIDhub-baseline", horizon%in%c(1, 4)), se=FALSE) +
   scale_color_viridis_d(direction=-1) +
-  scale_y_continuous("mean WIS (log scale)", trans = "log2") +
+  scale_y_continuous("mean WIS (log scale)", trans = "log2", n.breaks = 6) +
   scale_linetype_manual(NULL, values = c(2, 1)) +
   scale_x_date(NULL, date_breaks = "1 month", date_labels = "%b") + 
   ggtitle("B: mean WIS across time, stratified by forecast horizon") +

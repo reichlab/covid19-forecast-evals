@@ -1,6 +1,7 @@
 #library(zoltr)  ## devtools::install_github("reichlab/zoltr")
 library(covidHubUtils) ## devtools::install_github("reichlab/covidHubUtils")
 library(tidyverse)
+library(grid)
 
 source("code/load-global-analysis-dates.R")
 
@@ -24,20 +25,36 @@ scored_models_phase <- read_csv("paper-inputs/inc-scores.csv") %>%
   arrange(desc(n_forecasts)) %>%
   pull(model)
 
-title_cols <-c("Evaluated in\nMain Analysis" = "#4B0092", "Evaluated in\n supplemental Analysis" = "#E66100","Not Evaluated" = "black")
 
-
+plot_date <- as.Date("2021-05-08")
 #Plot of locations each model submitted to each week
-sf1 <- ggplot(for_loc_figure, aes(y=model, x=sat_fcast_week, fill= (n_loc < 25 | n_quant < 23))) + 
-  geom_tile() +
+sf1 <- ggplot(for_loc_figure, aes(y=model, x=sat_fcast_week, fill= (n_loc < 25 | n_quant < 23))) +  ## something about `| n_quant < 23` was here ??
+  geom_raster(hjust=0) +
   theme_bw() +
-  scale_x_date(date_labels = "%Y-%m-%d", date_breaks = "2 weeks") +
-  annotate(geom="text", x= as.Date("2021-05-4"), y= c(40), label="Main Analysis",
-            color="#4B0092", hjust = -0.6, size = 3) +
-  annotate(geom="text", x= as.Date("2021-05-4"), y=c(39), label="Supplement",
-           color="#E66100", hjust = -0.6, size = 3) +
-  annotate(geom="text", x= as.Date("2021-05-4"), y=c(38), label="Not Evaluated",
-           color="Black", hjust = -0.6, size = 3) +
+  scale_x_date(date_labels = "%Y-%m-%d", 
+#               date_breaks = "2 weeks", 
+               breaks=seq.Date(as.Date("2020-04-25"), as.Date("2021-04-24"), by = "2 weeks"),
+               expand=expansion(mult=c(0.01, 0.01))) +
+  annotation_custom(
+    grob = textGrob(label="Model incl. in:", hjust=0, gp=gpar(col="Black", fontsize=10, fontface="bold")),
+    ymin=16, ymax=16,
+    xmin=plot_date-3, xmax=plot_date-3
+  ) +
+  annotation_custom(
+    grob = textGrob(label="Main analysis", hjust=0, gp=gpar(col="#4B0092", fontsize=10)),
+    ymin=15, ymax=15,
+    xmin=plot_date, xmax=plot_date
+  ) +
+  annotation_custom(
+    grob = textGrob(label="Supplement", hjust=0, gp=gpar(col="#E66100", fontsize=10)),
+    ymin=14, ymax=14,
+    xmin=plot_date, xmax=plot_date
+  ) +
+  annotation_custom(
+    grob = textGrob(label="Neither",  hjust=0, gp=gpar(col="Black", fontsize=10)),
+    ymin=13, ymax=13,
+    xmin=plot_date, xmax=plot_date
+  ) +
   coord_cartesian(clip = "off") +
   scale_fill_manual(name = " ", values = c( "turquoise3","lightgrey"), labels = c("Eligible","Ineligible" )) +
   xlab("Saturday of Forecast Submission Week") + ylab(NULL) +
@@ -49,7 +66,7 @@ sf1 <- ggplot(for_loc_figure, aes(y=model, x=sat_fcast_week, fill= (n_loc < 25 |
         title = element_text(size = 9)) +
   guides(size = "none", color = "none", alpha = "none") +
   scale_y_discrete(labels=c("IHME-CurveFit" = "IHME-SEIR")) +
-  geom_vline(xintercept  = range_fcast_dates, linetype = 2) 
+  geom_vline(xintercept  = range_fcast_dates-7, linetype = 2) ## subtracting 7 so they are end of submission weeks, not target end dates
 
 
 pdf(file = "figures/inc-loc-heatmap.pdf",width=11, height=7)

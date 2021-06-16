@@ -60,7 +60,7 @@ calib_graph <- ggplot(calib_data_long, aes(x=expected_cov, y=emperical_cov)) +
   xlab("Expected Coverage") + ylab("Observed Coverage") + 
   scale_color_identity(name = NULL, 
                        breaks = c("blue", "green", "red"), 
-                       labels = c("Average calibration of all models", "COVIDhub-baseline","COVIDhub-ensemble"),
+                       labels = c("Average of all models", "COVIDhub-baseline","COVIDhub-ensemble"),
                        guide = "legend") +
   guides(group = FALSE) +
   scale_x_continuous(labels = seq(0,1,0.2), breaks = seq(0,1,0.2)) +
