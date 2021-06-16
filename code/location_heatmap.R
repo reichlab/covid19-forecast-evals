@@ -20,19 +20,25 @@ inc_tmp <- load_forecasts(
   forecast_dates = the_timezeros,
   locations = the_locations,
   types = "quantile",
-  targets = the_targets_inc) %>%
+  targets = the_targets_inc) 
   
-inc_tmp_edit <- inc_tmp %>%
-  group_by(model, forecast_date, location, horizon) %>%
-  summarise(n_quant = n()) %>% ungroup() %>% filter(n_quant == 23)
 
-inc_tmp_unique <-  inc_tmp_edit %>%
+inc_tmp_unique <-  inc_tmp %>%
   mutate(sat_fcast_week = as.Date(calc_target_week_end_date(forecast_date, horizon = 0))) %>%
+  group_by(model, location, sat_fcast_week, quantile) %>%
+  mutate(forecast_in_wk_quant = row_number(), 
+         last_forecast_in_wk_quant = forecast_in_wk_quant == max(forecast_in_wk_quant)) %>% 
+  filter(last_forecast_in_wk_quant) %>%
+  ungroup() %>%
+  group_by(model, sat_fcast_week, location, horizon) %>%
+  mutate(n_quant = n()) %>% ungroup() %>%
   group_by(model, location, sat_fcast_week) %>%
   mutate(forecast_in_wk = row_number(), 
          last_forecast_in_wk = forecast_in_wk == max(forecast_in_wk)) %>% 
-  filter(last_forecast_in_wk) %>% 
-  ungroup()  
+  filter(last_forecast_in_wk) %>%
+  ungroup() 
+  
+
 
 
 #count number of weeks each team submitted
@@ -51,7 +57,8 @@ num_loc <- inc_tmp_unique %>%
   summarise(n_loc = n()) %>%
   right_join(by_weeks) %>%
   mutate(model = as.factor(model)) %>%
-  ungroup()
+  ungroup() %>%
+  left_join(inc_tmp_unique %>% select(model, sat_fcast_week, n_quant))
 
 #Filter out teams that have fewer than 25 locations at every time point
 for_loc_figure <- num_loc %>%

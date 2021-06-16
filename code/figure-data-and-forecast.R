@@ -56,15 +56,23 @@ p1_updated_no_legend <- p1_updated + theme(legend.position='none')
 
 ## plot of true data by state, tiled
 truth_dat <- load_truth(truth_source = "JHU",
-  target_variable = "inc death") %>%
+  target_variable = c("inc death", "cum death")) %>%
   filter(geo_type == "state") %>%
+  filter(!is.na(value)) %>%
   mutate(death_rate_per_100k = value/population*100000,
     death_bins = cut(value, breaks = c(-Inf, 0, 1, 10, 100, 500, 1000, Inf), right = FALSE, labels=c("<0", "0", "1-9", "10-99", "100-499", "500-999", "1000+")))
 
+cum_death <- truth_dat %>% filter(target_variable == "cum death",
+                                  target_end_date == last_target_end_date) %>%
+  select(abbreviation, cum_death = value)
+
 
 p2 <- truth_dat %>%
+  filter(target_variable == "inc death") %>%
+  left_join(cum_death) %>%
   filter(abbreviation != "US", !(is.na(value)), target_end_date <= end_date) %>%
-  mutate(abbreviation = reorder(abbreviation, X=value, FUN=function(x) max(x, na.rm=TRUE))) %>%
+  mutate(abbreviation = fct_reorder(abbreviation, cum_death)) %>%
+ # mutate(abbreviation = reorder(abbreviation, X=value, FUN=function(x) max(x, na.rm=TRUE))) %>%
   ggplot(aes(y=abbreviation, x=target_end_date, fill=death_bins))+
   geom_tile() +
   geom_hline(yintercept=seq(51.5, 6.5, by=-5), color="darkgrey") +
