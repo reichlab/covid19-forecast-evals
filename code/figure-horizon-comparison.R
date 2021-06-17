@@ -9,17 +9,25 @@ locs_to_exclude <- c("United States", "American Samoa", "Guam", "Northern Marian
 
 
 ## panel A with example forecast
-longterm_dat <- load_latest_forecasts(models = c("IHME-CurveFit", "Covid19Sim-Simulator"),
-  last_forecast_date = as.Date("2020-06-08"), forecast_date_window_size = 6,
-  locations = "US",
-  types = c("quantile", "point"), 
-  targets = paste(1:20, "wk ahead inc death"),
-  source = "zoltar") %>%
+longterm_dat1 <- load_latest_forecasts(models = c("IHME-CurveFit", "Covid19Sim-Simulator"),
+                                       last_forecast_date = as.Date("2020-06-08"), forecast_date_window_size = 6,
+                                       locations = "US",
+                                       types = c("quantile", "point"), 
+                                       targets = paste(1:20, "wk ahead inc death"),
+                                       source = "zoltar") %>%
+  mutate(model = ifelse(model=="IHME-CurveFit", "IHME-SEIR", model))
+
+longterm_dat2 <- load_latest_forecasts(models = c("IHME-CurveFit", "Covid19Sim-Simulator"),
+                                       last_forecast_date = as.Date("2020-11-23"), forecast_date_window_size = 6,
+                                       locations = "US",
+                                       types = c("quantile", "point"), 
+                                       targets = paste(1:20, "wk ahead inc death"),
+                                       source = "zoltar") %>%
   mutate(model = ifelse(model=="IHME-CurveFit", "IHME-SEIR", model))
 
 truth_dat <- load_truth(truth_source = "JHU", target_variable = "inc death", locations = "US")
 
-panelA <- plot_forecasts(longterm_dat, 
+panelA <- plot_forecasts(bind_rows(longterm_dat1, longterm_dat2), 
   truth_data = truth_dat, 
   #model = "IHME-CurveFit", 
   target_variable = "inc death", 
@@ -65,12 +73,30 @@ avg_wis_by_model_target_week <- inc_scores %>%
 
 
 ## for results in manuscript not in table
+
+## overall across all models
+avg_wis_by_model_target_week %>% 
+  group_by(horizon) %>%
+  summarize(avg_wis = mean(mean_wis), mean_coverage = mean(pi_cov_95), min_coverage = min(pi_cov_95), max_coverage = max(pi_cov_95)) %>%
+  mutate(h1_avg_wis = min(avg_wis), rel_wis = avg_wis/h1_avg_wis)
+
+## for two long-forecasting models
 avg_wis_by_model_target_week %>% 
   filter(model %in% c("IHME-CurveFit", "Covid19Sim-Simulator")) %>%
   group_by(model, horizon) %>%
   summarize(avg_wis = mean(mean_wis)) %>%
   group_by(model) %>%
   mutate(h1_avg_wis = min(avg_wis), rel_wis = avg_wis/h1_avg_wis)
+
+## rel error by week
+avg_wis_by_model_target_week %>% 
+  filter(model %in% c("IHME-CurveFit", "Covid19Sim-Simulator")) %>%
+  group_by(model, horizon, target_end_date) %>%
+  summarize(avg_wis = mean(mean_wis)) %>%
+  group_by(model, target_end_date) %>%
+  mutate(h1_avg_wis = min(avg_wis), rel_wis = avg_wis/h1_avg_wis) %>%
+  print(n=Inf)
+
 
 
 panelB <- ggplot(filter(avg_wis_by_model_target_week, model!="COVIDhub-baseline"), 
@@ -81,7 +107,7 @@ panelB <- ggplot(filter(avg_wis_by_model_target_week, model!="COVIDhub-baseline"
   ## stat_summary(fun=mean, geom="point", aes(color=factor(horizon), group=horizon)) +
   ## add baseline
   geom_smooth(data=filter(avg_wis_by_model_target_week, model=="COVIDhub-baseline", horizon%in%c(1, 4)), se=FALSE) +
-  scale_color_viridis_d(direction=-1) +
+  scale_color_viridis_d(direction=-1) + 
   scale_y_continuous("mean WIS (log scale)", trans = "log2", n.breaks = 6) +
   scale_linetype_manual(NULL, values = c(2, 1)) +
   scale_x_date(NULL, date_breaks = "1 month", date_labels = "%b") + 
