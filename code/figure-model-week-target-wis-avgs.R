@@ -55,15 +55,15 @@ expected_locs <- inc_scores_overall %>%
     group_by(target_end_date_1wk_ahead) %>%
     summarize(nlocs_expected = n_distinct(location_name))
 
-avg_wis_by_model_target_week <- inc_scores %>%
-  filter(include_overall == "TRUE") %>%
-  filter(!(location_name %in% locs_to_exclude)) %>% 
-  group_by(model, target, seasonal_phase, target_end_date_1wk_ahead) %>%
-  summarize(median_wis = median(wis), mean_wis = mean(wis, na.rm=TRUE), nlocs=n()) %>%
-  left_join(expected_locs) %>%
-  mutate(obs_exp_locs = nlocs == nlocs_expected) %>%
-  left_join(model_levels) %>%
-  mutate(model = fct_reorder(model, relative_wis)) 
+# avg_wis_by_model_target_week <- inc_scores %>%
+#   filter(include_overall == "TRUE") %>%
+#   filter(!(location_name %in% locs_to_exclude)) %>% 
+#   group_by(model, target, seasonal_phase, target_end_date_1wk_ahead) %>%
+#   summarize(median_wis = median(wis), mean_wis = mean(wis, na.rm=TRUE), nlocs=n()) %>%
+#   left_join(expected_locs) %>%
+#   mutate(obs_exp_locs = nlocs == nlocs_expected) %>%
+#   left_join(model_levels) %>%
+#   mutate(model = fct_reorder(model, relative_wis)) 
 
 ## by model, target, and week
 avg_wis_by_model_target_week <- inc_scores_overall %>%
@@ -80,7 +80,8 @@ ensemble_1wk_avg <- avg_wis_by_model_target %>%
 baseline_avg <- avg_wis_by_model_target %>%
     filter(model=="COVIDhub-baseline") %>%
     group_by(model, target) %>%
-    summarize(mean_wis = mean(mean_wis))
+    summarize(mean_wis = mean(mean_wis),
+              median_wis = median(mean_wis))
 
 avg_wis_by_model_target_week <-  avg_wis_by_model_target_week  %>%
   left_join(model_levels) %>%
@@ -90,7 +91,7 @@ p_boxplot <- ggplot(avg_wis_by_model_target_week, aes(x = reorder(model, relativ
   geom_boxplot(outlier.size = 0.5) +
   facet_wrap(~ target) +
   geom_hline(data=baseline_avg,
-             aes(yintercept=mean_wis), linetype=2, color = "red") +
+             aes(yintercept=median_wis), linetype=2, color = "red") +
   geom_point(data = avg_wis_by_model_target, aes(y = mean_wis),  color = "blue", shape=4, size = 2) +
   theme_bw() +
   theme(axis.text.x = element_text(angle=90, vjust=0.5, hjust=1), 
