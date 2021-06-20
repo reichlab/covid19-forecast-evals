@@ -211,54 +211,53 @@ inc_scores_phase <- read_csv("paper-inputs/inc-scores.csv") %>%
 
 
 # compute pairwise and relative WIS for each location separately:
-for(i in seq_along(locations)){
-  
-  # select location:
-  loc <- locations[i]
-  loc_name <- location_names[i]
-  
-  # matrix to store:
-  results_ratio_temp <- matrix(ncol = length(models),
-                               nrow = length(models),
-                               dimnames = list(models, models)) 
-  
-  # run pairwise comparison for chosen location:
-  for(mx in seq_along(models)){
-    for(my in 1:mx){
-      pwc <- pairwise_comparison(scores = scores, mx = models[mx], my = models[my],
-                                 permutation_test = FALSE, # disable permutation test to speed up things
-                                 subset = scores$location == loc) # this will subset to the respective location inside the function
-      results_ratio_temp[mx, my] <- pwc$ratio
-      results_ratio_temp[my, mx] <- 1/pwc$ratio
-    }
-  }
-  
-  # compute the geometric means etc
-  ind_baseline <- which(rownames(results_ratio_temp) == "COVIDhub-baseline")
-  geom_mean_ratios_temp <- exp(rowMeans(log(results_ratio_temp[, -ind_baseline]), na.rm = TRUE))
-  ratios_baseline_temp <- results_ratio_temp[, "COVIDhub-baseline"]
-  ratios_baseline2_temp <- geom_mean_ratios_temp/geom_mean_ratios_temp["COVIDhub-baseline"]
-  
-  # summarize results:
-  to_add <- data.frame(model = names(ratios_baseline2_temp),
-                       location = loc,
-                       location_name = loc_name,
-                       relative_wis = ratios_baseline2_temp,
-                       log_relative_wis = log(ratios_baseline2_temp))
-  
-  # append to already stored:
-  if(i == 1){ # initialize at first location
-    average_by_loc <- to_add
-  }else{
-    average_by_loc <- rbind(average_by_loc, to_add)
-  }
-  
-  cat("Finished", loc_name, "\n")
-}
-
-average_by_loc_spring <- average_by_loc %>%
-  mutate(seasonal_phase = "spring")
-
+# for(i in seq_along(locations)){
+#   
+#   # select location:
+#   loc <- locations[i]
+#   loc_name <- location_names[i]
+#   
+#   # matrix to store:
+#   results_ratio_temp <- matrix(ncol = length(models),
+#                                nrow = length(models),
+#                                dimnames = list(models, models)) 
+#   
+#   # run pairwise comparison for chosen location:
+#   for(mx in seq_along(models)){
+#     for(my in 1:mx){
+#       pwc <- pairwise_comparison(scores = scores, mx = models[mx], my = models[my],
+#                                  permutation_test = FALSE, # disable permutation test to speed up things
+#                                  subset = scores$location == loc) # this will subset to the respective location inside the function
+#       results_ratio_temp[mx, my] <- pwc$ratio
+#       results_ratio_temp[my, mx] <- 1/pwc$ratio
+#     }
+#   }
+#   
+#   # compute the geometric means etc
+#   ind_baseline <- which(rownames(results_ratio_temp) == "COVIDhub-baseline")
+#   geom_mean_ratios_temp <- exp(rowMeans(log(results_ratio_temp[, -ind_baseline]), na.rm = TRUE))
+#   ratios_baseline_temp <- results_ratio_temp[, "COVIDhub-baseline"]
+#   ratios_baseline2_temp <- geom_mean_ratios_temp/geom_mean_ratios_temp["COVIDhub-baseline"]
+#   
+#   # summarize results:
+#   to_add <- data.frame(model = names(ratios_baseline2_temp),
+#                        location = loc,
+#                        location_name = loc_name,
+#                        relative_wis = ratios_baseline2_temp,
+#                        log_relative_wis = log(ratios_baseline2_temp))
+#   
+#   # append to already stored:
+#   if(i == 1){ # initialize at first location
+#     average_by_loc <- to_add
+#   }else{
+#     average_by_loc <- rbind(average_by_loc, to_add)
+#   }
+#   
+#   cat("Finished", loc_name, "\n")
+# }
+# 
+# average_by_loc_spring <- average_by_loc %>%
+#   mutate(seasonal_phase = "spring")
 
 
 
@@ -497,7 +496,8 @@ average_by_loc_to_plot$model <- reorder(average_by_loc_to_plot$model, average_by
 
 model_levels_phases <- read_csv("paper-inputs/table-phase-performance.csv") %>%
   group_by(seasonal_phase) %>% arrange(seasonal_phase, relative_wis) %>% 
-  select(model, seasonal_phase, order_wis = relative_wis)
+  select(model, seasonal_phase, order_wis = relative_wis) %>%
+  mutate(model = recode(model, "IHME-CurveFit" = "IHME-SEIR")) 
 
 to_plot_phase <- rbind(average_by_loc_spring, average_by_loc_summer,average_by_loc_winter) %>%
   left_join(model_levels_phases) %>%
