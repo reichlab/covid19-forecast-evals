@@ -5,7 +5,7 @@ library(covidHubUtils)
 
 source("code/load-global-analysis-dates.R")
 
-mondays <- seq(from = first_timezero - 1, to = Sys.Date(), by = "week")
+mondays <- seq(from = first_target_end_date + 2 , to = truth_date, by = "week")
 
 
 #load revisions as of each monday 
