@@ -24,11 +24,11 @@ inc_scores_overall <- inc_scores %>%
   ungroup() %>%
   mutate(model = reorder(model, rev_rank, FUN=function(x) quantile(x, probs=0.25, na.rm=TRUE)))
 
-## number of unique opportunities for a prediction
-# inc_scores %>%
-#   group_by(target_end_date_1wk_ahead, location_name, target) %>%
-#   summarize(n()) %>%
-#   nrow()
+# number of unique opportunities for a prediction
+inc_scores_overall %>%
+  group_by(target_end_date_1wk_ahead, location_name, target) %>%
+  summarize(n()) %>%
+  nrow()
 
 ## number of unique opportunities for a prediction by model
 # inc_scores %>%
@@ -38,11 +38,18 @@ inc_scores_overall <- inc_scores %>%
 # table(inc_scores$n_models)
 
 ## average rank
-# inc_scores %>%
-#   group_by(model) %>%
-#   summarize(average_rank = mean(model_rank), total_n = n(), n_top_rank = sum(model_rank==1), pct_top = n_top_rank/total_n*100) %>%
-#   print(n=Inf)
+inc_scores_overall %>%
+  group_by(model) %>%
+  summarize(average_rank = mean(model_rank), total_n = n(), 
+            n_top_rank = sum(model_rank==1), pct_top = n_top_rank/total_n*100) %>%
+  print(n=Inf) 
 
+## average rank
+average_rank_percent <- inc_scores_overall %>%
+  group_by(model) %>%
+  summarize(average_rank = mean(rev_rank), total_n = n(), 
+            n_top50 = sum(rev_rank> 0.5) , pct_top50 = n_top50/total_n*100) %>%
+  print(n=Inf) %>% arrange(-pct_top50)
 
 # ggplot(inc_scores, aes(y=id, x=model, fill=model_rank)) +
 #   geom_tile() +
@@ -67,12 +74,12 @@ inc_scores_overall <- inc_scores %>%
 # ggplot(inc_scores, aes(y=model, x=rank_percentile)) +
 #   geom_boxplot()
 
-# inc_scores_sum <- inc_scores %>%
-#   group_by(model) %>%
-#   summarize(mean_rp = mean(rev_rank), 
-#     q25_rp = quantile(rev_rank, probs=0.25),
-#     median_rp = median(rev_rank), 
-#     q75_rp = quantile(rev_rank, probs=0.75)) 
+inc_scores_sum <- inc_scores_overall %>%
+  group_by(model) %>%
+  summarize(mean_rp = mean(rev_rank),
+    q25_rp = quantile(rev_rank, probs=0.25),
+    median_rp = median(rev_rank),
+    q75_rp = quantile(rev_rank, probs=0.75))
 
 # ggplot(inc_scores, aes(y=model, x=rank_percentile, height = ..density..)) +
 #   geom_density_ridges(scale = 1, stat = "density", trim = TRUE) + 
