@@ -5,8 +5,8 @@ library(covidHubUtils)
 
 source("code/load-global-analysis-dates.R")
 
-mondays <- c(seq(from = as.Date("2020-06-01"), to = version_date-1, by = "week"), as.Date(version_date-1)) 
-#currently subtracting 1 b/c 12/07 isn't a submitted forecast revision date
+mondays <- c(seq(from = as.Date("2020-06-01"), to = truth_date-1, by = "week"), as.Date(truth_date-1)) 
+#currently subtracting 1 b/c truth_date is a Tuesday
 
 
 #load revisions as of each monday 
@@ -24,21 +24,19 @@ weekly_inc_deaths <- plyr::ldply(mondays, load_all_weeks)  #combine revisions in
 
 
 weekly_inc_deaths <- weekly_inc_deaths %>% 
-  left_join(hub_locations %>% select(location = fips, location_name, abbreviation)) %>% #add location names
-  mutate(MMWRweek = MMWRweek(weekly_inc_deaths$date)$MMWRweek) %>% #add epi week
-  filter(MMWRweek <= MMWRweek(last_timezero)$MMWRweek)  #filter to only include epi weeks in evaluation
+  left_join(hub_locations %>% select(location = fips, location_name, abbreviation)) 
 
 #Create PDF of revisions in all locations 
 
 pdf('figures/data_revisions.pdf')
 
 for(i in 1:7) {
-  fig_revisions <- ggplot(data = weekly_inc_deaths, aes(x = MMWRweek, y = inc, 
+  fig_revisions <- ggplot(data = weekly_inc_deaths, aes(x = date, y = inc, 
                                                         color = factor(revision_date))) +
     geom_line() +
     geom_point(size = 1) +
     theme_bw() +
-    scale_x_continuous(breaks = unique(weekly_inc_deaths$MMWRweek)[c(TRUE, FALSE)]) + 
+    #scale_x_continuous(breaks = unique(weekly_inc_deaths$MMWRweek)[c(TRUE, FALSE)]) + 
     #geom_vline(aes(xintercept = weekly_counts$first_fcast_date_impacted), linetype = "dashed") +
     #scale_x_date(date_labels = "%Y-%m-%d", breaks = c(mondays), name = "Date") +
     theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 7),
