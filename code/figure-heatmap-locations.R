@@ -9,7 +9,12 @@ source("code/load-global-analysis-dates.R")
 for_loc_figure <- read.csv("paper-inputs/heatmap_data.csv") %>%
   mutate(sat_fcast_week = as.Date(sat_fcast_week),
        model = fct_reorder(model, n_weeks_submit_forecast, max),
-       model_numeric = as.numeric(model)) 
+       model_numeric = as.numeric(model))  %>%
+  distinct()
+
+#calculate number of submissions each week (compare to fig 1c)
+n_loc_weekly <- for_loc_figure %>%
+  group_by(sat_fcast_week) %>% summarise(n_models = n())
 
 scored_models_overall <- read_csv("paper-inputs/inc-scores.csv") %>%
                         filter(include_overall == "TRUE") %>%

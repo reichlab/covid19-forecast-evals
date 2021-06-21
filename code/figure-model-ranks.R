@@ -74,12 +74,12 @@ average_rank_percent <- inc_scores_overall %>%
 # ggplot(inc_scores, aes(y=model, x=rank_percentile)) +
 #   geom_boxplot()
 
-inc_scores_sum <- inc_scores_overall %>%
-  group_by(model) %>%
-  summarize(mean_rp = mean(rev_rank),
-    q25_rp = quantile(rev_rank, probs=0.25),
-    median_rp = median(rev_rank),
-    q75_rp = quantile(rev_rank, probs=0.75))
+# inc_scores_sum <- inc_scores_overall %>%
+#   group_by(model) %>%
+#   summarize(mean_rp = mean(rev_rank),
+#     q25_rp = quantile(rev_rank, probs=0.25),
+#     median_rp = median(rev_rank),
+#     q75_rp = quantile(rev_rank, probs=0.75))
 
 # ggplot(inc_scores, aes(y=model, x=rank_percentile, height = ..density..)) +
 #   geom_density_ridges(scale = 1, stat = "density", trim = TRUE) + 
