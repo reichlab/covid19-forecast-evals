@@ -14,13 +14,14 @@ the_models <- get_model_designations(source = "zoltar") %>%
 
 the_locations <- hub_locations %>% filter(geo_type == "state") %>% pull(fips)
 
-the_targets_inc <- c("4 wk ahead inc death")
+the_targets_inc <- c("1 wk ahead inc death")
 
 inc_tmp <- load_forecasts(
+  models = the_models,
   forecast_dates = the_timezeros,
   locations = the_locations,
-  types = "quantile",
-  targets = the_targets_inc) 
+  types = c("point", "quantile"),
+  targets = the_targets_inc)
   
 
 inc_tmp_unique <-  inc_tmp %>%
@@ -36,7 +37,7 @@ inc_tmp_unique <-  inc_tmp %>%
   mutate(forecast_in_wk = row_number(), 
          last_forecast_in_wk = forecast_in_wk == max(forecast_in_wk)) %>% 
   filter(last_forecast_in_wk) %>%
-  ungroup() 
+  ungroup() %>% distinct()
   
 
 
@@ -63,9 +64,9 @@ num_loc <- inc_tmp_unique %>%
 #Filter out teams that have fewer than 25 locations at every time point
 for_loc_figure <- num_loc %>%
   group_by(model) %>%
-  filter(max(n_loc) >= NUM_UNITS) %>% #remove models with fewer than 25 locations at all times
+  #filter(max(n_loc) >= NUM_UNITS) %>% #remove models with fewer than 25 locations at all times
   filter(min(sat_fcast_week) <= last_target_end_date) %>% #filter models that have start date before end of scored period
-  filter(!(model %in% c( "CU-nochange", "CU-scenario_high", "CU-scenario_low", "CU-scenario_mid"))) %>% #remove models that aren't secondary or primary 
+  #filter(!(model %in% c( "CU-nochange", "CU-scenario_high", "CU-scenario_low", "CU-scenario_mid"))) %>% #remove models that aren't secondary or primary 
   ungroup() 
 
 
