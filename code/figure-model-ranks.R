@@ -2,6 +2,7 @@ library(tidyverse)
 library(covidHubUtils)
 library(ggridges)
 library(viridis)
+library(cowplot)
 
 theme_set(theme_bw())
 data("hub_locations")
@@ -173,22 +174,52 @@ inc_scores_phase <- inc_scores %>%
   mutate(model = reorder(model, rev_rank, FUN=function(x) quantile(x, probs=0.25, na.rm=TRUE)))
 
 
-p2_phase <- ggplot(inc_scores_phase,aes(y= model, x=rev_rank, fill = factor(stat(quantile)))) +
+
+p2_phase_1 <- ggplot(inc_scores_phase %>% filter(seasonal_phase %in% c("spring","summer")),aes(y= model, x=rev_rank, fill = factor(stat(quantile)))) +
   facet_wrap(~ seasonal_phase) +
   stat_density_ridges(
     geom = "density_ridges_gradient", calc_ecdf = TRUE,
     quantiles = 4, quantile_lines = TRUE) + 
-scale_fill_viridis_d(name = "Quartiles") +
+  scale_fill_manual(name = " ", values = c("#381648", "#5FB580", "#FAE955", "#406789")) +
   scale_x_continuous(name="standardized rank", 
-                     #expand=expansion(add=c(2, 1)/max(inc_scores$n_models)), 
                      limits=c(0,1)) +   # for both axes to remove unneeded padding +
-  scale_y_discrete(labels=c("IHME-CurveFit" = "IHME-SEIR"))
+  scale_y_discrete(labels=c("IHME-CurveFit" = "IHME-SEIR"), drop = FALSE) +
+  theme(legend.position = "none",
+        axis.text.y = element_text(size = 12),
+        axis.title.y = element_text(size =12),
+        strip.text = element_text(size = 14),
+        axis.title.x = element_text(hjust = 1)
+        ) 
+
+p2_phase_2 <- ggplot(inc_scores_phase %>% filter(seasonal_phase %in% c("winter")),aes(y= model, x=rev_rank, fill = factor(stat(quantile)))) +
+  facet_wrap(~ seasonal_phase) +
+  stat_density_ridges(
+    geom = "density_ridges_gradient", calc_ecdf = TRUE,
+    quantiles = 4, quantile_lines = TRUE) + 
+  scale_fill_manual(name = "Quantiles", values = c("#381648", "#406789", "#5FB580", "#FAE955")) +
+  scale_x_continuous(name=" ", 
+                     limits=c(0,1)) +   # for both axes to remove unneeded padding +
+  scale_y_discrete(labels=c("IHME-CurveFit" = "IHME-SEIR"), drop = FALSE) +
+  theme(axis.text.y = element_blank(),
+        axis.title.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        strip.text.x = element_text(size = 15))
 
 
-pdf(file = "figures/fig-model-ranks_phase.pdf", width=8, height=5)
-print(p2_phase)
+jpeg(file = "figures/model_ranks_phase_cowplot.jpg", width=10, height=9, units="in", res=300)
+plot_grid( p2_phase_1, p2_phase_2, rel_widths = c(2,1))
 dev.off()
 
-jpeg(file = "figures/fig-model-ranks_phase.jpg", width=8, height=5, units="in", res=300)
-print(p2_phase)
+pdf(file = "figures/model_ranks_phase_cowplot.pdf", width=8, height=9)
+plot_grid( p2_phase_1, p2_phase_2, rel_widths = c(2,1))
 dev.off()
+
+# 
+# 
+# pdf(file = "figures/fig-model-ranks_phase.pdf", width=8, height=5)
+# print(p2_phase)
+# dev.off()
+# 
+# jpeg(file = "figures/fig-model-ranks_phase.jpg", width=8, height=5, units="in", res=300)
+# print(p2_phase)
+# dev.off()

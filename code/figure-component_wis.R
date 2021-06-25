@@ -24,7 +24,7 @@ wis_wide <- pivot_longer(wis_plot,
   
 component_plot <- ggplot(wis_wide, aes(fill=score_name, y=value, x=model)) + 
     geom_bar(position="stack", stat="identity", width = .75) +
-   labs(y = "Avg unweighted WIS") +
+   labs(y = "Average WIS") +
     theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 9),
           axis.title.x =  element_blank(),
           plot.margin = margin(10, 10, 20, 20)) +
