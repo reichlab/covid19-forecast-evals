@@ -52,7 +52,7 @@ truth_dat_inc <- truth_function("inc death")
 
 #query forecast data from zoltar for all submission weeks. (used so that there are not duplicated values for a forecast that has submitted multiple times in a week)
 
-mondays <- seq(as.Date("2020-04-06"), last_eval_sat, by = "week")
+mondays <- seq(as.Date("2020-12-28"), last_eval_sat, by = "week")
 
 forecasts_case <- map_dfr(
   mondays, function(the_weeks) {
