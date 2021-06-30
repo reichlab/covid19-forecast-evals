@@ -1,7 +1,8 @@
 library(tidyverse)
 
 #vers <- read_csv("data-raw/model-forecast-versions-filled-all-forecast-from-May.csv")
-vers <- read_csv("paper-inputs/model-forecast-versions-from-May-as-of-7-1-2021.csv")
+# vers <- read_csv("paper-inputs/model-forecast-versions-from-May-as-of-7-1-2021.csv")
+vers <- read_csv("paper-inputs/model-forecast-versions-as-of-2021-06-30.csv")
 
 models <- read_csv("paper-inputs/table-overall-performance.csv") %>%
   pull(model)
