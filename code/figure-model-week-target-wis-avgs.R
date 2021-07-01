@@ -22,6 +22,9 @@ theme_set(theme_bw())
 # ## number of evaluation opportunities
 # nrow(tmp)
 
+## to load in sensitivity analysis version of files
+# inc_scores <- inc_scores_with_both %>%
+#   filter(anomaly_omit == FALSE) %>%
 inc_scores <- read_csv("paper-inputs/inc-scores.csv") %>%
   filter(target %in% paste(c(1,4), "wk ahead inc death"),
         target_end_date_1wk_ahead >= first_target_end_date,
@@ -96,7 +99,7 @@ p_boxplot <- ggplot(avg_wis_by_model_target_week, aes(x = reorder(model, relativ
   theme_bw() +
   theme(axis.text.x = element_text(angle=90, vjust=0.5, hjust=1), 
         legend.position = "none") +
-  ylab("Average WIS") + xlab(NULL) +
+  ylab("Average WIS (axis on log scale)") + xlab(NULL) +
   scale_fill_date(name="forecast date") +
   scale_y_continuous(trans = "log10") +
   scale_x_discrete(labels=c("IHME-CurveFit" = "IHME-SEIR")) 
