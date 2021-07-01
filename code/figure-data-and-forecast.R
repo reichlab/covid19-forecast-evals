@@ -23,9 +23,9 @@ data("hub_locations")
 
 fcast_data <- load_forecasts(
   models = "COVIDhub-ensemble", 
-  forecast_dates = c(as.Date("2020-05-11"), as.Date("2020-06-08"),  
-                      as.Date("2020-07-20"),  as.Date("2020-08-24"),  
-                       as.Date("2020-12-28"), as.Date("2021-02-22")),
+  forecast_dates = seq.Date(as.Date("2020-05-11"), 
+                            as.Date("2021-05-11"), 
+                            by="5 weeks"),
   targets = paste(1:4, "wk ahead inc death"),
   locations = "US" 
   )
@@ -33,7 +33,7 @@ fcast_data <- load_forecasts(
 p1 <- plot_forecasts(forecast_data = fcast_data,
   target_variable = "inc death",
   truth_source = "JHU",
-  intervals = c(0.2, 0.5, 0.8, 0.95, 0.98),
+  intervals = c(0.5,0.95),
   show_caption = FALSE, 
   plot=FALSE) +
   ggtitle("B: ensemble forecasts for incident deaths at the national level", 
@@ -126,7 +126,7 @@ p3 <- ggplot(n_models_per_week, aes(x=target_end_date_0wk_ahead)) +
   #geom_text(aes(y=.5)) +
   scale_y_continuous(name="# models")+
   scale_x_date(
-    limits=c(start_date, end_date), 
+    limits=c(start_date, end_date + 3), # +3 needed to make room for last bar
     date_breaks = "1 month",
     date_labels = "%b",
     name=element_blank(), 
