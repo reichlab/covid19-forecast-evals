@@ -28,7 +28,7 @@ component_plot <- ggplot(wis_wide, aes(fill=score_name, y=value, x=model)) +
     theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 9),
           axis.title.x =  element_blank(),
           plot.margin = margin(10, 10, 20, 20)) +
-  scale_fill_discrete(name = "WIS Components", labels = c("Overprediction","Dispersion", "Underprediction"))
+  scale_fill_brewer(palette="Dark2", name = "WIS Components", labels = c("overprediction","dispersion", "underprediction"))
   
 
 pdf(file = "figures/component_plot.pdf", width=8, height=6)

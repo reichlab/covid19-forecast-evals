@@ -176,7 +176,15 @@ p_boxplot <- ggplot(avg_wis_by_model_target_week, aes(x = model, y= scales::oob_
   scale_y_continuous(trans = "log10") +
   scale_x_discrete(labels=c("IHME-CurveFit" = "IHME-SEIR")) 
 
+averages  <- avg_wis_by_model_target_week %>%
+  group_by(model, target) %>%
+  summarise(median_wis = median(mean_wis),
+            mean_wis = mean(mean_wis))
 
+
+averages_median_under_mean <- averages %>%
+  filter(median_wis >= mean_wis)
+  
 # p <- ggplot(avg_wis_by_model_target_week, aes(x=model, y=mean_wis)) +
 #     #geom_hline(yintercept=ensemble_1wk_avg, linetype=2)+
 #     geom_hline(data=baseline_avg, aes(yintercept=mean_wis), linetype=2)+
