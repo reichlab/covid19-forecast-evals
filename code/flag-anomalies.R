@@ -12,7 +12,7 @@ inc_scores <- read_csv("paper-inputs/inc-scores.csv") %>%
 ## read anomaly csvs
 data_all_outliers <- read_csv("../covid19-forecast-hub/data-anomalies/outliers-inc-deaths.csv") %>%
   mutate(outlier_data = TRUE, days_since_first_obs=issue_date-date) %>%
-  filter(num_reviewers_marked_oulier == 2)
+  filter(num_reviewers_marked_outlier == 2)
 
 outliers_marked_on_first_obs <- filter(data_all_outliers, days_since_first_obs < 8)  
 
@@ -55,3 +55,4 @@ inc_scores_with_both <- inc_scores_with_revs %>%
   mutate(outlier_to_omit = ifelse(is.na(outlier_to_omit)|(!outlier_to_omit), FALSE, TRUE)) %>%
   mutate(anomaly_omit = revision_to_omit | outlier_to_omit)
 
+## to complete sensitivity analysis, run commented out code in Table-PI_relative WIS.R

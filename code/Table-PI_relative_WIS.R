@@ -12,7 +12,7 @@ data("hub_locations")
 
 ## for running sensitivity analysis
 # scores <- inc_scores_with_both %>%
-#   filter(anomaly_omit == FALSE) %>%  
+#   filter(anomaly_omit == FALSE) %>%
 
 ## for main analysis 
 scores <- read_csv("paper-inputs/inc-scores.csv") %>%
@@ -224,13 +224,13 @@ calib_pairwise <- merge(calib_pairwise, pairwise_scores_MAE) %>% arrange(model)
 
 #write Table
 write_csv(calib_pairwise, file = "paper-inputs/table-overall-performance.csv")
-#write_csv(calib_pairwise, file = "paper-inputs/table-overall-performance-anomaly-sensitivity.csv")
 
 ## comparison of sensitivity analysis
 # orig_pairwise <- read_csv("paper-inputs/table-overall-performance.csv")
 # 
 # all_pairwise <- calib_pairwise %>%
 #   left_join(orig_pairwise, by = c("model"="model"), suffix=c(".no_anomalies", ".orig"))
+# write_csv(all_pairwise, file = "paper-inputs/table-overall-performance-anomaly-sensitivity.csv")
 # 
 
 
