@@ -206,11 +206,11 @@ p2_phase_2 <- ggplot(inc_scores_phase %>% filter(seasonal_phase %in% c("winter")
         strip.text.x = element_text(size = 15))
 
 
-jpeg(file = "figures/model_ranks_phase_cowplot.jpg", width=10, height=9, units="in", res=300)
+jpeg(file = "figures/model_ranks_phase.jpg", width=10, height=9, units="in", res=300)
 plot_grid( p2_phase_1, p2_phase_2, rel_widths = c(2,1))
 dev.off()
 
-pdf(file = "figures/model_ranks_phase_cowplot.pdf", width=8, height=9)
+pdf(file = "figures/model_ranks_phase.pdf", width=8, height=9)
 plot_grid( p2_phase_1, p2_phase_2, rel_widths = c(2,1))
 dev.off()
 
