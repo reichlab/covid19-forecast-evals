@@ -104,6 +104,14 @@ p_boxplot <- ggplot(avg_wis_by_model_target_week, aes(x = reorder(model, relativ
   scale_y_continuous(trans = "log10") +
   scale_x_discrete(labels=c("IHME-CurveFit" = "IHME-SEIR")) 
 
+averages  <- avg_wis_by_model_target_week %>%
+  group_by(model, target) %>%
+  summarise(median_wis = median(mean_wis),
+            mean_wis = mean(mean_wis))
+
+
+averages_median_under_mean <- averages %>%
+  filter(median_wis >= mean_wis)
 
 # p <- ggplot(avg_wis_by_model_target_week, aes(x=model, y=mean_wis)) +
 #     #geom_hline(yintercept=ensemble_1wk_avg, linetype=2)+
@@ -164,6 +172,7 @@ dev.off()
 
 inc_scores_phase <- inc_scores %>%
   filter(include_phases == "TRUE") %>%
+  filter(!is.na(wis)) %>%
   mutate(model = recode(model, "IHME-CurveFit" = "IHME-SEIR")) %>%
   filter(!(location_name %in% locs_to_exclude)) 
 
@@ -227,7 +236,12 @@ jpeg(file = "figures/model-target-week-wis-avgs_phase_boxplot.jpg", width=10, he
 print(p_phase_boxplot)
 dev.off()
 
-
+better_than_med_2of3 <- avg_wis_by_model_target_phase %>% 
+  group_by(target, seasonal_phase) %>%
+  filter(mean_wis < mean_wis[model == "COVIDhub-baseline"]) %>% ungroup() %>%
+  group_by(model,target) %>%
+  summarise(n_better_mean = n()) %>% filter(n_better_mean >= 2) %>% ungroup() %>%
+  group_by(model) %>% summarise(n_1and4 = n()) %>% filter(n_1and4 > 1)
 
 ##Figure 4 [average WIS over time]
 
