@@ -73,11 +73,16 @@ scored_models <- read_csv("paper-inputs/inc-scores.csv") %>%
                         arrange(desc(n_forecasts)) %>%
                         pull(model)
 
-range_fcast_dates <- c(
-  first_forecast_date_spring,
-  first_forecast_date_summer,
-  first_forecast_date_winter,
-  last_1wk_target_end_date)
+model_change_dates <- data.frame(cbind(
+  model = c("UT-Mobility", "CU-select"),
+  sat_fcast_week = c("2021-01-08","2021-03-12")))
+
+
+# range_fcast_dates <- c(
+#   first_forecast_date_spring,
+#   first_forecast_date_summer,
+#   first_forecast_date_winter,
+#   last_1wk_target_end_date)
 
 #Plot of locations each model submitted to each week
 sf1 <- ggplot(for_loc_figure, aes(y=model, x=sat_fcast_week, fill= n_loc < 25)) + 
@@ -118,6 +123,12 @@ sf1 <- ggplot(for_loc_figure, aes(y=model, x=sat_fcast_week, fill= n_loc < 25)) 
   guides(size = "none", color = "none", alpha = "none") +
   scale_y_discrete(labels=c("IHME-CurveFit" = "IHME-SEIR")) +
   geom_vline(xintercept  = range_fcast_dates, linetype = 2) 
+
+
+
+
++
+  geom_point(data=nbar.m,aes(alpha=signif.),shape=22,size=5,colour="darkgreen",na.rm=TRUE,legend=FALSE)
 
 
 
