@@ -30,6 +30,14 @@ scored_models_phase <- read_csv("paper-inputs/inc-scores.csv") %>%
   arrange(desc(n_forecasts)) %>%
   pull(model)
 
+model_change_dates <- as.data.frame(cbind(
+  model = c("JHU_IDD-CovidSP","LANL-GrowthRate",  "UA-EpiCovDA", "UMich-RidgeTfReg", "RobertWalraven-ESG", "IowaStateLW-STEM","IHME-CurveFit"),
+  sat_fcast_week = c("2020-12-14","2020-10-28","2020-07-05", "2020-11-30","2021-03-15" ,"2020-07-27","2020-06-24"),
+  n_loc = c("25","25","25","25","25","25", "25"),
+  n_quant = c("23","23","23","23","23","23","23"))) %>%
+  mutate(sat_fcast_week = as.Date(sat_fcast_week),
+         model = as.factor(model),
+         change_date = TRUE)
 
 plot_date <- as.Date("2021-05-08")
 #Plot of locations each model submitted to each week
@@ -71,8 +79,8 @@ sf1 <- ggplot(for_loc_figure, aes(y=model, x=sat_fcast_week, fill= (n_loc < 25 |
         title = element_text(size = 9)) +
   guides(size = "none", color = "none", alpha = "none") +
   scale_y_discrete(labels=c("IHME-CurveFit" = "IHME-SEIR")) +
-  geom_vline(xintercept  = range_fcast_dates-7, linetype = 2) ## subtracting 7 so they are end of submission weeks, not target end dates
-
+  geom_vline(xintercept  = range_fcast_dates-7, linetype = 2) + ## subtracting 7 so they are end of submission weeks, not target end dates
+  geom_point(data= model_change_dates, aes(y = model, x = sat_fcast_week), shape=18, size=2) 
 
 pdf(file = "figures/inc-loc-heatmap.pdf",width=11, height=7)
 print(sf1)
