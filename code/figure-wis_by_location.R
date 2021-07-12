@@ -472,6 +472,8 @@ average_by_loc_to_plot$model <- reorder(average_by_loc_to_plot$model,
 
 
 
+
+
 # 
 # pairwise_df_spring <- scoringutils::pairwise_comparison(
 #   scores = spring_phase, 
@@ -493,7 +495,7 @@ average_by_loc_to_plot$model <- reorder(average_by_loc_to_plot$model,
 #   metric = "interval_score",
 #   baseline = "COVIDhub-baseline",
 #   summarise_by = c("model", "location_name")) %>%
-#   mutate(seasonal_phase = "winter")
+#   mutate(seasonal_phase = "winter"
 
 model_levels_phases <- read_csv("paper-inputs/table-phase-performance.csv") %>%
   mutate(model = recode(model, "IHME-CurveFit" = "IHME-SEIR")) %>%
@@ -532,7 +534,6 @@ fig_wis_loc <- ggplot(to_plot_phase %>% filter(seasonal_phase != "winter"),
         legend.title = element_text(size = 16),
         legend.text = element_text(size = 15)) +
   tidytext::scale_x_reordered()
-
 
 fig_wis_loc_winter <- ggplot(to_plot_phase %>% filter(seasonal_phase == "winter"), aes(x = tidytext::reorder_within(model,order_wis,seasonal_phase),
                                                                                        y=location_name, fill= scales::oob_squish(log_relative_wis, 
