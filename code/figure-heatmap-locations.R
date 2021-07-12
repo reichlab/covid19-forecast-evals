@@ -80,13 +80,13 @@ sf1 <- ggplot(for_loc_figure, aes(y=model, x=sat_fcast_week, fill= (n_loc < 25 |
   guides(size = "none", color = "none", alpha = "none") +
   scale_y_discrete(labels=c("IHME-CurveFit" = "IHME-SEIR")) +
   geom_vline(xintercept  = range_fcast_dates-7, linetype = 2) + ## subtracting 7 so they are end of submission weeks, not target end dates
-  geom_point(data= model_change_dates, aes(y = model, x = sat_fcast_week), shape=18, size=2) 
+  geom_point(data= model_change_dates, aes(y = model, x = sat_fcast_week), shape=18, size=3, show.legend = FALSE) 
 
 pdf(file = "figures/inc-loc-heatmap.pdf",width=11, height=7)
 print(sf1)
 dev.off()
 
-jpeg(file = "figures/inc-loc-heatmap.jpg", width=11, height=7, units="in", res=300)
+jpeg(file = "figures/inc-loc-heatmap.jpg", width=11, height=9, units="in", res=300)
 print(sf1)
 dev.off()
 
