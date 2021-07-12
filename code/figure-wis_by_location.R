@@ -467,7 +467,8 @@ average_by_loc_to_plot <- average_by_loc %>%
          model = fct_relevel(model, model_levels)) %>%
   filter(!is.na(relative_wis)) 
 
-average_by_loc_to_plot$model <- reorder(average_by_loc_to_plot$model, average_by_loc_to_plot$relative_wis)
+average_by_loc_to_plot$model <- reorder(average_by_loc_to_plot$model, 
+                                        average_by_loc_to_plot$relative_wis)
 
 
 
@@ -495,41 +496,73 @@ average_by_loc_to_plot$model <- reorder(average_by_loc_to_plot$model, average_by
 #   mutate(seasonal_phase = "winter")
 
 model_levels_phases <- read_csv("paper-inputs/table-phase-performance.csv") %>%
+  mutate(model = recode(model, "IHME-CurveFit" = "IHME-SEIR")) %>%
   group_by(seasonal_phase) %>% arrange(seasonal_phase, relative_wis) %>% 
-  select(model, seasonal_phase, order_wis = relative_wis) %>%
-  mutate(model = recode(model, "IHME-CurveFit" = "IHME-SEIR")) 
+  select(model, seasonal_phase, order_wis = relative_wis) 
 
 to_plot_phase <- rbind(average_by_loc_spring, average_by_loc_summer,average_by_loc_winter) %>%
   left_join(model_levels_phases) %>%
   mutate(model = fct_reorder(model, order_wis), 
-         location_name = fct_relevel(location_name, levels(truth_dat)))
+         location_name = fct_relevel(location_name, levels(truth_dat)),
+         relative_wis_text = sprintf("%.1f", round(relative_wis, 1)),
+         log_relative_wis = log2(relative_wis)) %>%
+  filter(!is.na(relative_wis)) 
+
     
-fig_wis_loc <- ggplot(to_plot_phase, aes(x = reorder_within(model,order_wis,seasonal_phase),
-                                         y=location_name, fill= scales::oob_squish(log_relative_wis, 
-                                                                range = c(- 2.584963, 2.584963)))) +
+fig_wis_loc <- ggplot(to_plot_phase %>% filter(seasonal_phase != "winter"), 
+                      aes(x = tidytext::reorder_within(model,order_wis,seasonal_phase),
+                          y=location_name, fill= scales::oob_squish(log_relative_wis, 
+                          range = c(- 2.584963, 2.584963)))) +
   geom_tile() +
   facet_grid( cols = vars(seasonal_phase), scales = "free_x", space="free") + #, scales="free_y") +
-  geom_text(aes(label = round(relative_wis,1)), size = 2) + # I adapted the rounding
+  geom_text(aes(label = round(relative_wis,1)), size = 4) + # I adapted the rounding
   scale_fill_gradient2(low = "steelblue", high = "red", midpoint = 0, na.value = "grey50", 
                        name = "Relative WIS", 
                        breaks = c(-2,-1,0,1,2), 
                        labels =c("0.25", 0.5, 1, 2, 4)) + 
   xlab(NULL) + ylab(NULL) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 9), 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 20), 
                                    # color=ifelse(
                                    #   levels(to_plot_phase$model) %in% models_to_highlight,
                                    #   "red", "black")),
-        axis.title.x = element_text(size = 9),
-        axis.text.y = element_text(size = 9),
-        title = element_text(size = 9)) +
-  scale_x_reordered()
+        axis.title.x = element_text(size = 11),
+        axis.text.y = element_text(size = 18),
+        title = element_text(size = 11),
+        strip.text = element_text(size = 20),
+        legend.title = element_text(size = 16),
+        legend.text = element_text(size = 15)) +
+  tidytext::scale_x_reordered()
 
 
-pdf(file = "figures/fig-wis-location_phase.pdf", width=16, height=8)
-print(fig_wis_loc)
+fig_wis_loc_winter <- ggplot(to_plot_phase %>% filter(seasonal_phase == "winter"), aes(x = tidytext::reorder_within(model,order_wis,seasonal_phase),
+                                                                                       y=location_name, fill= scales::oob_squish(log_relative_wis, 
+                                                                                                                                 range = c(- 2.584963, 2.584963)))) +
+  geom_tile() +
+  facet_grid( cols = vars(seasonal_phase), scales = "free_x", space="free") + #, scales="free_y") +
+  geom_text(aes(label = round(relative_wis,1)), size = 4) + # I adapted the rounding
+  scale_fill_gradient2(low = "steelblue", high = "red", midpoint = 0, na.value = "grey50", 
+                       name = "Relative WIS", 
+                       breaks = c(-2,-1,0,1,2), 
+                       labels =c("0.25", 0.5, 1, 2, 4)) + 
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 20), 
+        # color=ifelse(
+        #   levels(to_plot_phase$model) %in% models_to_highlight,
+        #   "red", "black")),
+        axis.text.y = element_text(size = 18),
+        title = element_text(size = 11),
+        strip.text = element_text(size = 20),
+        legend.title = element_text(size = 16),
+        legend.text = element_text(size = 15)) +
+  tidytext::scale_x_reordered()
+
+library(cowplot)
+pdf(file = "figures/fig-wis-location_phase.pdf", width=20, height=28)
+ggdraw(plot_grid(
+  fig_wis_loc, fig_wis_loc_winter, nrow = 2))
 dev.off()
 
-jpeg(file = "figures/fig-wis-location_phase.jpg", width=16, height=8, units="in", res=300)
-print(fig_wis_loc)
+jpeg(file = "figures/fig-wis-location_phase.jpg", width=20, height=28, units="in", res=300)
+ggdraw(plot_grid(
+  fig_wis_loc, fig_wis_loc_winter, nrow = 2))
 dev.off()
-
