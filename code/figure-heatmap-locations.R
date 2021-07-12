@@ -125,14 +125,6 @@ sf1 <- ggplot(for_loc_figure, aes(y=model, x=sat_fcast_week, fill= n_loc < 25)) 
   geom_vline(xintercept  = range_fcast_dates, linetype = 2) 
 
 
-
-
-+
-  geom_point(data=nbar.m,aes(alpha=signif.),shape=22,size=5,colour="darkgreen",na.rm=TRUE,legend=FALSE)
-
-
-
-
 # ggsave("../figures/inc_loc_heatmap.jpg", width=3, height=5)
 # ggsave("../figures/incidence_loc_heatmap.png", width=3, height=5)
 
