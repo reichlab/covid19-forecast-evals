@@ -1,3 +1,5 @@
+#THIS CODE IS OUTDATED AND NO LONGER BEING USED
+
 #This script includes code that is also in "figure-calibration.r" and "pairwise_wis.R". It has been added here in order to create table 2 all in 1 place.
 
 library(lubridate)
