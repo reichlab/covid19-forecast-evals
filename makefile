@@ -14,6 +14,11 @@ paper-inputs/table-overall-performance.csv: paper-inputs/inc-scores.csv code/Tab
 	Rscript code/Table-PI_relative_WIS.R
 	Rscript code/Table-PI_relative_WIS_phase.R
 
+# update table for sensitivity analysis 2
+paper-inputs/sensitivity_table2_update2.csv: paper-inputs/inc-scores.csv 
+	Rscript code/Table-PI_relative_WIS-sensitivityAnalysis.R
+
+	
 # update calibration scores, after score_forecasts transition, this may not be needed anymore.
 # paper-inputs/inc-calibration.csv: paper-inputs/model-eligibility-inc.csv code/get-calibration-scores-inc.R code/load-global-analysis-dates.R
 #	Rscript code/get-calibration-scores-inc.R
