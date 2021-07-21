@@ -320,21 +320,22 @@ f4b <- ggplot(filter(avg_scores_byweek, target=="1 wk ahead inc death"), aes(x =
   geom_point(aes(group = model), color="darkgray", alpha=.5, size = 2) +
   stat_summary(fun=mean, geom="line", aes(color="blue")) +
   geom_vline(xintercept = range_fcast_dates, linetype = 2) +
-  stat_summary(fun=mean, geom="point", aes(color="blue")) +
+  stat_summary(fun=mean, geom="point", aes(color="blue",  shape = "19")) +
   geom_line(data=filter(avg_scores_byweek, model=="COVIDhub-ensemble",  target=="1 wk ahead inc death"), aes(group = model, color="red")) +
-  geom_point(data=filter(avg_scores_byweek, model=="COVIDhub-ensemble",  target=="1 wk ahead inc death"), aes(group = model, color="red")) +
+  geom_point(data=filter(avg_scores_byweek, model=="COVIDhub-ensemble",  target=="1 wk ahead inc death"), aes(group = model, color="red", shape = "17")) +
   geom_line(data=filter(avg_scores_byweek, model=="COVIDhub-baseline", target=="1 wk ahead inc death"), aes(group = model, color="green")) +
-  geom_point(data=filter(avg_scores_byweek, model=="COVIDhub-baseline", target=="1 wk ahead inc death"), aes(group = model, color="green")) +
+  geom_point(data=filter(avg_scores_byweek, model=="COVIDhub-baseline", target=="1 wk ahead inc death"), aes(group = model, color="green", shape = "15")) +
   expand_limits(y=0) +
   coord_cartesian(ylim=c(0,200)) +
   scale_y_continuous(name = "Average WIS") +
   scale_x_date(name=NULL, limits=range(obs_inc_deaths$target_end_date), date_breaks = "1 month", date_labels = "%b") + 
-  #scale_x_continuous(name = "Forecast Week", breaks= unique(avg_scores_byweek$target_end_date_0wk_ahead)[c(TRUE,FALSE)], limits=c(1, 5)) +
-  # facet_grid(target~.) +
   scale_color_identity(name = NULL, 
     breaks = c( "blue", "green", "red"), 
     labels = c( "Average score of all models", "COVIDhub-baseline","COVIDhub-ensemble")) +
-  guides(color=FALSE, group = FALSE) +
+  scale_shape_manual(name = NULL,
+    values = c(15, 17,19),
+    labels = c( "Average score of all models", "COVIDhub-baseline","COVIDhub-ensemble")) +
+  guides(color=FALSE, group = FALSE, shape = FALSE) +
   ggtitle("B: Average 1-week ahead weighted interval scores by model") +
   theme(axis.ticks.length.x = unit(0.5, "cm"),
     axis.text.x = element_text(vjust = 7, hjust = -0.2))
@@ -343,28 +344,29 @@ f4b <- ggplot(filter(avg_scores_byweek, target=="1 wk ahead inc death"), aes(x =
 f4c <- ggplot(filter(avg_scores_byweek, target=="4 wk ahead inc death"), aes(x = target_end_date, y = mean_wis)) +
   geom_line(aes(group = model), color="darkgray", alpha=.5) +
   geom_point(aes(group = model), color="darkgray", alpha=.5, size = 2) +
-  stat_summary(fun=mean, geom="line", aes(colour="blue")) +
-  geom_vline(xintercept  = range_fcast_dates, linetype = 2) +
-  stat_summary(fun=mean, geom="point", aes(colour="blue")) +
+  stat_summary(fun=mean, geom="line", aes(color="blue")) +
+  geom_vline(xintercept = range_fcast_dates, linetype = 2) +
+  stat_summary(fun=mean, geom="point", aes(color="blue", shape = "blue")) +
   geom_line(data=filter(avg_scores_byweek, model=="COVIDhub-ensemble",  target=="4 wk ahead inc death"), aes(group = model, color="red")) +
-  geom_point(data=filter(avg_scores_byweek, model=="COVIDhub-ensemble",  target=="4 wk ahead inc death"), aes(group = model, color="red")) +
+  geom_point(data=filter(avg_scores_byweek, model=="COVIDhub-ensemble",  target=="4 wk ahead inc death"), aes(group = model, color="red", shape = "red")) +
   geom_line(data=filter(avg_scores_byweek, model=="COVIDhub-baseline", target=="4 wk ahead inc death"), aes(group = model, color="green")) +
-  geom_point(data=filter(avg_scores_byweek, model=="COVIDhub-baseline", target=="4 wk ahead inc death"), aes(group = model, color="green")) +
+  geom_point(data=filter(avg_scores_byweek, model=="COVIDhub-baseline", target=="4 wk ahead inc death"), aes(group = model, color="green", shape = "green")) +
   expand_limits(y=0) +
   ylab("Average WIS") +
   scale_x_date(name=NULL, limits=range(obs_inc_deaths$target_end_date), date_breaks = "1 month", date_labels = "%b") + 
   scale_y_continuous(name = "Average WIS") +
-  #scale_x_continuous(name = "Forecast Week", breaks= unique(avg_scores_byweek$target_end_date_0wk_ahead)[c(TRUE,FALSE)], limits=c(1, 5)) +
-  # facet_grid(target~.) +
   guides(group = FALSE) +
-  scale_color_identity(name = NULL, 
-    breaks = c( "blue", "green", "red"), 
+  scale_color_manual(name = NULL, 
+    values = c( "blue", "green", "red"), 
     labels = c( "Average score of all models", "COVIDhub-baseline","COVIDhub-ensemble"),
     guide = "legend") +
+  scale_shape_manual(name = NULL,
+                     values = c(19, 15, 17),
+                     labels = c("Average score of all models", "COVIDhub-baseline","COVIDhub-ensemble")) +
   coord_cartesian(ylim=c(0,500)) +
   theme(legend.position = c(0.05, 0.8), legend.justification = c(0,.5), 
     axis.ticks.length.x = unit(0.5, "cm"),
-    axis.text.x = element_text(vjust = 7, hjust = -0.2))+
+    axis.text.x = element_text(vjust = 7, hjust = -0.2)) +
   ggtitle("C: Average 4-week ahead weighted interval scores by model")
 
 

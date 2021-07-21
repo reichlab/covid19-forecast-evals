@@ -52,16 +52,19 @@ calib_graph <- ggplot(calib_data_long, aes(x=expected_cov, y=emperical_cov)) +
   facet_wrap(~target) + 
   geom_abline(slope = 1, intercept = 0, size = 0.8, linetype = "dashed") +
   geom_line(data = calib_avg, aes(color = "blue")) + 
-  geom_point(data = calib_avg, aes(color = "blue"),size = 2) +
+  geom_point(data = calib_avg, aes(color = "blue", shape = "blue"),size = 2) +
   geom_line(data = calib_baseline, aes(color = "green")) + 
-  geom_point(data = calib_baseline, aes(color="green"), size = 2) +
+  geom_point(data = calib_baseline, aes(color="green", shape = "green"), size = 2) +
   geom_line(data = calib_ensemble, aes(color="red")) +
-  geom_point(data = calib_ensemble, aes(color="red"), size = 2) +
+  geom_point(data = calib_ensemble, aes(color="red", shape = "red"), size = 2) +
   xlab("Expected Coverage") + ylab("Observed Coverage") + 
   scale_color_identity(name = NULL, 
                        breaks = c("blue", "green", "red"), 
                        labels = c("Average of all models", "COVIDhub-baseline","COVIDhub-ensemble"),
                        guide = "legend") +
+  scale_shape_manual(name = NULL,
+                     values = c(19, 15, 17),
+                     labels = c("Average of all models", "COVIDhub-baseline","COVIDhub-ensemble")) +
   guides(group = FALSE) +
   scale_x_continuous(labels = seq(0,1,0.2), breaks = seq(0,1,0.2)) +
   scale_y_continuous(labels = seq(0,1,0.2), breaks = seq(0,1,0.2)) + 

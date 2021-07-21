@@ -2,7 +2,6 @@
 
 library(lubridate)
 library(tidyverse)
-library(ggrepel) # need install from github I think.
 library(covidHubUtils)
 library(surveillance)
  
@@ -112,73 +111,17 @@ pairwise_scores <- tab %>%
 scores_full <- merge(fcast_count_full, pairwise_scores) %>%
   rename_at(vars(-model), ~ paste0(., '.full'))
 
-#aANALYSIS 2
-##Comparison all models 2020
-fcast_count_2020 <- inc_scores %>%
-  filter(forecast_date <= as.Date("2020-12-31")) %>%
-  group_by(model) %>%
-  summarise(n_forecasts = n())   %>%
-  ungroup() %>%
-  mutate(max_forecasts = max(n_forecasts)) %>%
-  group_by(model) %>%
-  summarise(percent_total_forecasts = round(((n_forecasts /max_forecasts)*100),2))
-
-scores <- inc_scores %>%
-  filter(forecast_date <= "2020-12-31") %>%
-  select("model", "forecast_date", "location", "horizon", "abs_error", "wis")
-
-# the included models:
-models <- unique(scores$model)
-
-# matrices to store:
-results_ratio <- results_pval <- results_pval_fcd <- matrix(ncol = length(models),
-                                                            nrow = length(models),
-                                                            dimnames = list(models, models))
-
-for(mx in seq_along(models)){
-  for(my in 1:mx){
-    pwc <- pairwise_comparison_wis(scores = scores, mx = models[mx], my = models[my],
-                               permutation_test = FALSE)
-    results_ratio[mx, my] <- pwc$ratio
-    results_ratio[my, mx] <- 1/pwc$ratio
-  }
-}
-
-ind_baseline <- which(rownames(results_ratio) == "COVIDhub-baseline")
-geom_mean_ratios <- exp(rowMeans(log(results_ratio[, -ind_baseline]), na.rm = TRUE))
-ratios_baseline <- results_ratio[, "COVIDhub-baseline"]
-ratios_baseline2 <- geom_mean_ratios/geom_mean_ratios["COVIDhub-baseline"]
-
-tab <- data.frame(model = names(geom_mean_ratios),
-                  geom_mean_ratios = geom_mean_ratios,
-                  ratios_baseline = ratios_baseline,
-                  ratios_baseline2 = ratios_baseline2)
-
-tab <- tab[order(tab$ratios_baseline2), ]
-
-pairwise_scores <- tab %>%
-  mutate(relative_wis = round(ratios_baseline2, 2)) %>%
-  select(model, relative_wis) 
 
 
-# matrices to store:
-results_ratio <- results_pval <- results_pval_fcd <- matrix(ncol = length(models),
-                                                            nrow = length(models),
-                                                            dimnames = list(models, models))
-
-#Merge count and pairwise 
-scores_2020 <- merge(fcast_count_2020, pairwise_scores) %>%
-  rename_at(vars(-model), ~ paste0(., '.2020all'))
-
-##Sensitivity Analysis 3: Models from 2020 with only max 8 missing weeks
-fcast_count_8missing <- inc_scores %>%
-  filter(forecast_date <= as.Date("2020-12-31")) %>% 
+##ANALYSIS 2:
+#MISSING 16 WEEKS (70% COMPLETE)
+fcast_count_16missing <- inc_scores %>%
   group_by(model, target_end_date_1wk_ahead, horizon) %>%
   mutate(first_per_week = ifelse(row_number() == 1, 1, 0)) %>% ungroup() %>%
   group_by(model) %>% 
   mutate(n_weeks = sum(horizon == 4 & first_per_week == 1 )) %>% #count number of weeks that have a horizon of 4 (if grouped by horizon there are different numbers of weeks per horizon)
   ungroup() %>%
-  filter(n_weeks >= max(n_weeks -8)) %>% #remove rows in which the number of weeks is more than 8 less than the max 
+  filter(n_weeks >= max(n_weeks -16)) %>% #remove rows in which the number of weeks is more than 16 less than the max 
   group_by(model) %>%
   summarise(n_forecasts = n()) %>%
   ungroup() %>%
@@ -187,13 +130,12 @@ fcast_count_8missing <- inc_scores %>%
   summarise(percent_total_forecasts = round(((n_forecasts /max_forecasts)*100),2))
 
 scores <- inc_scores %>%
-  filter(forecast_date <= as.Date("2020-12-31")) %>% 
   group_by(model, target_end_date_1wk_ahead, horizon) %>%
   mutate(first_per_week = ifelse(row_number() == 1, 1, 0)) %>% ungroup() %>%
   group_by(model) %>% 
   mutate(n_weeks = sum(horizon == 4 & first_per_week == 1 )) %>% #count number of weeks that have a horizon of 4 (if grouped by horizon there are different numbers of weeks per horizon)
   ungroup() %>%
-  filter(n_weeks >= max(n_weeks -8)) %>% ungroup() %>%
+  filter(n_weeks >= max(n_weeks -16)) %>% ungroup() %>%
   select("model", "forecast_date", "location", "horizon", "abs_error", "wis")
 
 # the included models:
@@ -234,82 +176,20 @@ pairwise_scores <- tab %>%
   select(model, relative_wis) 
 
 #Merge count and Pairwise 
-scores_8m <- merge(fcast_count_8missing, pairwise_scores) %>%
-  rename_at(vars(-model), ~ paste0(., '.2020_8m'))
+scores_16m <- merge(fcast_count_16missing, pairwise_scores) %>%
+  rename_at(vars(-model), ~ paste0(., '.2020_16m'))
 
 
 
-#aANALYSIS 4
-##Comparison all models 2021
-fcast_count_2021 <- inc_scores %>%
-  filter(forecast_date > as.Date("2020-12-31")) %>%
-  group_by(model) %>%
-  summarise(n_forecasts = n())   %>%
-  ungroup() %>%
-  mutate(max_forecasts = max(n_forecasts)) %>%
-  group_by(model) %>%
-  summarise(percent_total_forecasts = round(((n_forecasts /max_forecasts)*100),2))
-
-scores <- inc_scores %>%
-  filter(forecast_date > "2020-12-31") %>%
-  select("model", "forecast_date", "location", "horizon", "abs_error", "wis")
-
-# the included models:
-models <- unique(scores$model)
-
-# matrices to store:
-results_ratio <- results_pval <- results_pval_fcd <- matrix(ncol = length(models),
-                                                            nrow = length(models),
-                                                            dimnames = list(models, models))
-
-for(mx in seq_along(models)){
-  for(my in 1:mx){
-    pwc <- pairwise_comparison_wis(scores = scores, mx = models[mx], my = models[my],
-                                   permutation_test = FALSE)
-    results_ratio[mx, my] <- pwc$ratio
-    results_ratio[my, mx] <- 1/pwc$ratio
-  }
-}
-
-ind_baseline <- which(rownames(results_ratio) == "COVIDhub-baseline")
-geom_mean_ratios <- exp(rowMeans(log(results_ratio[, -ind_baseline]), na.rm = TRUE))
-ratios_baseline <- results_ratio[, "COVIDhub-baseline"]
-ratios_baseline2 <- geom_mean_ratios/geom_mean_ratios["COVIDhub-baseline"]
-
-tab <- data.frame(model = names(geom_mean_ratios),
-                  geom_mean_ratios = geom_mean_ratios,
-                  ratios_baseline = ratios_baseline,
-                  ratios_baseline2 = ratios_baseline2)
-
-tab <- tab[order(tab$ratios_baseline2), ]
-
-pairwise_scores <- tab %>%
-  mutate(relative_wis = round(ratios_baseline2, 2)) %>%
-  select(model, relative_wis) 
-
-
-# matrices to store:
-results_ratio <- results_pval <- results_pval_fcd <- matrix(ncol = length(models),
-                                                            nrow = length(models),
-                                                            dimnames = list(models, models))
-
-#Merge count and pairwise 
-scores_2021 <- merge(fcast_count_2021, pairwise_scores) %>%
-  rename_at(vars(-model), ~ paste0(., '.2021'))
-
-
-
-##ANALYSIS 5
-
-##Sensitivity Analysis 3: Models from 2020 with only max 8 missing weeks
-fcast_count_8missing_2021 <- inc_scores %>%
-  filter(forecast_date > as.Date("2020-12-31")) %>% 
+##ANALYSIS 3:
+#MISSING 6 WEEKS (89% COMPLETE)
+fcast_count_6missing <- inc_scores %>%
   group_by(model, target_end_date_1wk_ahead, horizon) %>%
   mutate(first_per_week = ifelse(row_number() == 1, 1, 0)) %>% ungroup() %>%
   group_by(model) %>% 
   mutate(n_weeks = sum(horizon == 4 & first_per_week == 1 )) %>% #count number of weeks that have a horizon of 4 (if grouped by horizon there are different numbers of weeks per horizon)
   ungroup() %>%
-  filter(n_weeks >= max(n_weeks -8)) %>% #remove rows in which the number of weeks is more than 8 less than the max 
+  filter(n_weeks >= max(n_weeks -6)) %>% #remove rows in which the number of weeks is more than 6 less than the max 
   group_by(model) %>%
   summarise(n_forecasts = n()) %>%
   ungroup() %>%
@@ -318,13 +198,12 @@ fcast_count_8missing_2021 <- inc_scores %>%
   summarise(percent_total_forecasts = round(((n_forecasts /max_forecasts)*100),2))
 
 scores <- inc_scores %>%
-  filter(forecast_date > as.Date("2020-12-31")) %>% 
   group_by(model, target_end_date_1wk_ahead, horizon) %>%
   mutate(first_per_week = ifelse(row_number() == 1, 1, 0)) %>% ungroup() %>%
   group_by(model) %>% 
   mutate(n_weeks = sum(horizon == 4 & first_per_week == 1 )) %>% #count number of weeks that have a horizon of 4 (if grouped by horizon there are different numbers of weeks per horizon)
   ungroup() %>%
-  filter(n_weeks >= max(n_weeks -8)) %>% ungroup() %>%
+  filter(n_weeks >= max(n_weeks -6)) %>% ungroup() %>%
   select("model", "forecast_date", "location", "horizon", "abs_error", "wis")
 
 # the included models:
@@ -365,14 +244,482 @@ pairwise_scores <- tab %>%
   select(model, relative_wis) 
 
 #Merge count and Pairwise 
-scores_8m_2021 <- merge(fcast_count_8missing_2021, pairwise_scores) %>%
-  rename_at(vars(-model), ~ paste0(., '.2021_8m'))
+scores_6m <- merge(fcast_count_6missing, pairwise_scores) %>%
+  rename_at(vars(-model), ~ paste0(., '.2020_6m'))
 
-#MERGING ALL 5 ANALYSES 
+# #MERGING ALL 3 ANALYSES 
 merge_all <- scores_full %>%
-  full_join(scores_2020) %>%
-  full_join(scores_8m) %>%
-  full_join(scores_2021) %>%
-  full_join(scores_8m_2021)
+  full_join(scores_16m) %>%
+  full_join(scores_6m) 
 
-write_csv(merge_all, "paper-inputs/sensitivity_table2_update2.csv")
+write_csv(merge_all, "paper-inputs/sensitivity_analysis2.csv")
+
+
+
+
+
+# ##ANALYSIS 3:
+# #MISSING 10 WEEKS (81% COMPLETE)
+# fcast_count_10missing <- inc_scores %>%
+#   group_by(model, target_end_date_1wk_ahead, horizon) %>%
+#   mutate(first_per_week = ifelse(row_number() == 1, 1, 0)) %>% ungroup() %>%
+#   group_by(model) %>% 
+#   mutate(n_weeks = sum(horizon == 4 & first_per_week == 1 )) %>% #count number of weeks that have a horizon of 4 (if grouped by horizon there are different numbers of weeks per horizon)
+#   ungroup() %>%
+#   filter(n_weeks >= max(n_weeks -10)) %>% #remove rows in which the number of weeks is more than 10 less than the max 
+#   group_by(model) %>%
+#   summarise(n_forecasts = n()) %>%
+#   ungroup() %>%
+#   mutate(max_forecasts = max(n_forecasts)) %>%
+#   group_by(model) %>%
+#   summarise(percent_total_forecasts = round(((n_forecasts /max_forecasts)*100),2))
+# 
+# scores <- inc_scores %>%
+#   group_by(model, target_end_date_1wk_ahead, horizon) %>%
+#   mutate(first_per_week = ifelse(row_number() == 1, 1, 0)) %>% ungroup() %>%
+#   group_by(model) %>% 
+#   mutate(n_weeks = sum(horizon == 4 & first_per_week == 1 )) %>% #count number of weeks that have a horizon of 4 (if grouped by horizon there are different numbers of weeks per horizon)
+#   ungroup() %>%
+#   filter(n_weeks >= max(n_weeks -10)) %>% ungroup() %>%
+#   select("model", "forecast_date", "location", "horizon", "abs_error", "wis")
+# 
+# # the included models:
+# models <- unique(scores$model)
+# 
+# # matrices to store:
+# results_ratio <- results_pval <- results_pval_fcd <- matrix(ncol = length(models),
+#                                                             nrow = length(models),
+#                                                             dimnames = list(models, models))
+# 
+# for(mx in seq_along(models)){
+#   for(my in 1:mx){
+#     pwc <- pairwise_comparison_wis(scores = scores, mx = models[mx], my = models[my],
+#                                    permutation_test = FALSE)
+#     results_ratio[mx, my] <- pwc$ratio
+#     results_ratio[my, mx] <- 1/pwc$ratio
+#   }
+# }
+# 
+# 
+# ind_baseline <- which(rownames(results_ratio) == "COVIDhub-baseline")
+# geom_mean_ratios <- exp(rowMeans(log(results_ratio[, -ind_baseline]), na.rm = TRUE))
+# ratios_baseline <- results_ratio[, "COVIDhub-baseline"]
+# ratios_baseline2 <- geom_mean_ratios/geom_mean_ratios["COVIDhub-baseline"]
+# 
+# tab <- data.frame(model = names(geom_mean_ratios),
+#                   geom_mean_ratios = geom_mean_ratios,
+#                   ratios_baseline = ratios_baseline,
+#                   ratios_baseline2 = ratios_baseline2)
+# 
+# tab <- tab[order(tab$ratios_baseline2), ]
+# 
+# 
+# tab #final column is theta^*_iB
+# 
+# pairwise_scores <- tab %>%
+#   mutate(relative_wis = round(ratios_baseline2, 2)) %>%
+#   select(model, relative_wis) 
+# 
+# #Merge count and Pairwise 
+# scores_10m <- merge(fcast_count_10missing, pairwise_scores) %>%
+#   rename_at(vars(-model), ~ paste0(., '.2020_10m'))
+# ##ANALYSIS 3:
+# #MISSING 10 WEEKS (81% COMPLETE)
+# fcast_count_10missing <- inc_scores %>%
+#   group_by(model, target_end_date_1wk_ahead, horizon) %>%
+#   mutate(first_per_week = ifelse(row_number() == 1, 1, 0)) %>% ungroup() %>%
+#   group_by(model) %>% 
+#   mutate(n_weeks = sum(horizon == 4 & first_per_week == 1 )) %>% #count number of weeks that have a horizon of 4 (if grouped by horizon there are different numbers of weeks per horizon)
+#   ungroup() %>%
+#   filter(n_weeks >= max(n_weeks -10)) %>% #remove rows in which the number of weeks is more than 10 less than the max 
+#   group_by(model) %>%
+#   summarise(n_forecasts = n()) %>%
+#   ungroup() %>%
+#   mutate(max_forecasts = max(n_forecasts)) %>%
+#   group_by(model) %>%
+#   summarise(percent_total_forecasts = round(((n_forecasts /max_forecasts)*100),2))
+# 
+# scores <- inc_scores %>%
+#   group_by(model, target_end_date_1wk_ahead, horizon) %>%
+#   mutate(first_per_week = ifelse(row_number() == 1, 1, 0)) %>% ungroup() %>%
+#   group_by(model) %>% 
+#   mutate(n_weeks = sum(horizon == 4 & first_per_week == 1 )) %>% #count number of weeks that have a horizon of 4 (if grouped by horizon there are different numbers of weeks per horizon)
+#   ungroup() %>%
+#   filter(n_weeks >= max(n_weeks -10)) %>% ungroup() %>%
+#   select("model", "forecast_date", "location", "horizon", "abs_error", "wis")
+# 
+# # the included models:
+# models <- unique(scores$model)
+# 
+# # matrices to store:
+# results_ratio <- results_pval <- results_pval_fcd <- matrix(ncol = length(models),
+#                                                             nrow = length(models),
+#                                                             dimnames = list(models, models))
+# 
+# for(mx in seq_along(models)){
+#   for(my in 1:mx){
+#     pwc <- pairwise_comparison_wis(scores = scores, mx = models[mx], my = models[my],
+#                                    permutation_test = FALSE)
+#     results_ratio[mx, my] <- pwc$ratio
+#     results_ratio[my, mx] <- 1/pwc$ratio
+#   }
+# }
+# 
+# 
+# ind_baseline <- which(rownames(results_ratio) == "COVIDhub-baseline")
+# geom_mean_ratios <- exp(rowMeans(log(results_ratio[, -ind_baseline]), na.rm = TRUE))
+# ratios_baseline <- results_ratio[, "COVIDhub-baseline"]
+# ratios_baseline2 <- geom_mean_ratios/geom_mean_ratios["COVIDhub-baseline"]
+# 
+# tab <- data.frame(model = names(geom_mean_ratios),
+#                   geom_mean_ratios = geom_mean_ratios,
+#                   ratios_baseline = ratios_baseline,
+#                   ratios_baseline2 = ratios_baseline2)
+# 
+# tab <- tab[order(tab$ratios_baseline2), ]
+# 
+# 
+# tab #final column is theta^*_iB
+# 
+# pairwise_scores <- tab %>%
+#   mutate(relative_wis = round(ratios_baseline2, 2)) %>%
+#   select(model, relative_wis) 
+# 
+# #Merge count and Pairwise 
+# scores_10m <- merge(fcast_count_10missing, pairwise_scores) %>%
+#   rename_at(vars(-model), ~ paste0(., '.2020_10m'))
+
+#OUTDATED CODE 
+# 
+# #ANALYSIS 2
+# ##Comparison all models 2020
+# fcast_count_2020 <- inc_scores %>%
+#   filter(forecast_date <= as.Date("2020-12-31")) %>%
+#   group_by(model) %>%
+#   summarise(n_forecasts = n())   %>%
+#   ungroup() %>%
+#   mutate(max_forecasts = max(n_forecasts)) %>%
+#   group_by(model) %>%
+#   summarise(percent_total_forecasts = round(((n_forecasts /max_forecasts)*100),2))
+# 
+# scores <- inc_scores %>%
+#   filter(forecast_date <= "2020-12-31") %>%
+#   select("model", "forecast_date", "location", "horizon", "abs_error", "wis")
+# 
+# # the included models:
+# models <- unique(scores$model)
+# 
+# # matrices to store:
+# results_ratio <- results_pval <- results_pval_fcd <- matrix(ncol = length(models),
+#                                                             nrow = length(models),
+#                                                             dimnames = list(models, models))
+# 
+# for(mx in seq_along(models)){
+#   for(my in 1:mx){
+#     pwc <- pairwise_comparison_wis(scores = scores, mx = models[mx], my = models[my],
+#                                permutation_test = FALSE)
+#     results_ratio[mx, my] <- pwc$ratio
+#     results_ratio[my, mx] <- 1/pwc$ratio
+#   }
+# }
+# 
+# ind_baseline <- which(rownames(results_ratio) == "COVIDhub-baseline")
+# geom_mean_ratios <- exp(rowMeans(log(results_ratio[, -ind_baseline]), na.rm = TRUE))
+# ratios_baseline <- results_ratio[, "COVIDhub-baseline"]
+# ratios_baseline2 <- geom_mean_ratios/geom_mean_ratios["COVIDhub-baseline"]
+# 
+# tab <- data.frame(model = names(geom_mean_ratios),
+#                   geom_mean_ratios = geom_mean_ratios,
+#                   ratios_baseline = ratios_baseline,
+#                   ratios_baseline2 = ratios_baseline2)
+# 
+# tab <- tab[order(tab$ratios_baseline2), ]
+# 
+# pairwise_scores <- tab %>%
+#   mutate(relative_wis = round(ratios_baseline2, 2)) %>%
+#   select(model, relative_wis) 
+# 
+# 
+# # matrices to store:
+# results_ratio <- results_pval <- results_pval_fcd <- matrix(ncol = length(models),
+#                                                             nrow = length(models),
+#                                                             dimnames = list(models, models))
+# 
+# #Merge count and pairwise 
+# scores_2020 <- merge(fcast_count_2020, pairwise_scores) %>%
+#   rename_at(vars(-model), ~ paste0(., '.2020all'))
+# 
+# ##Sensitivity Analysis 3: Models from 2020 with only max 8 missing weeks
+# fcast_count_8missing <- inc_scores %>%
+#   filter(forecast_date <= as.Date("2020-12-31")) %>% 
+#   group_by(model, target_end_date_1wk_ahead, horizon) %>%
+#   mutate(first_per_week = ifelse(row_number() == 1, 1, 0)) %>% ungroup() %>%
+#   group_by(model) %>% 
+#   mutate(n_weeks = sum(horizon == 4 & first_per_week == 1 )) %>% #count number of weeks that have a horizon of 4 (if grouped by horizon there are different numbers of weeks per horizon)
+#   ungroup() %>%
+#   filter(n_weeks >= max(n_weeks -8)) %>% #remove rows in which the number of weeks is more than 8 less than the max 
+#   group_by(model) %>%
+#   summarise(n_forecasts = n()) %>%
+#   ungroup() %>%
+#   mutate(max_forecasts = max(n_forecasts)) %>%
+#   group_by(model) %>%
+#   summarise(percent_total_forecasts = round(((n_forecasts /max_forecasts)*100),2))
+# 
+# scores <- inc_scores %>%
+#   filter(forecast_date <= as.Date("2020-12-31")) %>% 
+#   group_by(model, target_end_date_1wk_ahead, horizon) %>%
+#   mutate(first_per_week = ifelse(row_number() == 1, 1, 0)) %>% ungroup() %>%
+#   group_by(model) %>% 
+#   mutate(n_weeks = sum(horizon == 4 & first_per_week == 1 )) %>% #count number of weeks that have a horizon of 4 (if grouped by horizon there are different numbers of weeks per horizon)
+#   ungroup() %>%
+#   filter(n_weeks >= max(n_weeks -8)) %>% ungroup() %>%
+#   select("model", "forecast_date", "location", "horizon", "abs_error", "wis")
+# 
+# # the included models:
+# models <- unique(scores$model)
+# 
+# # matrices to store:
+# results_ratio <- results_pval <- results_pval_fcd <- matrix(ncol = length(models),
+#                                                             nrow = length(models),
+#                                                             dimnames = list(models, models))
+# 
+# for(mx in seq_along(models)){
+#   for(my in 1:mx){
+#     pwc <- pairwise_comparison_wis(scores = scores, mx = models[mx], my = models[my],
+#                                    permutation_test = FALSE)
+#     results_ratio[mx, my] <- pwc$ratio
+#     results_ratio[my, mx] <- 1/pwc$ratio
+#   }
+# }
+# 
+# 
+# ind_baseline <- which(rownames(results_ratio) == "COVIDhub-baseline")
+# geom_mean_ratios <- exp(rowMeans(log(results_ratio[, -ind_baseline]), na.rm = TRUE))
+# ratios_baseline <- results_ratio[, "COVIDhub-baseline"]
+# ratios_baseline2 <- geom_mean_ratios/geom_mean_ratios["COVIDhub-baseline"]
+# 
+# tab <- data.frame(model = names(geom_mean_ratios),
+#                   geom_mean_ratios = geom_mean_ratios,
+#                   ratios_baseline = ratios_baseline,
+#                   ratios_baseline2 = ratios_baseline2)
+# 
+# tab <- tab[order(tab$ratios_baseline2), ]
+# 
+# 
+# tab #final column is theta^*_iB
+# 
+# pairwise_scores <- tab %>%
+#   mutate(relative_wis = round(ratios_baseline2, 2)) %>%
+#   select(model, relative_wis) 
+# 
+# #Merge count and Pairwise 
+# scores_8m <- merge(fcast_count_8missing, pairwise_scores) %>%
+#   rename_at(vars(-model), ~ paste0(., '.2020_8m'))
+# 
+# 
+
+##Sensitivity Analysis 3: Models from 2020 with only max 8 missing weeks
+# fcast_count_8missing <- inc_scores %>%
+#   filter(forecast_date <= as.Date("2020-12-31")) %>% 
+#   group_by(model, target_end_date_1wk_ahead, horizon) %>%
+#   mutate(first_per_week = ifelse(row_number() == 1, 1, 0)) %>% ungroup() %>%
+#   group_by(model) %>% 
+#   mutate(n_weeks = sum(horizon == 4 & first_per_week == 1 )) %>% #count number of weeks that have a horizon of 4 (if grouped by horizon there are different numbers of weeks per horizon)
+#   ungroup() %>%
+#   filter(n_weeks >= max(n_weeks -8)) %>% #remove rows in which the number of weeks is more than 8 less than the max 
+#   group_by(model) %>%
+#   summarise(n_forecasts = n()) %>%
+#   ungroup() %>%
+#   mutate(max_forecasts = max(n_forecasts)) %>%
+#   group_by(model) %>%
+#   summarise(percent_total_forecasts = round(((n_forecasts /max_forecasts)*100),2))
+# 
+# scores <- inc_scores %>%
+#   filter(forecast_date <= as.Date("2020-12-31")) %>% 
+#   group_by(model, target_end_date_1wk_ahead, horizon) %>%
+#   mutate(first_per_week = ifelse(row_number() == 1, 1, 0)) %>% ungroup() %>%
+#   group_by(model) %>% 
+#   mutate(n_weeks = sum(horizon == 4 & first_per_week == 1 )) %>% #count number of weeks that have a horizon of 4 (if grouped by horizon there are different numbers of weeks per horizon)
+#   ungroup() %>%
+#   filter(n_weeks >= max(n_weeks -8)) %>% ungroup() %>%
+#   select("model", "forecast_date", "location", "horizon", "abs_error", "wis")
+# 
+# # the included models:
+# models <- unique(scores$model)
+# 
+# # matrices to store:
+# results_ratio <- results_pval <- results_pval_fcd <- matrix(ncol = length(models),
+#                                                             nrow = length(models),
+#                                                             dimnames = list(models, models))
+# 
+# for(mx in seq_along(models)){
+#   for(my in 1:mx){
+#     pwc <- pairwise_comparison_wis(scores = scores, mx = models[mx], my = models[my],
+#                                    permutation_test = FALSE)
+#     results_ratio[mx, my] <- pwc$ratio
+#     results_ratio[my, mx] <- 1/pwc$ratio
+#   }
+# }
+# 
+# 
+# ind_baseline <- which(rownames(results_ratio) == "COVIDhub-baseline")
+# geom_mean_ratios <- exp(rowMeans(log(results_ratio[, -ind_baseline]), na.rm = TRUE))
+# ratios_baseline <- results_ratio[, "COVIDhub-baseline"]
+# ratios_baseline2 <- geom_mean_ratios/geom_mean_ratios["COVIDhub-baseline"]
+# 
+# tab <- data.frame(model = names(geom_mean_ratios),
+#                   geom_mean_ratios = geom_mean_ratios,
+#                   ratios_baseline = ratios_baseline,
+#                   ratios_baseline2 = ratios_baseline2)
+# 
+# tab <- tab[order(tab$ratios_baseline2), ]
+# 
+# 
+# tab #final column is theta^*_iB
+# 
+# pairwise_scores <- tab %>%
+#   mutate(relative_wis = round(ratios_baseline2, 2)) %>%
+#   select(model, relative_wis) 
+# 
+# #Merge count and Pairwise 
+# scores_8m <- merge(fcast_count_8missing, pairwise_scores) %>%
+#   rename_at(vars(-model), ~ paste0(., '.2020_8m'))
+# 
+# 
+# #ANALYSIS 4
+# ##Comparison all models 2021
+# fcast_count_2021 <- inc_scores %>%
+#   filter(forecast_date > as.Date("2020-12-31")) %>%
+#   group_by(model) %>%
+#   summarise(n_forecasts = n())   %>%
+#   ungroup() %>%
+#   mutate(max_forecasts = max(n_forecasts)) %>%
+#   group_by(model) %>%
+#   summarise(percent_total_forecasts = round(((n_forecasts /max_forecasts)*100),2))
+# 
+# scores <- inc_scores %>%
+#   filter(forecast_date > "2020-12-31") %>%
+#   select("model", "forecast_date", "location", "horizon", "abs_error", "wis")
+# 
+# # the included models:
+# models <- unique(scores$model)
+# 
+# # matrices to store:
+# results_ratio <- results_pval <- results_pval_fcd <- matrix(ncol = length(models),
+#                                                             nrow = length(models),
+#                                                             dimnames = list(models, models))
+# 
+# for(mx in seq_along(models)){
+#   for(my in 1:mx){
+#     pwc <- pairwise_comparison_wis(scores = scores, mx = models[mx], my = models[my],
+#                                    permutation_test = FALSE)
+#     results_ratio[mx, my] <- pwc$ratio
+#     results_ratio[my, mx] <- 1/pwc$ratio
+#   }
+# }
+# 
+# ind_baseline <- which(rownames(results_ratio) == "COVIDhub-baseline")
+# geom_mean_ratios <- exp(rowMeans(log(results_ratio[, -ind_baseline]), na.rm = TRUE))
+# ratios_baseline <- results_ratio[, "COVIDhub-baseline"]
+# ratios_baseline2 <- geom_mean_ratios/geom_mean_ratios["COVIDhub-baseline"]
+# 
+# tab <- data.frame(model = names(geom_mean_ratios),
+#                   geom_mean_ratios = geom_mean_ratios,
+#                   ratios_baseline = ratios_baseline,
+#                   ratios_baseline2 = ratios_baseline2)
+# 
+# tab <- tab[order(tab$ratios_baseline2), ]
+# 
+# pairwise_scores <- tab %>%
+#   mutate(relative_wis = round(ratios_baseline2, 2)) %>%
+#   select(model, relative_wis) 
+# 
+# 
+# # matrices to store:
+# results_ratio <- results_pval <- results_pval_fcd <- matrix(ncol = length(models),
+#                                                             nrow = length(models),
+#                                                             dimnames = list(models, models))
+# 
+# #Merge count and pairwise 
+# scores_2021 <- merge(fcast_count_2021, pairwise_scores) %>%
+#   rename_at(vars(-model), ~ paste0(., '.2021'))
+# 
+# 
+# 
+# ##ANALYSIS 5
+# 
+# ##Sensitivity Analysis 3: Models from 2020 with only max 8 missing weeks
+# fcast_count_8missing_2021 <- inc_scores %>%
+#   filter(forecast_date > as.Date("2020-12-31")) %>% 
+#   group_by(model, target_end_date_1wk_ahead, horizon) %>%
+#   mutate(first_per_week = ifelse(row_number() == 1, 1, 0)) %>% ungroup() %>%
+#   group_by(model) %>% 
+#   mutate(n_weeks = sum(horizon == 4 & first_per_week == 1 )) %>% #count number of weeks that have a horizon of 4 (if grouped by horizon there are different numbers of weeks per horizon)
+#   ungroup() %>%
+#   filter(n_weeks >= max(n_weeks -8)) %>% #remove rows in which the number of weeks is more than 8 less than the max 
+#   group_by(model) %>%
+#   summarise(n_forecasts = n()) %>%
+#   ungroup() %>%
+#   mutate(max_forecasts = max(n_forecasts)) %>%
+#   group_by(model) %>%
+#   summarise(percent_total_forecasts = round(((n_forecasts /max_forecasts)*100),2))
+# 
+# scores <- inc_scores %>%
+#   filter(forecast_date > as.Date("2020-12-31")) %>% 
+#   group_by(model, target_end_date_1wk_ahead, horizon) %>%
+#   mutate(first_per_week = ifelse(row_number() == 1, 1, 0)) %>% ungroup() %>%
+#   group_by(model) %>% 
+#   mutate(n_weeks = sum(horizon == 4 & first_per_week == 1 )) %>% #count number of weeks that have a horizon of 4 (if grouped by horizon there are different numbers of weeks per horizon)
+#   ungroup() %>%
+#   filter(n_weeks >= max(n_weeks -8)) %>% ungroup() %>%
+#   select("model", "forecast_date", "location", "horizon", "abs_error", "wis")
+# 
+# # the included models:
+# models <- unique(scores$model)
+# 
+# # matrices to store:
+# results_ratio <- results_pval <- results_pval_fcd <- matrix(ncol = length(models),
+#                                                             nrow = length(models),
+#                                                             dimnames = list(models, models))
+# 
+# for(mx in seq_along(models)){
+#   for(my in 1:mx){
+#     pwc <- pairwise_comparison_wis(scores = scores, mx = models[mx], my = models[my],
+#                                    permutation_test = FALSE)
+#     results_ratio[mx, my] <- pwc$ratio
+#     results_ratio[my, mx] <- 1/pwc$ratio
+#   }
+# }
+# 
+# 
+# ind_baseline <- which(rownames(results_ratio) == "COVIDhub-baseline")
+# geom_mean_ratios <- exp(rowMeans(log(results_ratio[, -ind_baseline]), na.rm = TRUE))
+# ratios_baseline <- results_ratio[, "COVIDhub-baseline"]
+# ratios_baseline2 <- geom_mean_ratios/geom_mean_ratios["COVIDhub-baseline"]
+# 
+# tab <- data.frame(model = names(geom_mean_ratios),
+#                   geom_mean_ratios = geom_mean_ratios,
+#                   ratios_baseline = ratios_baseline,
+#                   ratios_baseline2 = ratios_baseline2)
+# 
+# tab <- tab[order(tab$ratios_baseline2), ]
+# 
+# 
+# tab #final column is theta^*_iB
+# 
+# pairwise_scores <- tab %>%
+#   mutate(relative_wis = round(ratios_baseline2, 2)) %>%
+#   select(model, relative_wis) 
+# 
+# #Merge count and Pairwise 
+# scores_8m_2021 <- merge(fcast_count_8missing_2021, pairwise_scores) %>%
+#   rename_at(vars(-model), ~ paste0(., '.2021_8m'))
+# 
+# 
+# #MERGING ALL 5 ANALYSES 
+# merge_all <- scores_full %>%
+#   full_join(scores_2020) %>%
+#   full_join(scores_8m) %>%
+#   full_join(scores_2021) %>%
+# full_join(scores_8m_2021)
+

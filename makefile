@@ -15,7 +15,7 @@ paper-inputs/table-overall-performance.csv: paper-inputs/inc-scores.csv code/Tab
 	Rscript code/Table-PI_relative_WIS_phase.R
 
 # update table for sensitivity analysis 2
-paper-inputs/sensitivity_table2_update2.csv: paper-inputs/inc-scores.csv 
+paper-inputs/sensitivity_analysis2.csv: paper-inputs/inc-scores.csv 
 	Rscript code/Table-PI_relative_WIS-sensitivityAnalysis.R
 
 	
