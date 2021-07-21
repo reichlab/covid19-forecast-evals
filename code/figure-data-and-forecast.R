@@ -56,7 +56,8 @@ p1_updated_no_legend <- p1_updated + theme(legend.position='none')
 
 ## plot of true data by state, tiled
 truth_dat <- load_truth(truth_source = "JHU",
-  target_variable = c("inc death", "cum death")) %>%
+  target_variable = c("inc death", "cum death"),
+  as_of = truth_date) %>%
   filter(geo_type == "state") %>%
   filter(!is.na(value)) %>%
   mutate(death_rate_per_100k = value/population*100000,
