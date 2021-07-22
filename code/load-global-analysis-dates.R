@@ -2,7 +2,7 @@ require(covidHubUtils)
 require(tidyverse)
 
 ## retrieval date for truth data used in score calculation
-truth_date <- as.Date("2021-05-25") #previously 2021-05-03 
+truth_date <- as.Date("2021-05-25") #previously 2021-05-03
 
 ## spreadsheet for keeping track of dates
 ## https://docs.google.com/spreadsheets/d/1u6PTlQoNgIyWwE_msswftg2P3U0JOmt5pwIRciAq0Wk/edit#gid=1071484175
