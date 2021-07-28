@@ -3,9 +3,20 @@
 #Load Libraries
 library(scoringutils)
 library(covidHubUtils)
-library(zoltr)
 library(tidyverse)
-source("score_forecasts_eyc_update.R")
+library(lubridate)
+library(DT)
+library(zoltr) ## devtools::install_github("reichlab/zoltr")
+library(scico)
+library(dplyr)
+
+
+library(htmltools)
+
+# new libraries
+library(crosstalk)
+library(plotly)
+
 
 #Get Date Boundaries
 
@@ -15,6 +26,7 @@ US_fips <- hub_locations %>%  filter(geo_type == "state") %>% filter(abbreviatio
 
 n_weeks_eval <- 10 #weeks included in evaluation
 n_weeks_submitted <- 5 #number of weeks needed for inclusion if no longer submitting
+n_weeks_history <- 26 # number of weeks for historical data
 
 #Important dates used
 last_eval_sat <- as.Date(calc_target_week_end_date(Sys.Date(), horizon = 0))
@@ -31,6 +43,9 @@ first_1wk_target_end_date  <- as.Date(calc_target_week_end_date(first_submission
 first_4wk_target_end_date  <- as.Date(calc_target_week_end_date(first_submission_date, horizon = 4)) #first horizon with all 4 target weeks evaluated 
 last_4wk_target_end_date <- as.Date(calc_target_week_end_date(last_submission_date, horizon = 4))
 
+forecast_mon <- lubridate::floor_date(Sys.Date(), unit = "week") + 1      #Even when running on Tuesday, will be Monday date (used so that there are not duplicated values for a forecast that has submitted multiple times in a week)
+first_mon_history <- forecast_mon - 7*n_weeks_history #First monday for historical data
+mondays <- seq(first_mon_history, last_eval_sat, by = "week")
 eval_sat <- c(first_eval_sat, last_eval_sat) #range of dates evaluated 
 
 models_primary_secondary <- get_model_designations(source = "zoltar") %>% filter(designation %in% c("secondary", "primary")) %>% pull(model)
@@ -46,14 +61,14 @@ truth_function <- function(x) {
     locations = the_locations)
 }
 
+truth_dat_case_all <- truth_function("inc case") 
+truth_dat_case <- truth_dat_case_all  %>%
+  filter(target_end_date >= first_mon_history)
+truth_dat_inc_all <- truth_function("inc death") 
+truth_dat_inc <- truth_dat_inc_all  %>%
+  filter(target_end_date >= first_mon_history)
 
-truth_dat_case <- truth_function("inc case")
-truth_dat_inc <- truth_function("inc death")
-
-#query forecast data from zoltar for all submission weeks. (used so that there are not duplicated values for a forecast that has submitted multiple times in a week)
-
-mondays <- seq(as.Date("2020-04-06"), last_eval_sat, by = "week")
-
+#query forecast data from zoltar for past 6 month submission weeks. (used so that there are not duplicated values for a forecast that has submitted multiple times in a week)
 forecasts_case <- map_dfr(
   mondays, function(the_weeks) {
     load_latest_forecasts(
@@ -67,9 +82,9 @@ forecasts_case <- map_dfr(
   }
 ) %>% filter(model %in% models_primary_secondary)
 
-
-forecasts_inc1 <- map_dfr(
-  mondays[1:10], function(the_weeks) {
+#iterate function
+forecasts_inc_function <- function(x,y) {map_dfr(
+  mondays[x:y], function(the_weeks) {
     load_latest_forecasts(
       models = c(models_primary_secondary),
       last_forecast_date = the_weeks,
@@ -80,48 +95,19 @@ forecasts_inc1 <- map_dfr(
       source = "zoltar")
   }
 )
+}
+lmonday<-length(mondays)
 
-forecasts_inc2 <- map_dfr(
-  mondays[11:20], function(the_weeks) {
-    load_latest_forecasts(
-      models = c(models_primary_secondary),
-      last_forecast_date = the_weeks,
-      forecast_date_window_size = 6,
-      locations = the_locations,
-      types = "quantile",
-      targets = paste(1:4, "wk ahead inc death"),
-      source = "zoltar")
-  }
-)
-
-forecasts_inc3 <- map_dfr(
-  mondays[21:30], function(the_weeks) {
-    load_latest_forecasts(
-      models = c(models_primary_secondary),
-      last_forecast_date = the_weeks,
-      forecast_date_window_size = 6,
-      locations = the_locations,
-      types = "quantile",
-      targets = paste(1:4, "wk ahead inc death"),
-      source = "zoltar")
-  }
-)
-
-forecasts_inc4 <- map_dfr(
-  mondays[31:length(mondays)], function(the_weeks) {
-    load_latest_forecasts(
-      models = c(models_primary_secondary),
-      last_forecast_date = the_weeks,
-      forecast_date_window_size = 6,
-      locations = the_locations,
-      types = "quantile",
-      targets = paste(1:4, "wk ahead inc death"),
-      source = "zoltar")
-  }
-)
+forecasts_inc1 <- forecasts_inc_function("1","10")
+forecasts_inc2 <- forecasts_inc_function("11","20")
+forecasts_inc3 <- forecasts_inc_function("21","26")
 
 
-forecasts_inc <- rbind(forecasts_inc1,forecasts_inc2,forecasts_inc3,forecasts_inc4) %>% filter(model %in% models_primary_secondary)
+# forecasts_inc1_update <-   unique(forecasts_inc1)%>%filter(model %in% models_primary_secondary)
+# forecasts_inc2_update <- unique(forecasts_inc2)%>%filter(model %in% models_primary_secondary)
+# forecasts_inc3_update <- unique(forecasts_inc3)%>%filter(model %in% models_primary_secondary)
+# forecasts_inc_update <- rbind(forecasts_inc1_update,forecasts_inc2_update,forecasts_inc3_update) %>% filter(model %in% models_primary_secondary)
+forecasts_inc <- rbind(forecasts_inc1,forecasts_inc2,forecasts_inc3) %>% filter(model %in% models_primary_secondary)
 
 forecasts_case_update <- unique(forecasts_case) #used to ensure there are no duplicates
 forecasts_inc_update <- unique(forecasts_inc)
@@ -129,17 +115,35 @@ forecasts_inc_update <- unique(forecasts_inc)
 
 #covidhub utils function to score the data
 
-score_case <- score_forecasts_eyc_update(forecasts = forecasts_case_update,
-                              truth = truth_dat_case,
-                              return_format = "long",
-                              use_median_as_point = TRUE)
+score_case <- score_forecasts(forecasts = forecasts_case_update,
+                                         truth = truth_dat_case,
+                                         return_format = "long",
+                                         use_median_as_point = TRUE)
 
-score_inc <- score_forecasts_eyc_update(forecasts = forecasts_inc_update,
+# score_case <- score_forecasts_eyc_update(forecasts = forecasts_case_update,
+#                               truth = truth_dat_case,
+#                               return_format = "long",
+#                               use_median_as_point = TRUE)
+
+# score_inc1 <- score_forecasts(forecasts = forecasts_inc1_update,
+#                                         truth = truth_dat_inc,
+#                                         return_format = "long",
+#                                         use_median_as_point = TRUE)
+# 
+# score_inc2 <- score_forecasts(forecasts = forecasts_inc2_update,
+#                               truth = truth_dat_inc,
+#                               return_format = "long",
+#                               use_median_as_point = TRUE)
+# 
+# score_inc3 <- score_forecasts(forecasts = forecasts_inc3_update,
+#                               truth = truth_dat_inc,
+#                               return_format = "long",
+#                               use_median_as_point = TRUE)
+# score_inc <- rbind(score_inc1,score_inc2,score_inc3)
+score_inc <- score_forecasts(forecasts = forecasts_inc_update,
                              truth = truth_dat_inc,
                              return_format = "long",
                              use_median_as_point = TRUE)
-
-
 # function to clean the datasets and add in columns to count the number of weeks, horizons, and locations
 mutate_scores <- function(x) {
   x %>%
@@ -172,11 +176,20 @@ score_inc_all <- mutate_scores(score_inc)
 
 
 #write rds of the data 
-save(truth_dat_case, file = "reports/truth_dat_case.rda")
-save(truth_dat_inc, file = "reports/truth_dat_inc.rda")
+save(truth_dat_case, file = "truth_dat_case.rda")
+save(truth_dat_inc, file = "truth_dat_inc.rda")
 
+save(truth_dat_case_all, file = "truth_dat_case_all.rda")
+save(truth_dat_inc_all, file = "truth_dat_inc_all.rda")
+
+# #write rds of the data 
+# save(truth_dat_case, file = "reports/truth_dat_case.rda")
+# save(truth_dat_inc, file = "reports/truth_dat_inc.rda")
 
 #write rda to save scores (this will be taken out if we use a csv pipeline)
-save(score_case_all, file = "reports/score_case_all.rda")
-save(score_inc_all, file = "reports/score_inc_all.rda")
+save(score_case_all, file = "score_case_all.rda")
+save(score_inc_all, file = "score_inc_all.rda")
 
+# #write rda to save scores (this will be taken out if we use a csv pipeline)
+# save(score_case_all, file = "reports/score_case_all.rda")
+# save(score_inc_all, file = "reports/score_inc_all.rda")
