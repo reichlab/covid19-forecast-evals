@@ -87,19 +87,19 @@ historical_accuracy_filter <- function(x) {
 #PLOTTING FUNCTIONS 
 
 #Plot truth data at US level
-plot_truth <- function(dat) {
+plot_truth <- function(dat,tar) {
   ggplot(data = dat, aes(x = target_end_date, y = value)) +
     #geom_line(color = "black") +
     geom_point() +
     geom_line(color = "black") +
-    scale_x_date(name = NULL, date_breaks="1 month", date_labels = "%b %d") +
+    scale_x_date(name = NULL, date_breaks="4 month", date_labels = "%b %d") +
     ylab("incident cases") +
-    labs(title = paste("Weekly reported COVID-19 data: \n Models evaluated from", first_eval_sat, "to", last_eval_sat, sep = " "),
+    labs(title = paste("Weekly reported COVID-19 ", tar),
          caption="source: JHU CSSE (observed data)")+
     theme(legend.position = c(.05,.95), legend.justification = c(0,1)) +
-    geom_vline(aes(xintercept= c(first_eval_sat -3.5), color = "Evaluated Date Boundaries"), linetype=2) +
-    geom_vline(aes(xintercept= c(last_eval_sat + 3.5), color = "Evaluated Date Boundaries"), linetype=2) +    
-    scale_color_manual(name = "", values = c("Evaluated Date Boundaries" = "blue"))# , "Submission Date Boundaries" = "red"))
+    geom_vline(aes(xintercept= c(first_eval_sat -3.5), color = "Recent Start Date"), linetype=2) +
+    geom_vline(aes(xintercept= c(first_eval_sat_hist - 3.5), color = "Histotic Start Date"), linetype=2) + 
+    scale_color_manual(name = "", values = c("Recent Start Date" = "blue","Historic Start Date" ="black"))# , "Submission Date Boundaries" = "red"))
 }
 
 
@@ -115,7 +115,8 @@ plot_n_location <- function(x){
           axis.title.x = element_text(size = 30),
           axis.text.y = element_text(size = 25),
           title = element_text(size = 20)) +
-    guides(fill=FALSE)
+    # guides(fill=FALSE)
+  guides(fill="none")
 }
 
 
@@ -397,7 +398,7 @@ wis_barplot_function <- function(x,y,order) {
   
   ggplot(wis_plot, aes(fill=score_name, y=mean_values, x=model)) + 
     geom_bar(position="stack", stat="identity", width = .75) +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 10),
           legend.title = element_blank(),
           axis.title.x =  element_blank()) +
     labs(y = "WIS components")
@@ -428,7 +429,8 @@ plot_byweek_function <- function(df, var, horizon_num) {
     geom_point(aes(group = model), alpha=.5, size = 2) +
     expand_limits(y=0) +
     scale_y_continuous(name = paste("Average",var)) +
-    guides(color=FALSE, group = FALSE) +
+    # guides(color=FALSE, group = FALSE) +
+    guides(color="none", group = "none") +
     ggtitle(paste0("Average ", horizon_num,"-week ahead ",var," by model")) +
     xlab("Target End Date") +
     theme(axis.ticks.length.x = unit(0.5, "cm"),
