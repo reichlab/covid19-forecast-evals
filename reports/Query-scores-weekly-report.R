@@ -176,19 +176,19 @@ score_inc_all <- mutate_scores(score_inc)
 
 
 #write rds of the data 
-save(truth_dat_case, file = "truth_dat_case.rda")
-save(truth_dat_inc, file = "truth_dat_inc.rda")
+save(truth_dat_case, file = "reports/truth_dat_case.rda")
+save(truth_dat_inc, file = "reports/truth_dat_inc.rda")
 
-save(truth_dat_case_all, file = "truth_dat_case_all.rda")
-save(truth_dat_inc_all, file = "truth_dat_inc_all.rda")
+save(truth_dat_case_all, file = "reports/truth_dat_case_all.rda")
+save(truth_dat_inc_all, file = "reports/truth_dat_inc_all.rda")
 
 # #write rds of the data 
 # save(truth_dat_case, file = "reports/truth_dat_case.rda")
 # save(truth_dat_inc, file = "reports/truth_dat_inc.rda")
 
 #write rda to save scores (this will be taken out if we use a csv pipeline)
-save(score_case_all, file = "score_case_all.rda")
-save(score_inc_all, file = "score_inc_all.rda")
+save(score_case_all, file = "reports/score_case_all.rda")
+save(score_inc_all, file = "reports/score_inc_all.rda")
 
 # #write rda to save scores (this will be taken out if we use a csv pipeline)
 # save(score_case_all, file = "reports/score_case_all.rda")

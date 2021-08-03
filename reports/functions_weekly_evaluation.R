@@ -5,6 +5,8 @@
 ##1. Must have all quantiles
 ##2. Must have submitted a forecast for 5 weeks total or at least 2 out of the last 3 weeks
 
+
+
 calib_table <- function(x){
   
   historical_calib <-  x  %>% 
@@ -123,8 +125,8 @@ plot_n_location <- function(x){
 
 #Plot average WIS by location
 # select relevant columns:
-plot_by_location_wis <- function(df, order) {
-  scores <- df %>%
+plot_by_location_wis <- function(df, order, location_order) {
+  scores <- df %>% 
     filter(horizon %in% c(1:4)) %>%
     filter(score_name == "wis") %>%
     filter(n_horizons == max(n_horizons),
@@ -222,13 +224,14 @@ plot_by_location_wis <- function(df, order) {
     # cat("Finished", loc_name, "\n")
   }
   
-  
   average_by_loc_to_plot <- average_by_loc %>%
     filter(location_name != "American Samoa" & location_name != "Northern Mariana Islands") %>%
     mutate(relative_wis_text = sprintf("%.1f", round(relative_wis, 1)),
            log_relative_wis = log2(relative_wis)) %>%
     filter(!is.na(relative_wis)) %>%
-    mutate(model = fct_relevel(model, order))
+    mutate(model = fct_relevel(model, order),
+           location_name = fct_relevel(location_name, location_order))
+  
   
   
   # plot:
