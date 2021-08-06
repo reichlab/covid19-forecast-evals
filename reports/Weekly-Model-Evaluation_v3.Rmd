@@ -606,8 +606,6 @@ wis_barplot_function(x = score_case_all, y = pairwise_scores, order = case_model
 ## Evaluation by Week  {.tabset .tabset-fade}
 
 
-## Observed data 
-
 This figure shows the number of incident reported COVID-19 cases reported each week in the US. The period between the vertical blue line and the black shows the weeks included in the "recent" model evaluations. The period between the vertical red line and the black shows the weeks included in the "historical" model evaluations.
 
 ```{r, fig.width=8, fig.height=5}
@@ -688,7 +686,7 @@ This figures below show model performance stratified by location. We have only i
 
 The color scheme shows the WIS score relative to the baseline. The only locations evaluated are 50 states and a national level forecast. The data are ordered on the x axis based on their relative WIS score shown in the accuracy table. 
 
-```{r, width=16, fig.height=15}
+```{r, width=16, fig.height=13}
 plot_by_location_wis(case_accuracy_recent, order = case_model_order, location_order  = location_order_case)
 ```
 
@@ -1111,7 +1109,7 @@ This figures below show model performance stratified by location In this figure,
 The color scheme shows the WIS score relative to the baseline. The only locations evaluated are 50 states and a national level forecast. The data are ordered on the x axis based on their relative WIS score shown in the accuracy table. 
 
 <!-- ### Evaluation by WIS -->
-```{r, fig.width=16, fig.height=15}
+```{r, fig.width=17, fig.height=20}
 plot_by_location_wis(inc_accuracy_recent, order = inc_model_order, location_order = location_order_death)
 ```
 

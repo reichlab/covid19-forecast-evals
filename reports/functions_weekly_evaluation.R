@@ -401,7 +401,7 @@ wis_barplot_function <- function(x,y,order) {
   
   ggplot(wis_plot, aes(fill=score_name, y=mean_values, x=model)) + 
     geom_bar(position="stack", stat="identity", width = .75) +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 10),
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 12),
           legend.title = element_blank(),
           axis.title.x =  element_blank()) +
     labs(y = "WIS components")
