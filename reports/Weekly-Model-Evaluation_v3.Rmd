@@ -1,6 +1,6 @@
 ---
 title: "COVID-19 US Forecast Evaluation Report"
-author: "This report was developed by the [Reich Lab](https://reichlab.io/) and the US [COVID-19 Forecast Hub](https://covid19forecasthub.org/) from UMass-Amehrst in collaboration with [CMU Delphi](https://delphi.cmu.edu/), as part of the Forecast Evaluation Research Collaborative."
+author: "This report was developed by the [Reich Lab](https://reichlab.io/) and the US [COVID-19 Forecast Hub](https://covid19forecasthub.org/) from UMass-Amherst in collaboration with [CMU Delphi](https://delphi.cmu.edu/), as part of the Forecast Evaluation Research Collaborative."
 date: "`r format(Sys.time(), '%B %d, %Y')`"
 output:
   html_document:
