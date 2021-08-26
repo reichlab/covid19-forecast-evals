@@ -14,7 +14,7 @@ load_all_weeks <- function(x)
 {
   load_jhu_data(
     issue_date = x, 
-    location_code = c("39", "44"), #ohio and rhode island
+    location_code = c("39", "48"), #ohio and 
     spatial_resolution = "state",
     temporal_resolution = "weekly",
     measure = "deaths") %>%
@@ -31,7 +31,7 @@ revis_deaths <- weekly_inc_deaths %>%
   filter(num_revis > 0) %>%
   group_by(location_name, date) %>%
   filter(revision_date == max(revision_date) | revision_date == min(revision_date)) %>% ungroup() %>%
-  mutate(revision_binary = ifelse(revision_date == max(revision_date), "Latest", "Earliest")) %>%
+  mutate(revision_binary = ifelse(revision_date == max(revision_date),"Reported as of 2021-07-26", "First Reported")) %>%
   mutate(target = "Deaths") 
 
 
@@ -42,7 +42,7 @@ load_all_weeks_cases <- function(x)
 {
   load_jhu_data(
     issue_date = x, 
-    location_code = c("29","48"),
+    location_code = c("39","48"),
     spatial_resolution = "state",
     temporal_resolution = "weekly",
     measure = "cases") %>%
@@ -61,7 +61,7 @@ revis_cases <- weekly_inc_cases %>%
   mutate(target = "Cases") %>% 
   group_by(location_name, date) %>%
   filter(revision_date == max(revision_date) | revision_date == min(revision_date)) %>% ungroup() %>%
-  mutate(revision_binary = ifelse(revision_date == max(revision_date), "Latest", "Earliest"))
+  mutate(revision_binary = ifelse(revision_date == max(revision_date),"Reported as of 2021-07-26", "First Reported"))
 
 
 # Euro Deaths 
@@ -87,14 +87,14 @@ revis_euro_death <- euro_death %>%
   filter(num_revis > 0) %>%
   group_by(location_name, date) %>%
   filter(revision_date == max(revision_date) | revision_date == min(revision_date)) %>% ungroup() %>%
-  mutate(revision_binary = ifelse(revision_date == max(revision_date), "Latest", "Earliest")) %>%
+  mutate(revision_binary = ifelse(revision_date == max(revision_date),"Reported as of 2021-07-26", "First Reported")) %>%
   mutate(target = "Deaths") 
 
 # Euro Cases
 load_euro_case <- function(x) {
   load_jhu_data(
     issue_date = x,
-    location_code = c( "FR", "DE"),
+    location_code = c("GB", "FR"),
     temporal_resolution = "weekly",
     measure = "cases",
     geography = c("global")) %>%
@@ -105,7 +105,7 @@ euro_case <- plyr::ldply(mondays, load_euro_case)
 
 revis_euro_case <- euro_case %>%
   mutate(location_name = fct_recode(factor(location), 
-                                     "France" = "FR", "Germany" = "DE" )) %>%
+                                    "United Kingdom" = "GB", "France" = "FR")) %>%
   group_by(location_name, inc, date) %>%  
   mutate(inc_new = ifelse(revision_date == max(revision_date), inc, NA)) %>% ungroup() %>%
   group_by(location_name, revision_date) %>%
@@ -114,8 +114,8 @@ revis_euro_case <- euro_case %>%
   mutate(target = "Cases") %>% 
   group_by(location_name, date) %>%
   filter(revision_date == max(revision_date) | revision_date == min(revision_date)) %>% ungroup() %>%
-  mutate(revision_binary = ifelse(revision_date == max(revision_date), "Latest", "Earliest"))
-
+  mutate(revision_binary = ifelse(revision_date == max(revision_date),"Reported as of 2021-07-26", "First Reported"))
+  
 
 
 #Graph each target individually 
