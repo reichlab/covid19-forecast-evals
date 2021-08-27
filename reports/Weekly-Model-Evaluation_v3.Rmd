@@ -103,11 +103,15 @@ new_dates_scorecase <- score_case_all %>%
   filter(target_end_date >= as.Date("2021-02-14")) 
 new_dates_scoreinc <- score_inc_all %>%
   filter(target_end_date >= as.Date("2021-02-14"))
+new_dates_scorehosp <- score_hosp_all %>%
+  filter(target_end_date >= as.Date("2021-02-14"))
+
 new_truth_case <- truth_dat_case %>%
   filter(target_end_date >= as.Date("2021-02-14"))
 new_truth_inc <- truth_dat_inc %>%
   filter(target_end_date >= as.Date("2021-02-14"))
-
+new_truth_hosp <- truth_dat_hosp %>%
+  filter(target_end_date >= as.Date("2021-02-14"))
 
 old_dates_scorecase <- score_case_all %>%
   filter(target_end_date < as.Date("2021-02-14"))
@@ -122,10 +126,11 @@ old_truth_inc <- truth_dat_inc %>%
 ```{r}
 score_case_all <- rbind(new_dates_scorecase,old_dates_scorecase)
 score_inc_all <- rbind(new_dates_scoreinc,old_dates_scoreinc)
-
+score_hosp_all <- rbind(new_dates_scorehosp, old_dates_scorehosp)
 
 truth_dat_case <- rbind(new_truth_case,old_truth_case)
 truth_dat_inc <- rbind(new_truth_inc, old_truth_inc)
+truth_dat_hosp <- rbind(new_truth_hosp, old_truth_hosp)
 ```
 
 ```{r}
@@ -138,6 +143,11 @@ location_order_death <- truth_dat_inc %>%
   filter(target_end_date == max(target_end_date)) %>%
   arrange(value) %>%
   pull(location_name)
+
+location_order_hosp <- truth_dat_hosp %>% 
+  filter(target_end_date == max(target_end_date)) %>%
+  arrange(value) %>%
+  pull(location_name)
   
 ```
 
@@ -146,6 +156,7 @@ location_order_death <- truth_dat_inc %>%
 #at least 50% of historical WIS or historical MAE
 case_accuracy_historical <- historical_accuracy_filter(score_case_all)
 inc_accuracy_historical <- historical_accuracy_filter(score_inc_all)
+hosp_accuracy_historical <- historical_accuracy_filter(score_hosp_all)
 ```
 
 
@@ -162,6 +173,547 @@ Additionally, we have included a historical score report to aggregate scores fro
 In collaboration with the US Centers for Disease Control and Prevention (CDC), the COVID-19 Forecast hub collects short-term COVID-19 forecasts from dozens of research groups around the globe. Every week we combine the most recent forecasts from each team into a single "ensemble" forecast for each of the targets. This forecast is used as the official ensemble forecast of the CDC, typically appearing on their [forecasting website](https://www.cdc.gov/coronavirus/2019-ncov/covid-data/mathematical-modeling.html) on Wednesday.  You can explore the full set of models, including their forecasts for past weeks online at CDC's [interactive forecast visualization](https://covid.cdc.gov/covid-data-tracker/#forecasting_weeklydeaths/).  Other related resources include CMU Delphi's [forecast evaluation dashboard](https://delphi.cmu.edu/forecast-eval/), a separate product of the forecast Evaluation Research Collaborative, as well as the preprint [Evaluation of individual and ensemble probabilistic forecasts of COVID-19 mortality in the US.](https://www.medrxiv.org/content/10.1101/2021.02.03.21250974v2)
 
 This report evaluates forecasts at the state and national level for newly reported weekly cases and deaths due to COVID-19. Data from the [JHU CSSE dashboard](https://coronavirus.jhu.edu/) is used as ground truth data for evaluating the forecasts.
+
+
+
+# Incident Hospitalization Forecasts {.tabset .tabset-fade}
+
+## Summary Tables {.tabset .tabset-fade}
+
+
+The first table evaluates models based on their [adjusted relative weighted interval scores (WIS, a measure of distributional accuracy)](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1008618), and adjusted relative mean absolute error (MAE). Scores are aggregated separately for the most recent 10 weeks and for 26 historical weeks. To account for the variation in difficult of forecasting different weeks and locations, a pairwise approach was used to calculated the relative adjusted WIS and MAE. Models with relative scores lower than 1 have been more accurate than the baseline on average, whereas relative scores greater than 1 indicate less accuracy than baseline on average.  
+
+
+The second table evaluates models based on their prediction interval coverage at the 50% and 95% levels. Scores are aggregated seperately for the most recent 10 weeks and for 26 historical weeks. 
+
+<!-- * The **prediction interval coverage**  measures  the proportion of times a prediction interval of a certain level covered the true value, to assess the degree to which forecasts accurately characterized uncertainty about future observations. Well calibrated models should have a 50% coverage level of 0.5 and a 95% coverage level of 0.95. 
+
+* The **weighted interval score (WIS)** is a proper score that combines a set of interval scores for probabilistic forecasts that provide quantiles of the predictive forecast distribution. To account for the variation in difficult of forecasting different weeks and locations, a pairwis approach was used to calculated the relative adjusted WIS. The code for this comparison can be found [here](https://github.com/jbracher/pairwise_comparisons). A preprint on this method for calculating the WIS can be found [here](https://arxiv.org/pdf/2005.12881.pdf). Models with an adjusted relative WIS  lower than 1 are more accurate than the baseline, and models with an adjusted relative WIS greater than 1 are less accurate than the baseline is predicting the number of incident Hospitalizations. 
+
+* The **mean absolute error** is defined as the the difference between the forecasted value and the actual value. For this calculation, point forecasts submitted by teams were used. When point forecasts were not available, the 0.50 quantile was used. Similar to calculating the WIS, a pairwise approach was used to account for variation across locations and weeks. Models with an adjusted relative MAE lower than 1 are more accurate than the baseline, and models with an adjusted relative MAE greater than 1 are less accurate than the baseline is predicting the number of incident Hospitalizations. 
+-->
+ 
+Inclusion criteria for each column are detailed below the table. 
+
+
+
+### Accuracy Table 
+
+```{r relative wis Hospitalization}
+#at least 50% of recent WIS or 50% of recent MAE
+hosp_accuracy_recent <- recent_accuracy_filter(score_hosp_all)
+
+inc_scores <- hosp_accuracy_recent %>%
+  filter(!is.na(score_value)) %>%
+  filter(n_locations >= 25) %>% 
+  droplevels()
+
+# bring all timezeros to Monday:
+inc_scores$timezero <- inc_scores$submission_sat
+# 
+# restrict to 1-4 wk ahead state-level
+scores <- inc_scores %>% filter(horizon %in% paste(1:4),  location %in% US_fips) %>%
+  filter(score_name %in% c("abs_error", "wis")) %>%
+  select("model", "timezero", "location", "horizon", "score_name", "score_value") %>%
+  pivot_wider(names_from = score_name, values_from = score_value) %>%
+  #filter(!is.na(wis)) %>%
+  droplevels()
+
+# the included models:
+models <- unique(scores$model)
+
+pairwise_comparison <- function(scores, mx, my, subset = rep(TRUE, nrow(scores)),
+                                permutation_test = FALSE){
+  # subsets of available scores for both models:
+  subx <- subset(scores, model == mx)
+  suby <- subset(scores, model == my)
+  # merge together and restrict to overlap:
+  sub <- merge(subx, suby, by = c("timezero", "location", "horizon"),
+               all.x = FALSE, all.y = FALSE)
+  ##### catch common problems:
+  ##### no overlap between targets covered by x and y:
+  if(nrow(sub) == 0){
+    warning("No overlap of covered forecast targets for ", mx, "and", my, ". Returning NA.")
+    return(list(ratio = NA, pval = NA, pval_fcd = NA, mx = mx, my = my))
+  }
+  ##### unavailable scores (likely because a model issues only point forecasts?)
+  if(any(is.na(subx$wis))){
+    warning("Some or all wis values are NA for ", mx, ". Returning NA.")
+    return(list(ratio = NA, pval = NA, pval_fcd = NA, mx = mx, my = my))
+  }
+  if(any(is.na(suby$wis))){
+    warning("Some or all wis values are NA for ", my, ". Returning NA.")
+    return(list(ratio = NA, pval = NA, pval_fcd = NA, mx = mx, my = my))
+  }
+
+  # compute ratio:
+
+  # matrices to store:
+  results_ratio <- results_pval <- results_pval_fcd <- matrix(ncol = length(models),
+                                                              nrow = length(models),
+                                                              dimnames = list(models, models))
+
+  ratio <- sum(sub$wis.x) / sum(sub$wis.y)
+  # perform permutation tests:
+  if(permutation_test){
+    pval <- permutationTest(sub$wis.x, sub$wis.y,
+                            nPermutation = 999)$pVal.permut
+    ##### aggregate by forecast date:
+    sub_fcd <- aggregate(cbind(wis.x, wis.y) ~ timezero, data = sub, FUN = mean)
+    # catch error if too many observations
+    if(nrow(sub_fcd) > 5){
+      pval_fcd <- permutationTest(sub_fcd$wis.x, sub_fcd$wis.y,
+                                  nPermutation = 999)$pVal.permut
+    }else{
+      warning("Too few observations to compute p-value for ", mx, " and ", my, " with aggregation by forecast date. Returning NA.")
+      pval_fcd <- NA
+    }
+  }else{
+    pval <- NULL
+    pval_fcd <- NULL
+  }
+  return(list(ratio = ratio, pval = pval, pval_fcd = pval_fcd, mx = mx, my = my))
+}
+
+# matrices to store:
+results_ratio <- results_pval <- results_pval_fcd <- matrix(ncol = length(models),
+                                                            nrow = length(models),
+                                                            dimnames = list(models, models))
+
+set.seed(123) # set seed for permutation tests
+
+for(mx in seq_along(models)){
+  for(my in 1:mx){
+    pwc <- pairwise_comparison(scores = scores, mx = models[mx], my = models[my],
+                               permutation_test = FALSE)
+
+    results_ratio[mx, my] <- pwc$ratio
+    results_ratio[my, mx] <- 1/pwc$ratio
+    ## commenting these out b/c no permutation test being run
+    #results_pval[mx, my] <-
+    #  results_pval[my, mx] <- pwc$pval
+    #results_pval_fcd[mx, my] <-
+    #  results_pval_fcd[my, mx] <- pwc$pval_fcd
+  }
+}
+
+ind_baseline <- which(rownames(results_ratio) == "COVIDhub-baseline")
+geom_mean_ratios <- exp(rowMeans(log(results_ratio[, -ind_baseline]), na.rm = TRUE))
+ratios_baseline <- results_ratio[, "COVIDhub-baseline"]
+ratios_baseline2 <- geom_mean_ratios/geom_mean_ratios["COVIDhub-baseline"]
+
+tab <- data.frame(model = names(geom_mean_ratios),
+                  geom_mean_ratios = geom_mean_ratios,
+                  ratios_baseline = ratios_baseline,
+                  ratios_baseline2 = ratios_baseline2)
+
+tab <- tab[order(tab$ratios_baseline2), ]
+
+
+pairwise_scores <- tab %>%
+  mutate(relative_wis = round(ratios_baseline2, 2)) %>%
+  select(model, relative_wis)
+```
+
+
+```{r relative mae hosp }
+scores <- inc_scores %>% filter(horizon %in% paste(1:4),  location %in% US_fips) %>%
+  select("model", "timezero", "location", "horizon", "score_name", "score_value") %>%
+  filter(score_name %in% c("abs_error", "wis")) %>%
+  pivot_wider(names_from = score_name, values_from = score_value) %>% 
+  filter(!is.na(abs_error)) %>%  
+  droplevels()
+
+# the included models:
+models <- unique(scores$model)
+
+pairabs_error_comparison <- function(scores, mx, my, subset = rep(TRUE, nrow(scores)),
+                                permutation_test = FALSE) {
+  # subsets of available scores for both models:
+  subx <- subset(scores, model == mx)
+  suby <- subset(scores, model == my)
+  # merge together and restrict to overlap:
+  sub <- merge(subx, suby, by = c("timezero", "location", "horizon"),
+               all.x = FALSE, all.y = FALSE)
+  ##### catch common problems:
+  ##### no overlap between targets covered by x and y:
+  if(nrow(sub) == 0){
+    warning("No overlap of covered forecast targets for ", mx, "and", my, ". Returning NA.")
+    return(list(ratio = NA, pval = NA, pval_fcd = NA, mx = mx, my = my))
+  }
+  ##### unavailable scores (likely because a model issues only point forecasts?)
+  if(any(is.na(subx$abs_error))){
+    warning("Some or all abs_error values are NA for ", mx, ". Returning NA.")
+    return(list(ratio = NA, pval = NA, pval_fcd = NA, mx = mx, my = my))
+  }
+  if(any(is.na(suby$abs_error))){
+    warning("Some or all abs_error values are NA for ", my, ". Returning NA.")
+    return(list(ratio = NA, pval = NA, pval_fcd = NA, mx = mx, my = my))
+  }
+  # compute ratio:
+
+  # matrices to store:
+  results_ratio <- results_pval <- results_pval_fcd <- matrix(ncol = length(models),
+                                                            nrow = length(models),
+                                                            dimnames = list(models, models))
+
+  ratio <- sum(sub$abs_error.x) / sum(sub$abs_error.y)
+  # perform permutation tests:
+  if(permutation_test){
+    pval <- permutationTest(sub$abs_error.x, sub$abs_error.y,
+                            nPermutation = 999)$pVal.permut
+    ##### aggregate by forecast date:
+    sub_fcd <- aggregate(cbind(abs_error.x, abs_error.y) ~ timezero, data = sub, FUN = mean)
+    # catch error if too many observations
+    if(nrow(sub_fcd) > 5){
+      pval_fcd <- permutationTest(sub_fcd$abs_error.x, sub_fcd$abs_error.y,
+                                  nPermutation = 999)$pVal.permut
+    }else{
+      warning("Too few observations to compute p-value for ", mx, " and ", my, " with aggregation by forecast date. Returning NA.")
+      pval_fcd <- NA
+    }
+  }else{
+    pval <- NULL
+    pval_fcd <- NULL
+  }
+  return(list(ratio = ratio, pval = pval, pval_fcd = pval_fcd, mx = mx, my = my))
+}
+
+# matrices to store:
+results_ratio <- results_pval <- results_pval_fcd <- matrix(ncol = length(models),
+                                                            nrow = length(models),
+                                                            dimnames = list(models, models))
+set.seed(123) # set seed for permutation tests
+
+for(mx in seq_along(models)){
+  for(my in 1:mx){
+    pwc <- pairabs_error_comparison(scores = scores, mx = models[mx], my = models[my],
+                               permutation_test = FALSE)
+
+    results_ratio[mx, my] <- pwc$ratio
+    results_ratio[my, mx] <- 1/pwc$ratio
+    ## commenting these out b/c no permutation test being run
+    #results_pval[mx, my] <-
+    #  results_pval[my, mx] <- pwc$pval
+    #results_pval_fcd[mx, my] <-
+    #  results_pval_fcd[my, mx] <- pwc$pval_fcd
+  }
+}
+
+ind_baseline <- which(rownames(results_ratio) == "COVIDhub-baseline")
+geom_mean_ratios <- exp(rowMeans(log(results_ratio[, -ind_baseline]), na.rm = TRUE))
+ratios_baseline <- results_ratio[, "COVIDhub-baseline"]
+ratios_baseline2 <- geom_mean_ratios/geom_mean_ratios["COVIDhub-baseline"]
+
+tab <- data.frame(model = names(geom_mean_ratios),
+                  geom_mean_ratios = geom_mean_ratios,
+                  ratios_baseline = ratios_baseline,
+                  ratios_baseline2 = ratios_baseline2)
+
+tab <- tab[order(tab$ratios_baseline2), ]
+
+pairwise_scores_mae <- tab %>%
+  mutate(relative_mae = round(ratios_baseline2, 2)) %>%
+  select(model, relative_mae)
+```
+
+
+```{r permutation test for historical data}
+inc_scores <- hosp_accuracy_historical %>%
+  filter(n_locations >= 25) %>%
+  filter(n_weeks >= 4) %>%
+  droplevels()
+
+# bring all timezeros to Monday:
+inc_scores$timezero <- inc_scores$submission_sat
+
+# restrict to 1-4 wk ahead state-level
+scores <- inc_scores %>% filter(horizon %in% paste(1:4),  location %in% US_fips) %>%
+  filter(!is.na(score_value)) %>%
+  select("model", "timezero", "location", "horizon", "score_name", "score_value") %>%
+  filter(score_name %in% c("abs_error", "wis")) %>%
+  pivot_wider(names_from = score_name, values_from = score_value) %>% filter(!is.na(wis))
+
+# the included models:
+models <- unique(scores$model)
+
+
+# matrices to store:
+results_ratio <- results_pval <- results_pval_fcd <- matrix(ncol = length(models),
+                                                            nrow = length(models),
+                                                            dimnames = list(models, models))
+
+set.seed(123) # set seed for permutation tests
+
+for(mx in seq_along(models)){
+  for(my in 1:mx){
+    pwc <- pairwise_comparison(scores = scores, mx = models[mx], my = models[my],
+                               permutation_test = FALSE)
+
+    results_ratio[mx, my] <- pwc$ratio
+    results_ratio[my, mx] <- 1/pwc$ratio
+    ## commenting these out b/c no permutation test being run
+    # results_pval[mx, my] <-
+    #   results_pval[my, mx] <- pwc$pval
+    # results_pval_fcd[mx, my] <-
+    #   results_pval_fcd[my, mx] <- pwc$pval_fcd
+  }
+}
+
+ind_baseline <- which(rownames(results_ratio) == "COVIDhub-baseline")
+geom_mean_ratios <- exp(rowMeans(log(results_ratio[, -ind_baseline]), na.rm = TRUE))
+ratios_baseline <- results_ratio[, "COVIDhub-baseline"]
+ratios_baseline2 <- geom_mean_ratios/geom_mean_ratios["COVIDhub-baseline"]
+
+tab <- data.frame(model = names(geom_mean_ratios),
+                  geom_mean_ratios = geom_mean_ratios,
+                  ratios_baseline = ratios_baseline,
+                  ratios_baseline2 = ratios_baseline2)
+
+tab <- tab[order(tab$ratios_baseline2), ]
+
+historical_wis <- tab %>%
+  mutate(relative_wis_historical = round(ratios_baseline2, 2)) %>%
+  select(model, relative_wis_historical)
+```
+
+```{r}
+scores <- inc_scores %>% filter(horizon %in% paste(1:4),  location %in% US_fips) %>%
+  select("model", "timezero", "location", "horizon", "score_name", "score_value") %>%
+  filter(score_name %in% c("abs_error", "wis")) %>%
+  pivot_wider(names_from = score_name, values_from = score_value) %>% 
+  filter(!is.na(abs_error)) %>%
+  droplevels()
+
+# the included models:
+models <- unique(scores$model)
+
+
+# matrices to store:
+results_ratio <- results_pval <- results_pval_fcd <- matrix(ncol = length(models),
+                                                            nrow = length(models),
+                                                            dimnames = list(models, models))
+
+set.seed(123) # set seed for permutation tests
+
+for(mx in seq_along(models)){
+  for(my in 1:mx){
+    pwc <- pairabs_error_comparison(scores = scores, mx = models[mx], my = models[my],
+                               permutation_test = FALSE)
+
+    results_ratio[mx, my] <- pwc$ratio
+    results_ratio[my, mx] <- 1/pwc$ratio
+    ## commenting these out b/c no permutation test being run
+    # results_pval[mx, my] <-
+    #   results_pval[my, mx] <- pwc$pval
+    # results_pval_fcd[mx, my] <-
+    #   results_pval_fcd[my, mx] <- pwc$pval_fcd
+  }
+}
+
+ind_baseline <- which(rownames(results_ratio) == "COVIDhub-baseline")
+geom_mean_ratios <- exp(rowMeans(log(results_ratio[, -ind_baseline]), na.rm = TRUE))
+ratios_baseline <- results_ratio[, "COVIDhub-baseline"]
+ratios_baseline2 <- geom_mean_ratios/geom_mean_ratios["COVIDhub-baseline"]
+
+tab <- data.frame(model = names(geom_mean_ratios),
+                  geom_mean_ratios = geom_mean_ratios,
+                  ratios_baseline = ratios_baseline,
+                  ratios_baseline2 = ratios_baseline2)
+
+tab <- tab[order(tab$ratios_baseline2), ]
+
+
+historical_mae <- tab %>%
+  mutate(historical_relative_mae = round(ratios_baseline2, 2)) %>%
+  select(model, historical_relative_mae) 
+```
+
+```{r}
+hosp_count_fcasts_recent <-  hosp_accuracy_recent %>% group_by(model,score_name) %>%
+    summarise(n_forecasts_wis = sum(score_name == "wis" & !is.na(score_value)),
+           n_forecasts_mae = sum(score_name == "abs_error" & !is.na(score_value))) %>% ungroup() %>%
+  mutate(n_fcast = ifelse(n_forecasts_wis > 0, n_forecasts_wis, n_forecasts_mae)) %>%
+  group_by(model) %>%
+  summarise(n_forecasts_recent = max(n_fcast))
+
+hosp_count_fcasts_historical <-  hosp_accuracy_historical %>% group_by(model,score_name) %>%
+    summarise(n_forecasts_wis = sum(score_name == "wis" & !is.na(score_value)),
+           n_forecasts_mae = sum(score_name == "abs_error" & !is.na(score_value))) %>% ungroup() %>%
+  mutate(n_fcast = ifelse(n_forecasts_wis > 0, n_forecasts_wis, n_forecasts_mae)) %>%
+  group_by(model) %>%
+  summarise(n_forecasts_historical = max(n_fcast))
+
+  
+leaderboard_table <- hosp_count_fcasts_recent %>%
+  full_join(hosp_count_fcasts_historical) %>%
+  full_join(pairwise_scores) %>%
+  full_join(historical_wis) %>%
+  full_join(pairwise_scores_mae) %>%
+  full_join(historical_mae) %>%
+  select(model, n_forecasts_recent, relative_wis, relative_mae,  n_forecasts_historical, relative_wis_historical, historical_relative_mae) %>%
+  arrange(relative_wis) %>% 
+  filter(!is.na(relative_wis) | !is.na(relative_mae) | !is.na(relative_wis_historical) | !is.na(historical_relative_mae))
+
+render <- JS(
+  "function(data, type, row) {",
+  "  if(type === 'sort' && data === null) {",
+  "    return 999999;",
+  "  }",
+  "  return data;",
+  "}"
+)
+
+
+datatable(leaderboard_table, rownames= FALSE, colnames = c("Model", "n recent forecasts",  "Recent rel WIS",  "Recent rel MAE", "n historical forecasts" , "Historical rel WIS", "Historical rel MAE"), 
+              options =  list(pageLength = 5, 
+                             autoWidth = TRUE,
+                             columnDefs = list(list(width = '300px', targets = "_all", render = render)), 
+                             ordering = TRUE),
+              filter = c("top"))
+```
+
+
+```{r}
+hosp_model_order <- leaderboard_table %>%
+  arrange(relative_wis) %>% pull(model)
+```
+
+To calculate each column in our table, different inclusion criteria were applied. This table only includes models that have submitted forecasts for at least 50% of forecasts for the last 10 weeks or at least 50% of forecasts since `r format(first_eval_sat_hist, "%B %d, %Y")`. 
+
+* The column titled, "n recent forecasts" lists the number of forecasts a team has submitted with a target end date over the most recent `r n_weeks_eval` week period.
+
+* Columns 3 and 4 calculate the adjusted relative WIS over the most recent `r n_weeks_eval` week period and the adjusted relative MAE over the most recent `r n_weeks_eval` week period. For inclusion in these rows, a model must have forecasts for at least 50% of the evaluated forecasts in the most recent evaluation period. 
+
+* Column 5 shows the number of historical models a team has submitted in the past `r n_weeks_history` week period. 
+
+* Columns 6 and 7 show the adjusted WIS and adjusted MAE over a historical period beginning `r format(first_eval_sat_hist, "%B %d, %Y")`. For inclusion in this figure, a model must have submitted predictions for 50% or more of the evaluated forecasts in the historical evaluation period.
+
+
+
+### Coverage Table 
+
+For inclusion in this table, a model most have contributed forecasts for 5 or more weeks total since `r format(first_eval_sat_hist, "%B %d, %Y")`, or have submitted forecasts during at least 2 out of the last 3 evaluated weeks. This inclusion criteria was applied in order to score models that submitted for a substantial amount of weeks at any point during the pandemic but may no longer be submitting, while also evaluating new teams that have recently joined our forecasting efforts. 
+
+```{r inclusion in coverage table recent}
+#Filtered to include only models in scoreboard (coverage table) 
+#at least 5 weeks overall or at least 2 out of the last 3 weeks 
+
+#calibration table 
+hosp_calib <- calib_table(score_hosp_all)
+hosp_calib
+```
+
+## WIS components
+
+
+The data in this graph has been aggregated over all locations and submission weeks. The models included have submitted forecasts for at least 50% of forecasts out of the last 10 weeks. This is the same exclusion criteria applied for WIS scores in the recent evaluation period. 
+
+The sum of the bars adds up to the WIS score. Of note, these values may not be exactly the same as the relative WIS scores shown in the leaderboard table because these are not adjusted for weeks or locations missing.  The data are ordered on the x axis based on their relative WIS score shown in the accuracy table. 
+
+```{r wis bar function, fig.height= 8, fig.width=13}
+wis_barplot_function(x = score_hosp_all, y = pairwise_scores, order = hosp_model_order)
+```
+
+
+## Evaluation by Week  {.tabset .tabset-fade}
+
+
+This figure shows the number of incident reported COVID-19 hosps reported each week in the US. The period between the vertical blue line and the black shows the weeks included in the "recent" model evaluations. The period between the vertical red line and the black shows the weeks included in the "historical" model evaluations.
+
+```{r, fig.width=8, fig.height=5}
+truth_US_hosp <- truth_dat_hosp_all %>%
+  filter(location == "US")
+
+plot_truth(dat = truth_US_hosp, tar="hosps")
+```
+
+
+In the following figures, we have evaluated models across multiple forecasting weeks. Points included in this comparison are for models that have submitted probabilistic forecasts for all 50 states. 
+
+For the first 2 figures, WIS is used as a metric. The first figure shows the mean WIS across all 50 states for submission weeks beginning `r format(first_eval_sat_hist, "%B %d, %Y")` at a 1 week horizon. The second figure shows the mean WIS aggregated across locations, however it is for a 4 week horizon.
+
+**To view a specific team, double click on the team names in the legend. To view a value on the plot, click on the point in the forecast of interest. To view a specific time of interest, highlight that section on the graph or use the zoom functionality. **
+
+### 1 Week Horizon WIS
+```{r,fig.width=10, fig.height=6}
+byweek_hosp <- by_week_function(score_hosp_all, var = "wis")
+# find 97.5 percentile
+b<-byweek_hosp %>%
+  filter(horizon == "4") 
+p975<-quantile(b$mean_score,probs=.975, na.rm = TRUE)
+
+by_week_wis_1wk <- plot_byweek_function(byweek_hosp, var = "wis", horizon_num = "1") + coord_cartesian(ylim=c(0, p975))
+ggplotly(by_week_wis_1wk, tooltip = c("label", "labelx", "labely"))
+```
+
+### 4 Week Horizon WIS
+
+In this figure, the dotted black line represents the average 1 week ahead error across all models. There is often larger error for the 4 week horizon compared to the 1 week horizon. 
+
+```{r,fig.width=10, fig.height=6}
+#calc 1 week error
+meanwis_1wk <- byweek_hosp %>%
+  filter(horizon == "1") %>%
+  group_by(target_end_date) %>%
+  summarise(mean_score = mean(mean_score, na.rm = TRUE)) %>%
+  mutate(model = "`average error for 1 week horizon`",
+         horizon = "4") %>%
+  select(model, horizon, target_end_date, mean_score)
+  
+
+by_week_wis_4wk <- plot_byweek_function(byweek_hosp, var = "wis", horizon_num = "4") +
+   geom_line(data = meanwis_1wk, aes(label = model, x = target_end_date, y = mean_score), alpha=.5, color = "black", linetype = 2) +
+  geom_point(data = meanwis_1wk, aes(x = target_end_date, y = mean_score), alpha=.5, size = 2, color = "black") + coord_cartesian(ylim=c(0, p975))
+ggplotly(by_week_wis_4wk,tooltip = c("label", "labelx", "labely"))
+```
+
+
+### 1 Week Horizon 95% Coverage
+
+We would expect a well calibrated model to have a value of 95% in this plot. 
+
+```{r,fig.width=10, fig.height=6}
+byweek_hosp <- by_week_function(score_hosp_all, var = "coverage_95")
+by_week_wis_1wk <- plot_byweek_function(byweek_hosp, var = "coverage_95", horizon_num = "1") +
+  geom_hline(yintercept = .95)
+ggplotly(by_week_wis_1wk,tooltip = c("label", "labelx", "labely"))
+```
+
+### 4 Week Horizon 95% Coverage
+
+We would expect a well calibrated model to have a value of 95% in this plot. There is typically larger error for the 4 week horizon compared to the 1 week horizon. 
+
+```{r,fig.width=10, fig.height=6}
+by_week_wis_4wk <- plot_byweek_function(byweek_hosp, var = "coverage_95", horizon_num = "4") +
+  geom_hline(yintercept = .95)
+
+ggplotly(by_week_wis_4wk, tooltip = c("label", "labelx", "labely")) 
+```
+
+
+
+## Evaluation by location {.tabset .tabset-fade}
+
+This figures below show model performance stratified by location. We have only included included models that have submitted forecasts for all 4 horizons and at least 50% of weeks over the past 10 evaluated weeks. 
+
+The color scheme shows the WIS score relative to the baseline. The only locations evaluated are 50 states and a national level forecast. The data are ordered on the x axis based on their relative WIS score shown in the accuracy table. 
+
+```{r, width=16, fig.height=13}
+plot_by_location_wis(hosp_accuracy_recent, order = hosp_model_order, location_order  = location_order_hosp)
+```
+
+
+
+
+
+
+
+
+
+
+
+
 
 # Incident Case Forecasts {.tabset .tabset-fade}
 
