@@ -61,11 +61,26 @@ truth_function <- function(x) {
     locations = the_locations)
 }
 
+
+truth_dat_hosp_all <- load_truth(
+  truth_source = "HealthData",
+  target_variable = c("inc hosp"),
+  truth_end_date = Sys.Date(),
+  temporal_resolution = "daily",
+  locations = the_locations)
+  
+  
 truth_dat_case_all <- truth_function("inc case") 
+
 truth_dat_case <- truth_dat_case_all  %>%
   filter(target_end_date >= first_mon_history)
+
 truth_dat_inc_all <- truth_function("inc death") 
+
 truth_dat_inc <- truth_dat_inc_all  %>%
+  filter(target_end_date >= first_mon_history)
+
+truth_dat_hosp <- truth_dat_hosp_all  %>%
   filter(target_end_date >= first_mon_history)
 
 #query forecast data from zoltar for past 6 month submission weeks. (used so that there are not duplicated values for a forecast that has submitted multiple times in a week)
@@ -80,8 +95,7 @@ forecasts_case <- map_dfr(
       targets = paste(1:4, "wk ahead inc case"),
       source = "zoltar")
   }
-) %>% filter(model %in% models_primary_secondary)
-
+) 
 #iterate function
 forecasts_inc_function <- function(x,y) {map_dfr(
   mondays[x:y], function(the_weeks) {
@@ -96,21 +110,38 @@ forecasts_inc_function <- function(x,y) {map_dfr(
   }
 )
 }
+
+
+forecasts_hosp <- map_dfr(
+  mondays, function(the_weeks) {
+    load_forecasts(
+      models = c(models_primary_secondary),
+      dates = the_weeks,
+      date_window_size = 1,
+      locations = the_locations,
+      types = "quantile",
+      targets = paste(1:28, "day ahead inc hosp"),
+      source = "zoltar")
+  }
+) 
+
+
+
+
+
+
+
 lmonday<-length(mondays)
 
 forecasts_inc1 <- forecasts_inc_function("1","10")
 forecasts_inc2 <- forecasts_inc_function("11","20")
 forecasts_inc3 <- forecasts_inc_function("21","26")
 
-
-# forecasts_inc1_update <-   unique(forecasts_inc1)%>%filter(model %in% models_primary_secondary)
-# forecasts_inc2_update <- unique(forecasts_inc2)%>%filter(model %in% models_primary_secondary)
-# forecasts_inc3_update <- unique(forecasts_inc3)%>%filter(model %in% models_primary_secondary)
-# forecasts_inc_update <- rbind(forecasts_inc1_update,forecasts_inc2_update,forecasts_inc3_update) %>% filter(model %in% models_primary_secondary)
 forecasts_inc <- rbind(forecasts_inc1,forecasts_inc2,forecasts_inc3) %>% filter(model %in% models_primary_secondary)
 
 forecasts_case_update <- unique(forecasts_case) #used to ensure there are no duplicates
 forecasts_inc_update <- unique(forecasts_inc)
+forecasts_hosp_update <- unique(forecasts_hosp)
 
 
 #covidhub utils function to score the data
@@ -120,30 +151,19 @@ score_case <- score_forecasts(forecasts = forecasts_case_update,
                                          return_format = "long",
                                          use_median_as_point = TRUE)
 
-# score_case <- score_forecasts_eyc_update(forecasts = forecasts_case_update,
-#                               truth = truth_dat_case,
-#                               return_format = "long",
-#                               use_median_as_point = TRUE)
-
-# score_inc1 <- score_forecasts(forecasts = forecasts_inc1_update,
-#                                         truth = truth_dat_inc,
-#                                         return_format = "long",
-#                                         use_median_as_point = TRUE)
-# 
-# score_inc2 <- score_forecasts(forecasts = forecasts_inc2_update,
-#                               truth = truth_dat_inc,
-#                               return_format = "long",
-#                               use_median_as_point = TRUE)
-# 
-# score_inc3 <- score_forecasts(forecasts = forecasts_inc3_update,
-#                               truth = truth_dat_inc,
-#                               return_format = "long",
-#                               use_median_as_point = TRUE)
-# score_inc <- rbind(score_inc1,score_inc2,score_inc3)
 score_inc <- score_forecasts(forecasts = forecasts_inc_update,
                              truth = truth_dat_inc,
                              return_format = "long",
                              use_median_as_point = TRUE)
+
+
+#I WAS THINKING MAYBE WE COULD DO SOMETHING HERE TO MAKE IT WEEKLY SCORES FOR HOSPITALIZATIONS? 
+score_hosp <- score_forecasts(forecasts = forecasts_hosp_update,
+                             truth = truth_dat_hosp,
+                             return_format = "long",
+                             use_median_as_point = TRUE)
+
+
 # function to clean the datasets and add in columns to count the number of weeks, horizons, and locations
 mutate_scores <- function(x) {
   x %>%
@@ -164,23 +184,16 @@ mutate_scores <- function(x) {
 
 score_case_all <- mutate_scores(score_case)
 score_inc_all <- mutate_scores(score_inc)
-
-# #write csv of the data 
-# write.csv(truth_dat_case, "truth_dat_case.csv", row.names = FALSE)
-# write.csv(truth_dat_inc, "truth_dat_inc.csv", row.names = FALSE)
-# 
-# 
-# #write csv to save scores (this will be taken out if we use a csv pipeline)
-# write.csv(score_case_edit, "score_case_edit.csv", row.names = FALSE)
-# write.csv(score_inc_edit, "score_inc_edit.csv", row.names = FALSE)
-
+score_hosp_all <- mutate_scores(score_hosp)
 
 #write rds of the data 
 save(truth_dat_case, file = "reports/truth_dat_case.rda")
 save(truth_dat_inc, file = "reports/truth_dat_inc.rda")
+save(truth_dat_hosp, file = "reports/truth_dat_hosp.rda")
 
 save(truth_dat_case_all, file = "reports/truth_dat_case_all.rda")
 save(truth_dat_inc_all, file = "reports/truth_dat_inc_all.rda")
+save(truth_dat_hosp_all, file = "reports/truth_dat_hosp_all.rda")
 
 # #write rds of the data 
 # save(truth_dat_case, file = "reports/truth_dat_case.rda")
@@ -189,7 +202,4 @@ save(truth_dat_inc_all, file = "reports/truth_dat_inc_all.rda")
 #write rda to save scores (this will be taken out if we use a csv pipeline)
 save(score_case_all, file = "reports/score_case_all.rda")
 save(score_inc_all, file = "reports/score_inc_all.rda")
-
-# #write rda to save scores (this will be taken out if we use a csv pipeline)
-# save(score_case_all, file = "reports/score_case_all.rda")
-# save(score_inc_all, file = "reports/score_inc_all.rda")
+save(score_hosp_all, file = "reports/score_hosp_all.rda")
