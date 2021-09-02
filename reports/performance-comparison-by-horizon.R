@@ -1,3 +1,6 @@
+## note that this file relies on having the Query-scores-weekly-report.R 
+## being run before it  to generate updated .rda files
+
 library(tidyverse)
 library(covidHubUtils)
 
