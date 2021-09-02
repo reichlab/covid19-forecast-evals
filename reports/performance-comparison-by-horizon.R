@@ -25,6 +25,9 @@ case_coverage <- case_scores_focused %>%
             mean_cov_95 = mean(coverage_95)) %>%
   filter(obs>200)
 
+write_csv(case_coverage, file="PIcoverage-by-horizon.csv")
+
+
 
 ggplot(case_coverage, aes(x=horizon, y=mean_cov_95, color=model, group=model)) +
   geom_point(alpha=.5) +
@@ -114,6 +117,8 @@ tab <- data.frame(model = c(names(geom_mean_ratios_hzn1),
                                           ratios_baseline_adj_hzn3,
                                           ratios_baseline_adj_hzn4)
                   )
+
+write_csv(tab, file="relativeWIS-by-horizon.csv")
 
 ggplot(tab, aes(x=horizon, y=ratios_baseline_adj, color=model, group=model)) +
   geom_point(alpha=.5) +
