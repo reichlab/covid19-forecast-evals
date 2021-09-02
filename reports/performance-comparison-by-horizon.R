@@ -134,7 +134,16 @@ fdat <- load_forecasts(models = models_of_interest,
                        targets = paste(1:4, "wk ahead inc case"), 
                        locations = c("US", "12", "22") ## US, FL, LA
                        )
+
+truth_dat <- load_truth(truth_source="JHU",
+                        target_variable="inc case", 
+                        locations=c("US", "12", "22")) %>%
+  filter(target_end_date > as.Date("2021-06-01"))
+
 plot_forecasts(fdat, 
-               facet = model ~ location, 
+               truth_data = truth_dat,
+               facet = location ~ model, 
+               facet_ncol=4, 
+               facet_scales = "free_y",
                fill_by_model = TRUE, 
                truth_source = "JHU")
