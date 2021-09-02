@@ -37,8 +37,8 @@ ggplot(case_coverage, aes(x=horizon, y=mean_cov_95, color=model, group=model)) +
   geom_line(alpha=0.5) +
   scale_y_continuous(name="95% PI coverage", limits=c(0,1)) + 
   geom_hline(yintercept=0.95, linetype=2) +
-  geom_point(data=filter(case_coverage, model=="COVIDhub-ensemble"), color="red", shape=3, size=3) +
-  geom_point(data=filter(case_coverage, model=="COVIDhub-baseline"), color="blue", shape=4, size=3)
+  geom_point(data=filter(case_coverage, model=="COVIDhub-ensemble"), color="black", size=3) +
+  geom_point(data=filter(case_coverage, model=="COVIDhub-baseline"), color="black", shape=2, size=3)
 
 plotly::ggplotly()
 
@@ -128,7 +128,7 @@ ggplot(tab, aes(x=horizon, y=ratios_baseline_adj, color=model, group=model)) +
   geom_line(alpha=0.5) +
   scale_y_continuous(name="relative WIS") + 
   geom_hline(yintercept=1, linetype=2) +
-  geom_point(data=filter(tab, model=="COVIDhub-ensemble"), color="red", shape=3, size=3)
+  geom_point(data=filter(tab, model=="COVIDhub-ensemble"), color="black", size=3)
 
 plotly::ggplotly()
 
@@ -148,10 +148,43 @@ truth_dat <- load_truth(truth_source="JHU",
                         locations=c("US", "12", "22")) %>%
   filter(target_end_date > as.Date("2021-06-01"))
 
-plot_forecasts(fdat, 
-               truth_data = truth_dat,
-               facet = location ~ model, 
-               facet_ncol=4, 
-               facet_scales = "free_y",
-               fill_by_model = TRUE, 
-               truth_source = "JHU")
+us_plot <- plot_forecasts(fdat, 
+                          locations = "US",
+                          truth_data = truth_dat,
+                          facet = . ~ model, 
+                          facet_ncol=4, 
+                          fill_transparency = .5,
+                          fill_by_model = TRUE, 
+                          truth_source = "JHU",
+                          show_caption = FALSE,
+                          subtitle = "none",
+                          title = "US forecasts") +
+  coord_cartesian(ylim=c(NA, 1.5e6))
+
+fl_plot <- plot_forecasts(fdat, 
+                          locations = "12",
+                          truth_data = truth_dat,
+                          facet = . ~ model, 
+                          facet_ncol=4, 
+                          fill_transparency = .5,
+                          fill_by_model = TRUE, 
+                          truth_source = "JHU",
+                          show_caption = FALSE,
+                          subtitle = "none",
+                          title = "FL forecasts") +
+  coord_cartesian(ylim=c(NA, 2e5)) ## 12
+
+la_plot <- plot_forecasts(fdat, 
+                          locations = "22",
+                          truth_data = truth_dat,
+                          facet = . ~ model, 
+                          facet_ncol=4, 
+                          fill_transparency = .5,
+                          fill_by_model = TRUE, 
+                          truth_source = "JHU",
+                          show_caption = FALSE,
+                          subtitle = "none",
+                          title = "LA forecasts") +
+  coord_cartesian(ylim=c(NA, 75000)) ## 22
+
+cowplot::plot_grid(us_plot, fl_plot, la_plot, nrow=3)
