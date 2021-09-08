@@ -71,10 +71,10 @@ truth_dat_inc <- truth_dat_inc_all  %>%
 #query forecast data from zoltar for past 6 month submission weeks. (used so that there are not duplicated values for a forecast that has submitted multiple times in a week)
 forecasts_case <- map_dfr(
   mondays, function(the_weeks) {
-    load_latest_forecasts(
+    load_forecasts(
       models = c(models_primary_secondary),
-      last_forecast_date = the_weeks,
-      forecast_date_window_size = 6,
+      date = the_weeks,
+      date_window_size = 6,
       locations = the_locations,
       types = "quantile",
       targets = paste(1:4, "wk ahead inc case"),
@@ -82,13 +82,12 @@ forecasts_case <- map_dfr(
   }
 ) %>% filter(model %in% models_primary_secondary)
 
-#iterate function
 forecasts_inc_function <- function(x,y) {map_dfr(
   mondays[x:y], function(the_weeks) {
-    load_latest_forecasts(
+    load_forecasts(
       models = c(models_primary_secondary),
-      last_forecast_date = the_weeks,
-      forecast_date_window_size = 6,
+      date = the_weeks,
+      date_window_size = 6,
       locations = the_locations,
       types = "quantile",
       targets = paste(1:4, "wk ahead inc death"),
@@ -96,7 +95,7 @@ forecasts_inc_function <- function(x,y) {map_dfr(
   }
 )
 }
-lmonday<-length(mondays)
+# lmonday<-length(mondays)
 
 forecasts_inc1 <- forecasts_inc_function("1","10")
 forecasts_inc2 <- forecasts_inc_function("11","20")

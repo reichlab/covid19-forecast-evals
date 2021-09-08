@@ -233,24 +233,24 @@ plot_by_location_wis <- function(df, order, location_order) {
            location_name = fct_relevel(location_name, location_order))
   
   
-  
-  # plot:
-  ggplot(average_by_loc_to_plot, 
-         aes(x=model, y=location_name, 
-             fill= scales::oob_squish(log_relative_wis, range = c(- 2.584963, 2.584963)))) +
-    geom_tile() +
-    geom_text(aes(label = relative_wis_text), size = 2.5) + # I adapted the rounding
-    scale_fill_gradient2(low = "steelblue", high = "red", midpoint = 0, na.value = "grey50", 
-                         name = "Relative WIS", 
-                         breaks = c(-2,-1,0,1,2), 
-                         labels =c("0.25", 0.5, 1, 2, 4)) + 
-    xlab(NULL) + ylab(NULL) +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 9),
-          axis.title.x = element_text(size = 9),
-          axis.text.y = element_text(size = 9),
-          title = element_text(size = 9)) 
-}
 
+
+# plot:
+ggplot(average_by_loc_to_plot,
+       aes(x=model, y=location_name,
+           fill= scales::oob_squish(log_relative_wis, range = c(- 2.584963, 2.584963)))) +
+  geom_tile() +
+  geom_text(aes(label = relative_wis_text), size = 2.5) + # I adapted the rounding
+  scale_fill_gradient2(low = "steelblue", high = "red", midpoint = 0, na.value = "grey50",
+                       name = "Relative WIS",
+                       breaks = c(-2,-1,0,1,2),
+                       labels =c("0.25", 0.5, 1, 2, 4)) +
+  xlab(NULL) + ylab(NULL) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 9),
+        axis.title.x = element_text(size = 9),
+        axis.text.y = element_text(size = 9),
+        title = element_text(size = 9))
+}
 
 
 
@@ -390,7 +390,7 @@ plot_by_location_mae <- function(df) {
 wis_barplot_function <- function(x,y,order) {
   wis_plot <- x %>% 
     filter(target_end_date >= first_eval_sat) %>%
-    filter(score_name %in% c("sharpness","overprediction", "underprediction")) %>% 
+    filter(score_name %in% c("dispersion","overprediction", "underprediction")) %>% 
     group_by(model, score_name) %>% 
     summarise(mean_values = mean(score_value,na.rm = T)) %>% 
     mutate(n_forecasts = n()) %>%
