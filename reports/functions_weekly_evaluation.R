@@ -14,7 +14,7 @@ calib_table <- function(x){
     filter(!is.na(score_value))  %>%
     filter(score_name %in% c("coverage_50","coverage_95")) %>%
     pivot_wider(names_from = score_name, values_from = score_value) %>%
-    group_by(model) %>%
+    group_by(model,horizon) %>%
     summarise(n_forecasts_historical = n(),
               mean_PI50 = round(sum(coverage_50, na.rm = TRUE) / n(),2),
               mean_PI95 = round(sum(coverage_95, na.rm = TRUE) / n(),2)) %>% ungroup() 
@@ -26,7 +26,7 @@ calib_table <- function(x){
     filter(score_name %in% c("coverage_50","coverage_95")) %>%
     filter(target_end_date >= first_eval_sat) %>%  droplevels() %>%
     pivot_wider(names_from = score_name, values_from = score_value) %>%
-    group_by(model) %>%
+    group_by(model,horizon) %>%
     summarise(n_forecasts_recent = n(),
               mean_PI50_recent = round(sum(coverage_50, na.rm = TRUE) / n(),2),
               mean_PI95_recent = round(sum(coverage_95, na.rm = TRUE) / n(),2)) %>%
@@ -60,7 +60,7 @@ calib_table <- function(x){
 
 
 
-#filter for inclusion in historical coverage table 
+#filter for inclusion in recent accuracy table 
 ##Keep only models that have submitted forecasts for at least half of the number of max WIS forecasts or half the max MAE forecasts 
 recent_accuracy_filter <- function(x) {
   x %>%
@@ -73,6 +73,19 @@ recent_accuracy_filter <- function(x) {
     droplevels()
 }
 
+#filter for inclusion in recent coverage table 
+#at least 5 weeks overall or at least 2 out of the last 3 weeks 
+recent_coverage_filter <- function(x) {
+  x %>%
+    filter(n_weeks >= 5 |  n_weeks_3wksPrior >= 2) %>% 
+    filter(score_name %in% c("coverage_50")) %>%
+    filter(!is.na(score_value)) %>%  #remove NAs 
+    filter(target_end_date >= first_eval_sat) %>% #
+    group_by(model, score_name) %>%
+    mutate(n_forecasts_50 = sum(score_name == "coverage_50" & !is.na(score_value)),
+           n_forecasts_95 = sum(score_name == "coverage_95" & !is.na(score_value))) %>% ungroup() %>%
+    droplevels()
+}
 ##Filter for inclusion in historical accuracy 
 historical_accuracy_filter <- function(x) {
   x %>%
@@ -83,6 +96,17 @@ historical_accuracy_filter <- function(x) {
     filter(!is.na(score_value)) %>% droplevels()
 }
 
+##Filter for inclusion in historical coverage 
+historical_coverage_filter <- function(x) {
+  x %>%
+    filter(n_weeks >= 5 |  n_weeks_3wksPrior >= 2) %>% 
+    filter(score_name %in% c("coverage_50")) %>%
+    filter(!is.na(score_value)) %>%  #remove NAs 
+    group_by(model, score_name) %>%
+    mutate(n_forecasts_50 = sum(score_name == "coverage_50" & !is.na(score_value)),
+           n_forecasts_95 = sum(score_name == "coverage_95" & !is.na(score_value))) %>% ungroup() %>%
+    droplevels()
+}
 
 
 
@@ -390,7 +414,7 @@ plot_by_location_mae <- function(df) {
 wis_barplot_function <- function(x,y,order) {
   wis_plot <- x %>% 
     filter(target_end_date >= first_eval_sat) %>%
-    filter(score_name %in% c("sharpness","overprediction", "underprediction")) %>% 
+    filter(score_name %in% c("dispersion","overprediction", "underprediction")) %>% 
     group_by(model, score_name) %>% 
     summarise(mean_values = mean(score_value,na.rm = T)) %>% 
     mutate(n_forecasts = n()) %>%
