@@ -14,7 +14,7 @@ calib_table <- function(x){
     filter(!is.na(score_value))  %>%
     filter(score_name %in% c("coverage_50","coverage_95")) %>%
     pivot_wider(names_from = score_name, values_from = score_value) %>%
-    group_by(model) %>%
+    group_by(model,horizon) %>%
     summarise(n_forecasts_historical = n(),
               mean_PI50 = round(sum(coverage_50, na.rm = TRUE) / n(),2),
               mean_PI95 = round(sum(coverage_95, na.rm = TRUE) / n(),2)) %>% ungroup() 
@@ -26,7 +26,7 @@ calib_table <- function(x){
     filter(score_name %in% c("coverage_50","coverage_95")) %>%
     filter(target_end_date >= first_eval_sat) %>%  droplevels() %>%
     pivot_wider(names_from = score_name, values_from = score_value) %>%
-    group_by(model) %>%
+    group_by(model,horizon) %>%
     summarise(n_forecasts_recent = n(),
               mean_PI50_recent = round(sum(coverage_50, na.rm = TRUE) / n(),2),
               mean_PI95_recent = round(sum(coverage_95, na.rm = TRUE) / n(),2)) %>%
@@ -60,7 +60,7 @@ calib_table <- function(x){
 
 
 
-#filter for inclusion in historical coverage table 
+#filter for inclusion in recent accuracy table 
 ##Keep only models that have submitted forecasts for at least half of the number of max WIS forecasts or half the max MAE forecasts 
 recent_accuracy_filter <- function(x) {
   x %>%
@@ -73,6 +73,19 @@ recent_accuracy_filter <- function(x) {
     droplevels()
 }
 
+#filter for inclusion in recent coverage table 
+#at least 5 weeks overall or at least 2 out of the last 3 weeks 
+recent_coverage_filter <- function(x) {
+  x %>%
+    filter(n_weeks >= 5 |  n_weeks_3wksPrior >= 2) %>% 
+    filter(score_name %in% c("coverage_50")) %>%
+    filter(!is.na(score_value)) %>%  #remove NAs 
+    filter(target_end_date >= first_eval_sat) %>% #
+    group_by(model, score_name) %>%
+    mutate(n_forecasts_50 = sum(score_name == "coverage_50" & !is.na(score_value)),
+           n_forecasts_95 = sum(score_name == "coverage_95" & !is.na(score_value))) %>% ungroup() %>%
+    droplevels()
+}
 ##Filter for inclusion in historical accuracy 
 historical_accuracy_filter <- function(x) {
   x %>%
@@ -83,6 +96,17 @@ historical_accuracy_filter <- function(x) {
     filter(!is.na(score_value)) %>% droplevels()
 }
 
+##Filter for inclusion in historical coverage 
+historical_coverage_filter <- function(x) {
+  x %>%
+    filter(n_weeks >= 5 |  n_weeks_3wksPrior >= 2) %>% 
+    filter(score_name %in% c("coverage_50")) %>%
+    filter(!is.na(score_value)) %>%  #remove NAs 
+    group_by(model, score_name) %>%
+    mutate(n_forecasts_50 = sum(score_name == "coverage_50" & !is.na(score_value)),
+           n_forecasts_95 = sum(score_name == "coverage_95" & !is.na(score_value))) %>% ungroup() %>%
+    droplevels()
+}
 
 
 
@@ -233,24 +257,24 @@ plot_by_location_wis <- function(df, order, location_order) {
            location_name = fct_relevel(location_name, location_order))
   
   
-
-
-# plot:
-ggplot(average_by_loc_to_plot,
-       aes(x=model, y=location_name,
-           fill= scales::oob_squish(log_relative_wis, range = c(- 2.584963, 2.584963)))) +
-  geom_tile() +
-  geom_text(aes(label = relative_wis_text), size = 2.5) + # I adapted the rounding
-  scale_fill_gradient2(low = "steelblue", high = "red", midpoint = 0, na.value = "grey50",
-                       name = "Relative WIS",
-                       breaks = c(-2,-1,0,1,2),
-                       labels =c("0.25", 0.5, 1, 2, 4)) +
-  xlab(NULL) + ylab(NULL) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 9),
-        axis.title.x = element_text(size = 9),
-        axis.text.y = element_text(size = 9),
-        title = element_text(size = 9))
+  
+  # plot:
+  ggplot(average_by_loc_to_plot, 
+         aes(x=model, y=location_name, 
+             fill= scales::oob_squish(log_relative_wis, range = c(- 2.584963, 2.584963)))) +
+    geom_tile() +
+    geom_text(aes(label = relative_wis_text), size = 2.5) + # I adapted the rounding
+    scale_fill_gradient2(low = "steelblue", high = "red", midpoint = 0, na.value = "grey50", 
+                         name = "Relative WIS", 
+                         breaks = c(-2,-1,0,1,2), 
+                         labels =c("0.25", 0.5, 1, 2, 4)) + 
+    xlab(NULL) + ylab(NULL) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 9),
+          axis.title.x = element_text(size = 9),
+          axis.text.y = element_text(size = 9),
+          title = element_text(size = 9)) 
 }
+
 
 
 
