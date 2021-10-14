@@ -329,12 +329,6 @@ truth_dat_hosp <- truth_dat_hosp_all  %>%
 
 
 
-#convert to 7 day average by week
-# truth_dat_hosp_wk <- truth_dat_hosp %>%
-#   group_by(model,target_variable,MMWRyear,MMWRweek, location) %>% summarize(hosp_07da = sum(value)) %>%
-#   mutate(target_end_date = MMWRweek2Date(MMWRyear,MMWRweek) + 6) %>%
-#   rename (value=hosp_07da)
-
 #query forecast data from zoltar for past 6 month submission weeks. 
 forecasts_hosp <- map_dfr(
   mondays, function(the_weeks) {
@@ -403,6 +397,7 @@ forecasts_hosp_x5 <- forecasts_hosp_all_x %>%
   filter(forecast_date > mondays[24])
 
 #ensure there are no duplicates in each smaller group (may have to increase memory limit memory.limit(24000))
+memory.limit(30000)
 forecasts_hosp_x1_update <- unique(forecasts_hosp_x1)
 forecasts_hosp_x2_update <- unique(forecasts_hosp_x2)
 forecasts_hosp_x3_update <- unique(forecasts_hosp_x3)
@@ -410,26 +405,34 @@ forecasts_hosp_x4_update <- unique(forecasts_hosp_x4)
 forecasts_hosp_x5_update <- unique(forecasts_hosp_x5)
 
 forecasts_hosp_update <- rbind(forecasts_hosp_x1_update,forecasts_hosp_x2_update,forecasts_hosp_x3_update,forecasts_hosp_x4_update,forecasts_hosp_x5_update)
+save(forecasts_hosp_update, file = "reports/forecasts_hosp_update.rda")
 
 #covidhub utils function to score the data
 score_hosp <- score_forecasts(forecasts = forecasts_hosp_update,
                               truth = truth_dat_hosp,
                               return_format = "long",
                               use_median_as_point = TRUE)
+save(score_hosp, file = "reports/score_hosp.rda")
+load(file = "score_hosp_all.rda") 
 
-# #convert to 7 day average by week (START HERE)
-# score_hosp_wk <- score_hosp %>%
-#   mutate(week)
-#   group_by(model,target_variable,forecast_date,score_name,location,MMWRyear,MMWRweek) %>% summarize(score_value_wk = mean(score_value)) %>%
-#   mutate(target_end_date = MMWRweek2Date(MMWRyear,MMWRweek) + 6, targetyear=MMWRyear, targetweek=MMWRweek, MMWRweek(forecast_date)) %>%
-#   mutate(horizon = targetweek-MMWRweek + 1, temporal_resolution = "wk") %>%
-#   rename (value=hosp_07da)
-
-
-
+#convert scores to weekly
+score_hosp_wk <- score_hosp %>%
+  rename(horz_day = horizon)  %>%
+  mutate(horizon = ceiling(horz_day/7)) %>%
+  group_by(model,score_name,location,forecast_date,horizon,target_variable) %>%
+  mutate(n_days = n()) %>% 
+  dplyr::summarise(score_value_mean = mean(score_value),
+           score_value_sum = sum(score_value),
+           score_value_n = mean(n_days)) %>% 
+  mutate(score_value = case_when(score_name %in% c("wis","abs_error","dispersion","overprediction","underprediction") ~ score_value_mean,
+                                 score_name %in% c("coverage_50","coverage_95") ~ score_value_sum/score_value_n)) %>%
+  filter(score_name %in% c("wis","abs_error","dispersion","overprediction","underprediction","coverage_50","coverage_95")) %>%
+  mutate(temporal_resolution = "wk",
+         target_end_date = forecast_date+ horizon*7)  %>%
+  select(model,score_name,location,forecast_date,horizon,score_value,target_variable,temporal_resolution,target_end_date)
 
 # clean the datasets and add in columns to count the number of weeks, horizons, and locations
-score_hosp_all <- mutate_scores(score_hosp)  
+score_hosp_all <- mutate_scores(score_hosp_wk)  
 
 #write rda to save scores (this will be taken out if we use a csv pipeline)
 save(truth_dat_hosp, file = "reports/truth_dat_hosp.rda")

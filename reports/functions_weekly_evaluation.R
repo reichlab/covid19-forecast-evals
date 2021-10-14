@@ -115,7 +115,7 @@ pairwise_comparison <- function(scores, mx, my, subset = rep(TRUE, nrow(scores))
 #FILTER FUNCTIONS
 # by_week_function: Filter WIS by week 
 # historical_accuracy_filter: filter for inclusion in historical accuracy 
-# historical_accuracy_filter: filter for inclusion in historical accuracy 
+# historical_coverage_filter: filter for inclusion in historical coverage table 
 # recent_accuracy_filter: filter for inclusion in recent accuracy table 
 # recent_coverage_filter: filter for inclusion in recent coverage table 
 
