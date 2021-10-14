@@ -33,6 +33,7 @@ n_weeks_history <- 26 # number of weeks for historical data
 last_eval_sat <- as.Date(calc_target_week_end_date(Sys.Date(), horizon = 0))
 first_eval_sat <- last_eval_sat  - 7*(n_weeks_eval - 1)  #First Evaluated Date
 
+
 last_submission_date <- last_eval_sat  - 5 #Last submission date
 first_submission_date <- first_eval_sat - 11  #First submission date
 
@@ -45,14 +46,16 @@ first_4wk_target_end_date  <- as.Date(calc_target_week_end_date(first_submission
 last_4wk_target_end_date <- as.Date(calc_target_week_end_date(last_submission_date, horizon = 4))
 
 forecast_mon <- lubridate::floor_date(Sys.Date(), unit = "week") + 1      #Even when running on Tuesday, will be Monday date (used so that there are not duplicated values for a forecast that has submitted multiple times in a week)
+first_sat_history <- last_eval_sat - 7*n_weeks_history #First saturday for historical data
 first_mon_history <- forecast_mon - 7*n_weeks_history #First monday for historical data
 mondays <- seq(first_mon_history, last_eval_sat, by = "week")
+saturdays <- seq(first_sat_history, last_eval_sat, by = "week")
 eval_sat <- c(first_eval_sat, last_eval_sat) #range of dates evaluated 
 
 models_primary_secondary <- get_model_designations(source = "zoltar") %>% filter(designation %in% c("secondary", "primary")) %>% pull(model)
 
 
-#function to load truth data for all 2 targets
+#function to load truth data for death and case targets
 truth_function <- function(x) {
   load_truth(
     truth_source = "JHU",
@@ -94,6 +97,100 @@ forecasts_inc_function <- function(x,y) {map_dfr(
 )
 }
 
+#' @return forecast dataframe augmented by columns reference_date and
+#' relative_horizon
+align_forecasts_one_temporal_resolution <- function(
+  forecasts,
+  reference_dates,
+  reference_weekday,
+  reference_windows,
+  drop_nonpos_relative_horizons
+) {
+  if (length(unique(forecasts$temporal_resolution)) > 1) {
+    stop("standardize_forecasts_one_temporal_resolution only supports forecasts at a single temporal resolution.")
+  }
+  
+  if (is.null(reference_windows)) {
+    if (reference_weekday == "Saturday") {
+      reference_windows <- -4:2
+    } else if (reference_weekday == "Monday") {
+      reference_windows <- -6:0
+    } else {
+      stop("Reference windows undefined")
+    }
+  }
+  
+  if (!is.list(reference_windows)) {
+    reference_windows <- list(reference_windows)
+  }
+  
+  if (!is.null(reference_dates)) {
+    # ensure we have dates
+    reference_dates <- as.Date(reference_dates)
+  } else {
+    # every date from that of first forecast - diameter of first window
+    # to that of last forecast + diameter of last window
+    all_dates <- seq(
+      min(forecasts$forecast_date) - (
+        max(sort(reference_windows[[1]])) -
+          min(sort(reference_windows[[1]]))
+      ),
+      max(forecasts$forecast_date) + (
+        max(sort(reference_windows[[length(reference_windows)]])) -
+          min(sort(reference_windows[[length(reference_windows)]])) 
+      ),
+      by = 1
+    )
+    
+    # keep the dates identified above that are the specified reference_weekday
+    reference_dates <- all_dates[weekdays(all_dates) == reference_weekday]
+  }
+  
+  # create a tibble where each row contains:
+  # - a possible forecast date
+  # - a reference date to which that forecast date should be assigned
+  ref_df <- tibble(
+    reference_date = reference_dates,
+    forecast_date = purrr::map2(
+      reference_date, 
+      reference_windows, 
+      ~.x+.y
+    )
+  ) %>% unnest(cols = forecast_date)
+  
+  # ensure that in the tibble constructed above, each forecast date is
+  # associated with at most one reference date
+  # this could be violated if some windows are overlapping
+  reps <- ref_df %>%
+    dplyr::group_by(forecast_date) %>%
+    dplyr::tally() %>% 
+    dplyr::filter(n > 1)
+  if (nrow(reps) > 0) {
+    stop(paste0(
+      "The following forecast dates are associated with multiple reference dates: ",
+      paste(reps %>% dplyr::pull(forecast_date), collapse = ", ")
+    ))
+  }
+  
+  # join with the reference date lookup table above
+  # and calculate the relative horizon
+  forecasts <- forecasts %>% 
+    dplyr::left_join(ref_df, by = "forecast_date") %>% 
+    dplyr::mutate(
+      ts_days = ifelse(temporal_resolution == "wk", 7, 1),
+      relative_horizon = 
+        ceiling(as.numeric((target_end_date - reference_date) / ts_days))
+    ) %>%
+    dplyr::select(-ts_days)
+  
+  if (drop_nonpos_relative_horizons) {
+    forecasts <- forecasts %>%
+      dplyr::filter(relative_horizon > 0)
+  }
+  
+  return(forecasts)
+}
+
 ###########################
 # CASES
 # Load truth data
@@ -121,6 +218,7 @@ forecasts_case <- map_dfr(
 forecasts_case_cte <- 
     load_forecasts(
       models = "COVIDhub-trained_ensemble",
+      dates = mondays,
       date_window_size = 6,
       locations = the_locations,
       types = "quantile",
@@ -130,6 +228,7 @@ forecasts_case_cte <-
 forecasts_case_c4e <- 
   load_forecasts(
     models = "COVIDhub-4_week_ensemble",
+    dates = mondays,
     date_window_size = 6,
     locations = the_locations,
     types = "quantile",
@@ -175,6 +274,7 @@ forecasts_inc <- rbind(forecasts_inc1,forecasts_inc2,forecasts_inc3) %>% filter(
 forecasts_inc_cte <- 
   load_forecasts(
     models = "COVIDhub-trained_ensemble",
+    dates = mondays,
     date_window_size = 6,
     locations = the_locations,
     types = "quantile",
@@ -184,6 +284,7 @@ forecasts_inc_cte <-
 forecasts_inc_c4e <- 
   load_forecasts(
     models = "COVIDhub-4_week_ensemble",
+    dates = mondays,
     date_window_size = 6,
     locations = the_locations,
     types = "quantile",
@@ -224,15 +325,9 @@ truth_dat_hosp_all <- load_truth(
 
 #filter for last 6 months
 truth_dat_hosp <- truth_dat_hosp_all  %>%
-  filter(target_end_date >= first_mon_history) %>%
-    mutate(MMWRweek(target_end_date))
+  filter(target_end_date >= first_mon_history) 
 
 
-#convert to 7 day average by week
-truth_dat_hosp_wk <- truth_dat_hosp %>%
-  group_by(model,target_variable,MMWRyear,MMWRweek, location) %>% summarize(hosp_07da = sum(value)) %>%
-  mutate(target_end_date = MMWRweek2Date(MMWRyear,MMWRweek) + 6) %>%
-  rename (value=hosp_07da)
 
 #query forecast data from zoltar for past 6 month submission weeks. 
 forecasts_hosp <- map_dfr(
@@ -248,28 +343,61 @@ forecasts_hosp <- map_dfr(
   }
 ) 
 
+#manually add in COVIDhub ensembles
+forecasts_hosp_cte <- 
+  load_forecasts(
+    models = "COVIDhub-trained_ensemble",
+    dates = mondays,
+    date_window_size = 1,
+    locations = the_locations,
+    types = "quantile",
+    targets = paste(1:28, "day ahead inc hosp"),
+    source = "zoltar")
+
+forecasts_hosp_c4e <- 
+  load_forecasts(
+    models = "COVIDhub-4_week_ensemble",
+    dates = mondays,
+    date_window_size = 1,
+    locations = the_locations,
+    types = "quantile",
+    targets = paste(1:28, "day ahead inc hosp"),
+    source = "zoltar")
+
+forecasts_hosp_all <- bind_rows(forecasts_hosp,forecasts_hosp_cte,forecasts_hosp_c4e)
+
+#align dates
+forecasts_hosp_x <- align_forecasts_one_temporal_resolution(forecasts = forecasts_hosp_all,
+  reference_dates = mondays,                                                          
+  reference_weekday = "Monday",
+  reference_windows =  -6:0,
+  drop_nonpos_relative_horizons = TRUE
+)
+
+
 #reduce size
-forecasts_hosp_x <- forecasts_hosp %>%
-  select(model, forecast_date, location, horizon, temporal_resolution, target_variable, target_end_date, type, quantile, value) %>%
-  mutate(MMWRweek(target_end_date))
+forecasts_hosp_all_x <- forecasts_hosp_x %>%
+  select(model, reference_date, location, relative_horizon, temporal_resolution, target_variable, target_end_date, type, quantile, value) %>%
+  rename(forecast_date=reference_date,horizon=relative_horizon)
 
 #divide into smaller groups
-forecasts_hosp_x1 <- forecasts_hosp_x %>%
+forecasts_hosp_x1 <- forecasts_hosp_all_x %>%
   filter(forecast_date <= mondays[7])
 
-forecasts_hosp_x2 <- forecasts_hosp_x %>%
+forecasts_hosp_x2 <- forecasts_hosp_all_x %>%
   filter(forecast_date > mondays[7] & forecast_date <= mondays[12])
 
-forecasts_hosp_x3 <- forecasts_hosp_x %>%
+forecasts_hosp_x3 <- forecasts_hosp_all_x %>%
   filter(forecast_date > mondays[12] & forecast_date <= mondays[19])
 
-forecasts_hosp_x4 <- forecasts_hosp_x %>%
+forecasts_hosp_x4 <- forecasts_hosp_all_x %>%
   filter(forecast_date > mondays[19] & forecast_date <= mondays[24])
 
-forecasts_hosp_x5 <- forecasts_hosp_x %>%
+forecasts_hosp_x5 <- forecasts_hosp_all_x %>%
   filter(forecast_date > mondays[24])
 
 #ensure there are no duplicates in each smaller group (may have to increase memory limit memory.limit(24000))
+memory.limit(30000)
 forecasts_hosp_x1_update <- unique(forecasts_hosp_x1)
 forecasts_hosp_x2_update <- unique(forecasts_hosp_x2)
 forecasts_hosp_x3_update <- unique(forecasts_hosp_x3)
@@ -277,23 +405,34 @@ forecasts_hosp_x4_update <- unique(forecasts_hosp_x4)
 forecasts_hosp_x5_update <- unique(forecasts_hosp_x5)
 
 forecasts_hosp_update <- rbind(forecasts_hosp_x1_update,forecasts_hosp_x2_update,forecasts_hosp_x3_update,forecasts_hosp_x4_update,forecasts_hosp_x5_update)
-
-#convert to 7 day average by week
-forecasts_hosp_x_wk <- forecasts_hosp_update %>%
-  group_by(model,target_variable,forecast_date,type,quantile,MMWRyear,MMWRweek, location) %>% summarize(hosp_07da = sum(value)) %>%
-  mutate(target_end_date = MMWRweek2Date(MMWRyear,MMWRweek) + 6, targetyear=MMWRyear, targetweek=MMWRweek, MMWRweek(forecast_date)) %>%
-  mutate(horizon = targetweek-MMWRweek + 1, temporal_resolution = "wk") %>%
-  rename (value=hosp_07da)
-
+save(forecasts_hosp_update, file = "reports/forecasts_hosp_update.rda")
 
 #covidhub utils function to score the data
-score_hosp <- score_forecasts(forecasts = forecasts_hosp_x_wk,
-                              truth = truth_dat_hosp_wk,
+score_hosp <- score_forecasts(forecasts = forecasts_hosp_update,
+                              truth = truth_dat_hosp,
                               return_format = "long",
                               use_median_as_point = TRUE)
+save(score_hosp, file = "reports/score_hosp.rda")
+load(file = "score_hosp_all.rda") 
+
+#convert scores to weekly
+score_hosp_wk <- score_hosp %>%
+  rename(horz_day = horizon)  %>%
+  mutate(horizon = ceiling(horz_day/7)) %>%
+  group_by(model,score_name,location,forecast_date,horizon,target_variable) %>%
+  mutate(n_days = n()) %>% 
+  dplyr::summarise(score_value_mean = mean(score_value),
+           score_value_sum = sum(score_value),
+           score_value_n = mean(n_days)) %>% 
+  mutate(score_value = case_when(score_name %in% c("wis","abs_error","dispersion","overprediction","underprediction") ~ score_value_mean,
+                                 score_name %in% c("coverage_50","coverage_95") ~ score_value_sum/score_value_n)) %>%
+  filter(score_name %in% c("wis","abs_error","dispersion","overprediction","underprediction","coverage_50","coverage_95")) %>%
+  mutate(temporal_resolution = "wk",
+         target_end_date = forecast_date+ horizon*7)  %>%
+  select(model,score_name,location,forecast_date,horizon,score_value,target_variable,temporal_resolution,target_end_date)
 
 # clean the datasets and add in columns to count the number of weeks, horizons, and locations
-score_hosp_all <- mutate_scores(score_hosp)
+score_hosp_all <- mutate_scores(score_hosp_wk)  
 
 #write rda to save scores (this will be taken out if we use a csv pipeline)
 save(truth_dat_hosp, file = "reports/truth_dat_hosp.rda")
