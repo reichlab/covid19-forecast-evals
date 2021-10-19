@@ -3,7 +3,7 @@ library(covidHubUtils)
 library(cowplot)
 theme_set(theme_bw())
 
-source("code/load-global-analysis-dates.R")
+source("code/load-global-analysis-dates.R") 
 
 locs_to_exclude <- c("United States", "American Samoa", "Guam", "Northern Mariana Islands", "Virgin Islands", "Puerto Rico", "District of Columbia")
 
@@ -70,7 +70,7 @@ avg_wis_by_model_target_week <- inc_scores %>%
             median_wis = median(wis), 
             mean_wis = mean(wis, na.rm=TRUE), 
             pi_cov_95 = mean(coverage_95), 
-            mean_sharpness = mean(sharpness),
+            mean_sharpness = mean(dispersion),
             mean_underprediction = mean(underprediction),
             mean_overprediction = mean(overprediction),
             nlocs=n()) %>%
@@ -115,7 +115,8 @@ err_by_model_horizon <- avg_wis_by_model_target_week %>%
   ungroup() %>%
   filter(max_horizon > 8, nobs>100) %>%
   mutate(model = reorder(model, -pi_cov_95),
-         `# predictions` = nobs) 
+         `# predictions` = nobs) %>%
+  mutate(model = fct_recode(model, "IHME-SEIR" = "IHME-CurveFit"))
 
 model_colors <- palette.colors(n=5, palette="Set1")[c(3,5,4,1,2)]
 
@@ -143,7 +144,8 @@ comp_err_by_model_horizon <- err_by_model_horizon %>%
   group_by(model, horizon) %>%
   mutate(pct_sharpness = dispersion/(dispersion + overprediction + underprediction),
          pct_underprediction = underprediction/(dispersion + overprediction + underprediction),
-         pct_overprediction = overprediction/(dispersion + overprediction + underprediction))
+         pct_overprediction = overprediction/(dispersion + overprediction + underprediction)) %>%
+  mutate(model = fct_recode(model, "IHME-SEIR" = "IHME-CurveFit"))
 
 comp_err_by_model_horizon %>% 
   pivot_longer(cols=starts_with("pct"),
@@ -171,6 +173,7 @@ avg_wis_by_model_target_week %>%
   summarize(avg_wis = mean(mean_wis)) %>%
   group_by(model, target_end_date) %>%
   mutate(h1_avg_wis = min(avg_wis), rel_wis = avg_wis/h1_avg_wis) %>%
+  mutate(model = ifelse(model=="IHME-CurveFit", "IHME-SEIR", model))
   print(n=Inf)
 
 ## panel B: figure mean wis by date color by horizon

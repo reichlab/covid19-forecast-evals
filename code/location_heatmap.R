@@ -18,12 +18,12 @@ the_targets_inc <- c("1 wk ahead inc death")
 
 inc_tmp <- load_forecasts(
   models = the_models,
-  forecast_dates = the_timezeros,
+  dates = the_timezeros,
   locations = the_locations,
   types = c("point", "quantile"),
   targets = the_targets_inc)
   
-
+ 
 inc_tmp_unique <-  inc_tmp %>%
   mutate(sat_fcast_week = as.Date(calc_target_week_end_date(forecast_date, horizon = 0))) %>%
   group_by(model, location, sat_fcast_week, quantile) %>%

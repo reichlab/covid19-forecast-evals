@@ -8,7 +8,7 @@ wis_plot <- read_csv("paper-inputs/inc-scores.csv") %>%
                           filter(geo_type == "state") %>% pull(fips))) %>%
   mutate(n_forecasts = n()) %>%
   group_by(model) %>%
-  summarise(dispersion = mean(sharpness, na.rm = T),
+  summarise(dispersion = mean(dispersion, na.rm = T),
             overprediction = mean(overprediction, na.rm = T),
             underprediction = mean(underprediction, na.rm = T))
 
@@ -19,7 +19,8 @@ model_levels <- read_csv("paper-inputs/table-overall-performance.csv") %>%
 wis_wide <- pivot_longer(wis_plot,
                         cols = c("overprediction", "dispersion", "underprediction"),
                         names_to = "score_name") %>%
-  mutate(model = fct_relevel(model, model_levels))
+  mutate(model = fct_relevel(model, model_levels)) %>%
+  mutate(model = ifelse(model=="IHME-CurveFit", "IHME-SEIR", model)) 
   
 component_plot <- ggplot(wis_wide, aes(fill=score_name, y=value, x=model)) + 
   geom_bar(position="stack", stat="identity", width = .75) +

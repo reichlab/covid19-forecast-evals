@@ -5,7 +5,7 @@ library(tidyverse)
 library(covidData)
 
 source("code/load-global-analysis-dates.R") 
-data("hub_locations")
+data("hub_locations") 
 
 ##Read in eligible data 
 model_eligibility_inc <- read.csv("paper-inputs/model-eligibility-inc.csv") %>%
@@ -55,7 +55,7 @@ inc_scores_covidhub_utils <- map_dfr(
   function(x){
     forecasts <- load_forecasts(
     models = colnames(model_eligibility_inc)[x],
-    forecast_dates = model_eligibility_inc %>% pull(x),
+    dates = model_eligibility_inc %>% pull(x),
     locations = hub_locations %>% filter(geo_type == "state") %>% pull(fips),
     types = c("quantile", "point"), 
     targets = c(paste(1:20, "wk ahead inc death"))
