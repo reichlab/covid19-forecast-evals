@@ -2,7 +2,7 @@ require(covidHubUtils)
 require(tidyverse)
 
 ## retrieval date for truth data used in score calculation
-truth_date <- as.Date("2021-10-05") # previously as.Date("2021-05-25") #previously 2021-05-03
+truth_date <- as.Date("2021-10-18") # previously as.Date("2021-05-25") #previously 2021-05-03
 
 ## spreadsheet for keeping track of dates
 ## https://docs.google.com/spreadsheets/d/1u6PTlQoNgIyWwE_msswftg2P3U0JOmt5pwIRciAq0Wk/edit#gid=1071484175
@@ -10,7 +10,7 @@ truth_date <- as.Date("2021-10-05") # previously as.Date("2021-05-25") #previous
 ## important dates for score calculations
 first_timezero <- as.Date("2020-04-21") ## earliest forecast_date in an eligible file 
 last_timezero <- as.Date("2021-09-27") #previously as.Date("2021-04-26") ## latest forecast_date for 1 wk ahead in an eligible file, based on 1 wk ahead. 
-last_timezero4wk <- as.Date("2021-04-27") #previously as.Date("2021-04-05") ## latest forecast_date for 4 wk ahead in an eligible file
+last_timezero4wk <- as.Date("2021-09-06") #previously as.Date("2021-04-05") ## latest forecast_date for 4 wk ahead in an eligible file
 
 ## range of target_week_end_dates. 
 first_target_end_date <- as.Date(calc_target_week_end_date(first_timezero, 1))

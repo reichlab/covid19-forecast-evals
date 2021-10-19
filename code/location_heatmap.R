@@ -18,7 +18,7 @@ the_targets_inc <- c("1 wk ahead inc death")
 
 inc_tmp <- load_forecasts(
   models = the_models,
-  forecast_dates = the_timezeros,
+  dates = the_timezeros,
   locations = the_locations,
   types = c("point", "quantile"),
   targets = the_targets_inc)
