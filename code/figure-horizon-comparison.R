@@ -3,7 +3,7 @@ library(covidHubUtils)
 library(cowplot)
 theme_set(theme_bw())
 
-source("code/load-global-analysis-dates.R")
+source("code/load-global-analysis-dates.R") 
 
 locs_to_exclude <- c("United States", "American Samoa", "Guam", "Northern Mariana Islands", "Virgin Islands", "Puerto Rico", "District of Columbia")
 

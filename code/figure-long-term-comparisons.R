@@ -2,7 +2,7 @@
 library(tidyverse)
 library(covidHubUtils)
 library(ggrepel)
-theme_set(theme_bw())
+theme_set(theme_bw()) 
 
 source("code/load-global-analysis-dates.R")
 first_date_for_longterm_eval <- as.Date("2020-10-03")

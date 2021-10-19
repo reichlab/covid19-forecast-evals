@@ -5,7 +5,7 @@ library(tidyverse)
 library(covidData)
 
 source("code/load-global-analysis-dates.R") 
-data("hub_locations")
+data("hub_locations") 
 
 ##Read in eligible data 
 model_eligibility_inc <- read.csv("paper-inputs/model-eligibility-inc.csv") %>%

@@ -11,7 +11,7 @@ truth_date <- as.Date("2021-10-18") # previously as.Date("2021-05-25") #previous
 first_timezero <- as.Date("2020-04-21") ## earliest forecast_date in an eligible file 
 last_timezero <- as.Date("2021-09-27") #previously as.Date("2021-04-26") ## latest forecast_date for 1 wk ahead in an eligible file, based on 1 wk ahead. 
 last_timezero4wk <- as.Date("2021-09-06") #previously as.Date("2021-04-05") ## latest forecast_date for 4 wk ahead in an eligible file
-
+ 
 ## range of target_week_end_dates. 
 first_target_end_date <- as.Date(calc_target_week_end_date(first_timezero, 1))
 last_target_end_date <- as.Date(calc_target_week_end_date(last_timezero, 1)) #last date for 1 week ahead forecast
