@@ -2,7 +2,7 @@
 library(tidyverse)
 library(covidHubUtils)
 library(ggrepel)
-theme_set(theme_bw())
+theme_set(theme_bw()) 
 
 source("code/load-global-analysis-dates.R")
 first_date_for_longterm_eval <- as.Date("2020-10-03")
@@ -117,7 +117,7 @@ calib95 <- ggplot(calibration_scores_inc, aes(x=horizon, y=percent_calib95, colo
   geom_hline(yintercept=.95, linetype=2) +
   scale_y_continuous(name = "Empirical prediction interval coverage", limits = c(0,1)) +
   scale_x_continuous(name = "Forecast horizon (weeks)") +
-  guides(color=FALSE) +
+  guides(color="none") +
   ggtitle("C: 95% prediction interval coverage rates")+
   geom_label_repel(aes(label = label),
     #nudge_x = 0.5,
