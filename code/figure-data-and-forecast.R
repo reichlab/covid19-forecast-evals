@@ -23,7 +23,7 @@ data("hub_locations")
 
 fcast_data <- load_forecasts(
   models = "COVIDhub-ensemble", 
-  forecast_dates = seq.Date(as.Date("2020-05-11"), 
+  dates = seq.Date(as.Date("2020-05-11"), 
                             as.Date("2021-05-11"), 
                             by="5 weeks"),
   targets = paste(1:4, "wk ahead inc death"),

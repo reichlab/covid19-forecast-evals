@@ -39,14 +39,14 @@ model_change_dates <- as.data.frame(cbind(
          model = as.factor(model),
          change_date = TRUE)
 
-plot_date <- as.Date("2021-05-08")
+plot_date <- as.Date("2021-10-16") #previously as.Date("2021-05-08")
 #Plot of locations each model submitted to each week
 sf1 <- ggplot(for_loc_figure, aes(y=model, x=sat_fcast_week, fill= (n_loc < 25 | n_quant < 23))) +  ## something about `| n_quant < 23` was here ??
   geom_raster(hjust=0) +
   theme_bw() +
   scale_x_date(date_labels = "%Y-%m-%d", 
 #               date_breaks = "2 weeks", 
-               breaks=seq.Date(as.Date("2020-04-25"), as.Date("2021-04-24"), by = "2 weeks"),
+               breaks=seq.Date(as.Date("2020-04-25"), as.Date("2021-10-02"), by = "2 weeks"),
                expand=expansion(mult=c(0.01, 0.01))) +
   annotation_custom(
     grob = textGrob(label="Model incl. in:", hjust=0, gp=gpar(col="Black", fontsize=10, fontface="bold")),
