@@ -25,7 +25,8 @@ the_target_end_dates <- seq(from = first_target_end_date, last_target_end_date, 
 
   
 ## maximum number of weeks missing that we allow before disqualifying a model
-MAXIMUM_MISSING_WEEKS <- 45 #formerly 46. Updated b/c there are now only 10 weeks in spring period and need to include models that have submitted for 6 weeks in spring
+MAXIMUM_MISSING_WEEKS <- 69 # 75 total target_end_dates, need to have submitted at a minimum 6 weeks for inclusion in spring
+                            #formerly 45. Updated b/c there are now only 10 weeks in spring period and need to include models that have submitted for 6 weeks in spring
                             #formerly 17 # formerly 3 
 
 UNITS_FOR_ELIGIBILITY <-covidHubUtils::hub_locations %>% 
