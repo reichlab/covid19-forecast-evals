@@ -58,7 +58,10 @@ inc_scores_covidhub_utils <- map_dfr(
     dates = model_eligibility_inc %>% pull(x),
     locations = hub_locations %>% filter(geo_type == "state") %>% pull(fips),
     types = c("quantile", "point"), 
-    targets = c(paste(1:20, "wk ahead inc death"))
+    targets = c(paste(1:20, "wk ahead inc death")),
+    source = "local_zoltar",
+    zoltar_sqlite_file = "../covid19-forecast-evals/data-raw/db-deaths-2021-10-21.sqlite3",
+    local_zoltpy_path = "../zoltpy/"
     )
     return(score_forecasts(forecasts, truth))
   }
