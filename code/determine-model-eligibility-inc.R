@@ -82,8 +82,12 @@ for(this_model in date_eligible_models){
         dates = fcasts_to_query$forecast_date,
         locations = UNITS_FOR_ELIGIBILITY,
         types = c("quantile"),
-        targets = inc_targets
-        ) %>%
+        # targets = inc_targets) %>%
+        targets = inc_targets, 
+        source = "local_zoltar",
+        zoltar_sqlite_file = "../covid19-forecast-evals/data-raw/db-deaths-2021-10-21.sqlite3",
+        local_zoltpy_path = "../zoltpy/"
+    ) %>%
         mutate(target_group = "inc")
     
     
