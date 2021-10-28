@@ -180,7 +180,7 @@ avg_wis_by_model_target_week_phase <- inc_scores_phase %>%
   group_by(model, target, seasonal_phase, target_end_date_1wk_ahead) %>%
   summarize(median_wis = median(wis), mean_wis = mean(wis, na.rm=TRUE), nlocs=n()) %>%
   left_join(model_levels_phases %>% mutate(model = recode(model, "IHME-CurveFit" = "IHME-SEIR"))) %>%
-  mutate(model = fct_reorder(model, relative_wis)) %>% droplevels()
+  mutate(model = fct_reorder(model, relative_wis)) %>% ungroup() 
 
 ## by model and target
 avg_wis_by_model_target_phase <- inc_scores_phase %>%
@@ -210,10 +210,12 @@ avg_phase <- inc_scores %>%
 
 #box plot 
 
+avg_wis_by_model_target_week_phase <- avg_wis_by_model_target_week_phase %>% ungroup() %>%
+  mutate(seasonal_phase = fct_relevel(factor(seasonal_phase), levels = c("spring", "summer", "winter", "delta"))) 
 
 p_phase_boxplot <- ggplot(avg_wis_by_model_target_week_phase, aes(x = reorder_within(model,relative_wis,seasonal_phase),
                                                                   y= scales::oob_squish(mean_wis, range = c(0,500)))) +
-  facet_grid(rows = vars(target), cols = vars(seasonal_phase), scales = "free_x", space="free") + #, scales="free_y") +
+  facet_grid(rows = vars(target), cols = vars(factor(seasonal_phase, levels = c("spring", "summer", "winter", "delta"))), scales = "free_x", space="free") + #, scales="free_y") +
   geom_boxplot(outlier.size = 0.5) +
   geom_hline(data=baseline_avg,
              aes(yintercept=mean_wis), linetype=2, color = "red") +
@@ -227,12 +229,11 @@ p_phase_boxplot <- ggplot(avg_wis_by_model_target_week_phase, aes(x = reorder_wi
   scale_x_reordered()
  
 
-
-pdf(file = "figures/model-target-week-wis-avgs_phase_boxplot.pdf", width=10, height=6)
+pdf(file = "figures/model-target-week-wis-avgs_phase_boxplot.pdf", width=11, height=6)
 print(p_phase_boxplot)
 dev.off()
 
-jpeg(file = "figures/model-target-week-wis-avgs_phase_boxplot.jpg", width=10, height=6, units="in", res=200)
+jpeg(file = "figures/model-target-week-wis-avgs_phase_boxplot.jpg", width=11, height=6, units="in", res=200)
 print(p_phase_boxplot)
 dev.off()
 
