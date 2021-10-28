@@ -157,8 +157,6 @@ p2_calib_graph_hardperiod <- ggplot(horizons_difficult_periods, aes(x=horizon, y
         legend.background=element_blank()) 
 
 
-
-
 #Fig 3 all periods 
 
 horizons_all_periods <- inc_scores %>% 
@@ -208,8 +206,6 @@ p3_calib_graph_all <- ggplot(horizons_all_periods, aes(x=horizon, y=avg_90PI)) +
 
 
 
-
-
 #Merge 3 plots
 pdf(file = "figures/wis-difficult_forecast_periods.pdf", width=6, height=7)
 gridExtra::grid.arrange(p1_forecasts, p2_calib_graph_hardperiod, p3_calib_graph_all, layout_matrix = matrix(c(1,2,3), ncol=3))
@@ -218,9 +214,6 @@ dev.off()
 # pdf(file = "figures/wis-difficult_forecast_periods_point.pdf", width=8, height=9)
 # gridExtra::grid.arrange(p1_forecasts, p2_wis, p3_pi, layout_matrix = matrix(c(1,2,3), ncol=3))
 # dev.off()
-
-
-
 
 
 
@@ -250,10 +243,8 @@ dev.off()
 # # +
 # #   theme(axis.text.x = element_text(vjust = 2, hjust = -0.2, angle=45))
 # 
-# 
-#
 
-# 
+
 # truth_AL_summer2020 <- load_truth(
 #   truth_source = "JHU",
 #   target_variable = "inc death",
@@ -265,14 +256,12 @@ dev.off()
 #   forecasts = fcast_AL_summer2020, 
 #   truth = truth_AL_summer2020)
 
-
 # truth_AZ_Nov2020 <- load_truth(
 #   truth_source = "JHU",
 #   target_variable = "inc death",
 #   truth_end_date = "2020-12-01",
 #   locations = "04", #Arizona
 #   hub = c("US"))
-
 
 # score_AZ_Nov2020 <-  score_forecasts(
 #   forecasts = fcast_AZ_Nov2020, 
@@ -285,7 +274,6 @@ dev.off()
 #   truth_end_date = "2021-05-01",
 #   locations = "26", #Michigan
 #   hub = c("US"))
-
 
 # truth_FL_Aug2021 <- load_truth(
 #   truth_source = "JHU",
@@ -300,8 +288,6 @@ dev.off()
 #   use_median_as_point = FALSE)
 
 
-
-# 
 # score_FL_Aug2021 <-  score_forecasts(
 #   forecasts = fcast_FL_Aug2021, 
 #   truth = truth_FL_Aug2021,
@@ -312,15 +298,8 @@ dev.off()
 
 # all_truth <- rbind(truth_AL_summer2020, truth_AZ_Nov2020, truth_MI_Mar2021, truth_FL_Aug2021) %>%
 
-
-
 # all_scores <- rbind(score_AL_summer2020, score_AZ_Nov2020, score_MI_Mar2021, score_FL_Aug2021)
 # all_scores$location_f = factor(all_scores$location, levels=c("01","04", "26", "12"))
-
-
-
-
-
 
 # p1_forecasts_point <- plot_forecasts(forecast_data = all_forecasts,
 #                                truth_data = all_truth,
@@ -338,8 +317,6 @@ dev.off()
 #                                subtitle = "none")  +
 #   scale_x_date(name=NULL, date_breaks = "1 month", date_labels = "%b-%Y") +
 #   theme(legend.position='none')
-
-
 
 # , axis.text.x = element_text(hjust = -0.2, angle=45)
 # 
