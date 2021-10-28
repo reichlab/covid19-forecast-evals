@@ -45,7 +45,7 @@ panelA <- plot_forecasts(bind_rows(longterm_dat1, longterm_dat2),
     legend.key.size = unit(0.15, "cm"),
     legend.background=element_rect(fill = alpha("white", 0.5)),
     plot.margin = margin(10, 15, 10, 10),axis.ticks.length.x = unit(0.5, "cm"),
-    axis.text.x = element_text(vjust = 7, hjust = -0.2)
+    axis.text.x = element_text(vjust = 7, hjust = -0.1)
   ) 
 
 
@@ -118,7 +118,7 @@ err_by_model_horizon <- avg_wis_by_model_target_week %>%
          `# predictions` = nobs) %>%
   mutate(model = fct_recode(model, "IHME-SEIR" = "IHME-CurveFit"))
 
-model_colors <- palette.colors(n=5, palette="Set1")[c(3,5,4,1,2)]
+model_colors <- palette.colors(n=6, palette="Set1")[c(3,5,4,1,2,6)]
 
 panelC_new <- ggplot(err_by_model_horizon, 
                      aes(x=horizon, y=pi_cov_95, color=model, group=model)) +
@@ -167,14 +167,14 @@ wis_component_by_horizon <- comp_err_by_model_horizon %>%
 
 
 ## rel error by week
-avg_wis_by_model_target_week %>% 
-  filter(model %in% c("IHME-CurveFit", "Covid19Sim-Simulator")) %>%
-  group_by(model, horizon, target_end_date) %>%
-  summarize(avg_wis = mean(mean_wis)) %>%
-  group_by(model, target_end_date) %>%
-  mutate(h1_avg_wis = min(avg_wis), rel_wis = avg_wis/h1_avg_wis) %>%
-  mutate(model = ifelse(model=="IHME-CurveFit", "IHME-SEIR", model))
-  print(n=Inf)
+# avg_wis_by_model_target_week %>% 
+#   filter(model %in% c("IHME-CurveFit", "Covid19Sim-Simulator")) %>%
+#   group_by(model, horizon, target_end_date) %>%
+#   summarize(avg_wis = mean(mean_wis)) %>%
+#   group_by(model, target_end_date) %>%
+#   mutate(h1_avg_wis = min(avg_wis), rel_wis = avg_wis/h1_avg_wis) %>%
+#   mutate(model = ifelse(model=="IHME-CurveFit", "IHME-SEIR", model))
+#   print(n=Inf)
 
 ## panel B: figure mean wis by date color by horizon
 panelB <- ggplot(filter(avg_wis_by_model_target_week, model!="COVIDhub-baseline", horizon %in% horizon_subset), 
@@ -197,7 +197,7 @@ panelB <- ggplot(filter(avg_wis_by_model_target_week, model!="COVIDhub-baseline"
     #legend.box = "horizontal",
     legend.justification = c(0,1),
     axis.ticks.length.x = unit(0.5, "cm"),
-    axis.text.x = element_text(vjust = 7, hjust = -0.2)) +
+    axis.text.x = element_text(vjust = 7, hjust = -0.1)) +
   guides(linetype=guide_legend(keywidth = 2))
 # 
 # panelC <- ggplot(filter(avg_wis_by_model_target_week, model!="COVIDhub-baseline", horizon %in% horizon_subset), 

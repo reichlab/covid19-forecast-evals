@@ -459,6 +459,74 @@ average_by_loc_winter <- average_by_loc %>%
   mutate(seasonal_phase = "winter")
 
 
+#Delta
+
+delta_phase <- inc_scores_phase %>%
+  filter(include_phases == TRUE) %>%
+  filter(seasonal_phase == "delta") 
+
+scores <- delta_phase %>%
+  select("model", "forecast_date", "location", "location_name", "horizon", "abs_error", "wis") %>%
+  mutate(model = factor(model))
+
+# the included models and locations:
+models <- unique(scores$model)
+locations <- unique(scores$location)
+location_names <- unique(scores$location_name)
+
+
+# compute pairwise and relative WIS for each location separately:
+for(i in seq_along(locations)){
+  
+  # select location:
+  loc <- locations[i]
+  loc_name <- location_names[i]
+  
+  # matrix to store:
+  results_ratio_temp <- matrix(ncol = length(models),
+                               nrow = length(models),
+                               dimnames = list(models, models)) 
+  
+  # run pairwise comparison for chosen location:
+  for(mx in seq_along(models)){
+    for(my in 1:mx){
+      pwc <- pairwise_comparison(scores = scores, mx = models[mx], my = models[my],
+                                 permutation_test = FALSE, # disable permutation test to speed up things
+                                 subset = scores$location == loc) # this will subset to the respective location inside the function
+      results_ratio_temp[mx, my] <- pwc$ratio
+      results_ratio_temp[my, mx] <- 1/pwc$ratio
+    }
+  }
+  
+  # compute the geometric means etc
+  ind_baseline <- which(rownames(results_ratio_temp) == "COVIDhub-baseline")
+  geom_mean_ratios_temp <- exp(rowMeans(log(results_ratio_temp[, -ind_baseline]), na.rm = TRUE))
+  ratios_baseline_temp <- results_ratio_temp[, "COVIDhub-baseline"]
+  ratios_baseline2_temp <- geom_mean_ratios_temp/geom_mean_ratios_temp["COVIDhub-baseline"]
+  
+  # summarize results:
+  to_add <- data.frame(model = names(ratios_baseline2_temp),
+                       location = loc,
+                       location_name = loc_name,
+                       relative_wis = ratios_baseline2_temp,
+                       log_relative_wis = log(ratios_baseline2_temp))
+  
+  # append to already stored:
+  if(i == 1){ # initialize at first location
+    average_by_loc <- to_add
+  }else{
+    average_by_loc <- rbind(average_by_loc, to_add)
+  }
+  
+  cat("Finished", loc_name, "\n")
+}
+
+average_by_loc_delta <- average_by_loc %>%
+  mutate(seasonal_phase = "delta")
+
+
+
+
 average_by_loc_to_plot <- average_by_loc %>%
   filter(location_name != "American Samoa" & location_name != "Northern Mariana Islands") %>%
   mutate(location_name = fct_relevel(location_name, levels(truth_dat)),
@@ -470,32 +538,6 @@ average_by_loc_to_plot <- average_by_loc %>%
 average_by_loc_to_plot$model <- reorder(average_by_loc_to_plot$model, 
                                         average_by_loc_to_plot$relative_wis)
 
-
-
-
-
-# 
-# pairwise_df_spring <- scoringutils::pairwise_comparison(
-#   scores = spring_phase, 
-#   metric = "interval_score",
-#   baseline = "COVIDhub-baseline",
-#   summarise_by = c("model", "location_name"))  %>%
-#   mutate(seasonal_phase = "spring")
-# 
-# pairwise_df_summer <- scoringutils::pairwise_comparison(
-#   scores = inc_scores %>% filter(seasonal_phase == "summer") %>% mutate(interval_score = wis), 
-#   metric = "interval_score",
-#   baseline = "COVIDhub-baseline",
-#   summarise_by = c("model", "location_name"))  %>%
-#   mutate(seasonal_phase = "summer")
-# 
-# 
-# pairwise_df_winter <- scoringutils::pairwise_comparison(
-#   scores = inc_scores %>% filter(seasonal_phase == "winter") %>% mutate(interval_score = wis), 
-#   metric = "interval_score",
-#   baseline = "COVIDhub-baseline",
-#   summarise_by = c("model", "location_name")) %>%
-#   mutate(seasonal_phase = "winter"
 
 model_levels_phases <- read_csv("paper-inputs/table-phase-performance.csv") %>%
   mutate(model = recode(model, "IHME-CurveFit" = "IHME-SEIR")) %>%
@@ -535,7 +577,7 @@ fig_wis_loc <- ggplot(to_plot_phase %>% filter(seasonal_phase != "winter"),
         legend.text = element_text(size = 15)) +
   tidytext::scale_x_reordered()
 
-fig_wis_loc_winter <- ggplot(to_plot_phase %>% filter(seasonal_phase == "winter"), aes(x = tidytext::reorder_within(model,order_wis,seasonal_phase),
+fig_wis_loc_winter <- ggplot(to_plot_phase %>% filter(seasonal_phase %in% c("spring", "summer")), aes(x = tidytext::reorder_within(model,order_wis,seasonal_phase),
                                                                                        y=location_name, fill= scales::oob_squish(log_relative_wis, 
                                                                                                                                  range = c(- 2.584963, 2.584963)))) +
   geom_tile() +
@@ -567,3 +609,29 @@ jpeg(file = "figures/fig-wis-location_phase.jpg", width=20, height=28, units="in
 ggdraw(plot_grid(
   fig_wis_loc, fig_wis_loc_winter, nrow = 2))
 dev.off()
+
+
+#Trash
+
+# 
+# pairwise_df_spring <- scoringutils::pairwise_comparison(
+#   scores = spring_phase, 
+#   metric = "interval_score",
+#   baseline = "COVIDhub-baseline",
+#   summarise_by = c("model", "location_name"))  %>%
+#   mutate(seasonal_phase = "spring")
+# 
+# pairwise_df_summer <- scoringutils::pairwise_comparison(
+#   scores = inc_scores %>% filter(seasonal_phase == "summer") %>% mutate(interval_score = wis), 
+#   metric = "interval_score",
+#   baseline = "COVIDhub-baseline",
+#   summarise_by = c("model", "location_name"))  %>%
+#   mutate(seasonal_phase = "summer")
+# 
+# 
+# pairwise_df_winter <- scoringutils::pairwise_comparison(
+#   scores = inc_scores %>% filter(seasonal_phase == "winter") %>% mutate(interval_score = wis), 
+#   metric = "interval_score",
+#   baseline = "COVIDhub-baseline",
+#   summarise_by = c("model", "location_name")) %>%
+#   mutate(seasonal_phase = "winter"

@@ -23,8 +23,7 @@ data("hub_locations")
 
 fcast_data <- load_forecasts(
   models = "COVIDhub-ensemble", 
-  dates = seq.Date(as.Date("2020-05-11"), 
-                            as.Date("2021-05-11"), 
+  dates = seq.Date(as.Date("2020-05-11"), last_timezero, 
                             by="5 weeks"),
   targets = paste(1:4, "wk ahead inc death"),
   locations = "US" 
@@ -102,28 +101,51 @@ all_primary_models <- get_model_designations(source="zoltar") %>%
   filter(designation != "other") %>%
   pull(model)
 
-n_models_per_week <- map_dfr(
-  1:length(weekly_forecast_dates),
-  function(x){
-    fcasts <- load_latest_forecasts(
+# n_models_per_week <- map_dfr(
+#   1:length(weekly_forecast_dates),
+#   function(x){
+#     fcasts <- load_latest_forecasts(
+#       models = all_primary_models,
+#       last_forecast_date = weekly_forecast_dates[x],
+#       forecast_date_window_size = 6,
+#       locations = hub_locations %>% filter(geo_type == "state") %>% pull(fips),
+#       types = c("point", "quantile"), 
+#       targets = "1 wk ahead inc death",
+#       source="zoltar") 
+#     n_models = length(unique(fcasts$model))
+#     
+#     return(tibble(target_end_date_0wk_ahead = weekly_forecast_dates[x]-2, 
+#       total_models = n_models, 
+#       ensemble_week = "COVIDhub-ensemble" %in% fcasts$model))
+#   }
+# )
+
+# return(tibble(target_end_date_0wk_ahead = weekly_forecast_dates[x]-2, 
+#               total_models = n_models, 
+#               ensemble_week = "COVIDhub-ensemble" %in% fcasts$model))
+# }
+# )
+
+n_models_per_week <-  load_forecasts(
       models = all_primary_models,
-      last_forecast_date = weekly_forecast_dates[x],
-      forecast_date_window_size = 6,
+      dates = weekly_forecast_dates,
+      date_window_size = 6,
       locations = hub_locations %>% filter(geo_type == "state") %>% pull(fips),
       types = c("point", "quantile"), 
       targets = "1 wk ahead inc death",
       source="zoltar") 
-    n_models = length(unique(fcasts$model))
-    
-    return(tibble(target_end_date_0wk_ahead = weekly_forecast_dates[x]-2, 
-      total_models = n_models, 
-      ensemble_week = "COVIDhub-ensemble" %in% fcasts$model))
-  }
-)
 
-p3 <- ggplot(n_models_per_week, aes(x=target_end_date_0wk_ahead)) +
+count_models <- n_models_per_week %>%
+  group_by(target_end_date) %>%
+  summarise(total_models = length(unique(model)),
+            ensemble_week = "COVIDhub-ensemble" %in% model) %>%
+  mutate(target_end_date_0wk_ahead = target_end_date -2)
+    
+
+
+p3 <- ggplot(count_models, aes(x=target_end_date_0wk_ahead)) +
   geom_col(aes(y=total_models)) +
-  geom_point(data=filter(n_models_per_week, ensemble_week), aes(y=5), shape=8, color="red") +
+  geom_point(data=filter(count_models, ensemble_week), aes(y=5), shape=8, color="red") +
   #geom_text(aes(y=.5)) +
   scale_y_continuous(name="# models")+
   scale_x_date(

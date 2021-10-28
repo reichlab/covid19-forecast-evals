@@ -198,7 +198,7 @@ p2_phase_1 <- ggplot(inc_scores_phase %>% filter(seasonal_phase %in% c("spring",
         axis.title.x = element_text(hjust = 1)
   )
 
-p2_phase_2 <- ggplot(inc_scores_phase %>% filter(seasonal_phase %in% c("winter")),aes(y= model, x=rev_rank, fill = factor(stat(quantile)))) +
+p2_phase_2 <- ggplot(inc_scores_phase %>% filter(seasonal_phase %in% c("winter", "delta")),aes(y= model, x=rev_rank, fill = factor(stat(quantile)))) +
   facet_wrap(~ seasonal_phase) +
   stat_density_ridges(
     geom = "density_ridges_gradient", calc_ecdf = TRUE,
@@ -212,11 +212,29 @@ p2_phase_2 <- ggplot(inc_scores_phase %>% filter(seasonal_phase %in% c("winter")
         axis.ticks.y = element_blank(),
         strip.text.x = element_text(size = 15))
 
-
-jpeg(file = "figures/model_ranks_phase.jpg", width=10, height=9, units="in", res=300)
-plot_grid( p2_phase_1, p2_phase_2, rel_widths = c(2,1))
+jpeg(file = "figures/model_ranks_phase.jpg", width=14, height=9, units="in", res=300)
+plot_grid(p2_phase_1, p2_phase_2,  ncol = 2, rel_widths = c(1,1))
 dev.off()
 
 pdf(file = "figures/model_ranks_phase.pdf", width=8, height=9)
 plot_grid( p2_phase_1, p2_phase_2, rel_widths = c(2,1))
 dev.off()
+
+
+
+phase_test <- ggplot(inc_scores_phase,aes(y= model, x=rev_rank, fill = factor(stat(quantile)))) +
+  facet_wrap(~ seasonal_phase) +
+  stat_density_ridges(
+    geom = "density_ridges_gradient", calc_ecdf = TRUE,
+    quantiles = 4, quantile_lines = TRUE) + 
+  #scale_fill_viridis_d(name = "Quartiles") +
+  scale_x_continuous(name="standardized rank", 
+                     limits=c(0,1)) +   # for both axes to remove unneeded padding +
+  scale_fill_manual(name = " ", values = c("#381648", "#5FB580", "#FAE955", "#406789")) +
+  scale_y_discrete(labels=c("IHME-CurveFit" = "IHME-SEIR"), drop = FALSE) +
+  theme(legend.position = "none",
+        axis.text.y = element_text(size = 12),
+        axis.title.y = element_text(size =12),
+        strip.text = element_text(size = 14),
+        axis.title.x = element_text(hjust = 1))
+  
