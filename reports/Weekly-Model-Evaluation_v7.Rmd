@@ -70,6 +70,9 @@ n_weeks_history <- 26 # number of weeks for historical data
 
 ```{r get-date-boundaries}
 #Important dates used
+# fixed date
+# forecast_mon <- as.Date ("2021-10-11")
+
 forecast_mon <- lubridate::floor_date(Sys.Date(), unit = "week") + 1      #Even when running on Tuesday, will be Monday date
 last_eval_sat <- as.Date(calc_target_week_end_date(forecast_mon, horizon = 0))
 first_eval_sat <- last_eval_sat  - 7*(n_weeks_eval - 1)  #First Evaluated Date
@@ -315,7 +318,7 @@ set.seed(123) # set seed for permutation tests
 for(mx in seq_along(models)){
   for(my in 1:mx){
     for(hzn in 1:4){
-      pwc <- pairwise_comparison(scores = filter(scores, horizon==hzn), 
+      pwc <-  pairabs_comparison(scores = filter(scores, horizon==hzn), 
                                  mx = models[mx], 
                                  my = models[my],
                                  permutation_test = FALSE)
@@ -644,6 +647,7 @@ datatable(leaderboard_table1,
               filter = c("top")
 
 ```
+
 To calculate each column in our table, different inclusion criteria were applied. This table only includes forecasts for the last `r n_weeks_eval` weeks, since `r format(first_eval_sat, "%B %d, %Y")`.The models included have submitted  at least 50% of forecasts during this time, where one forecast is a location, target, forecast date combination.  The data are initially ordered by model based on their relative WIS aggregated across horizons, with the most accurate models at the top. 
 
 * The column titled, "# recent forecasts" lists the number of forecasts a team has submitted with a target end date over the most recent `r n_weeks_eval` week period.
@@ -651,6 +655,8 @@ To calculate each column in our table, different inclusion criteria were applied
 * Columns 3 through 6 calculate the adjusted relative WIS over the most recent `r n_weeks_eval` week period by horizon.
 
 * Columns 7 through 10 calculate the adjusted relative MAE over the most recent `r n_weeks_eval` week period by horizon. 
+
+
 
 ### Historical accuracy 
 ```{r historical Leaderboard CASES accuracy}
