@@ -221,7 +221,7 @@ p_phase_boxplot <- ggplot(avg_wis_by_model_target_week_phase, aes(x = reorder_wi
              aes(yintercept=mean_wis), linetype=2, color = "red") +
   geom_point(data = avg_wis_by_model_target_phase, aes(y = mean_wis),  color = "blue", shape=4, size = 2) +
   theme_bw() +
-  theme(axis.text.x = element_text(angle=90, vjust=0.5, hjust=1), 
+  theme(axis.text.x = element_text(size = 8, angle=90, vjust=0.5, hjust=1), 
         legend.position = "none") +
   ylab("Average WIS") + xlab(NULL) +
   scale_fill_date(name="forecast date") +
@@ -233,7 +233,7 @@ pdf(file = "figures/model-target-week-wis-avgs_phase_boxplot.pdf", width=11, hei
 print(p_phase_boxplot)
 dev.off()
 
-jpeg(file = "figures/model-target-week-wis-avgs_phase_boxplot.jpg", width=11, height=6, units="in", res=200)
+jpeg(file = "figures/model-target-week-wis-avgs_phase_boxplot.jpg", width=12, height=8, units="in", res=200)
 print(p_phase_boxplot)
 dev.off()
 
@@ -320,7 +320,7 @@ f4b <- ggplot(filter(avg_scores_byweek, target=="1 wk ahead inc death"), aes(x =
   geom_line(aes(group = model), color="darkgray", alpha=.5) +
   geom_point(aes(group = model), color="darkgray", alpha=.5, size = 2) +
   stat_summary(fun=mean, geom="line", aes(color="blue")) +
-  geom_vline(xintercept = range_fcast_dates, linetype = 2) +
+  #geom_vline(xintercept = range_fcast_dates, linetype = 2) +
   stat_summary(fun=mean, geom="point", aes(color="blue",  shape = "19")) +
   geom_line(data=filter(avg_scores_byweek, model=="COVIDhub-ensemble",  target=="1 wk ahead inc death"), aes(group = model, color="red")) +
   geom_point(data=filter(avg_scores_byweek, model=="COVIDhub-ensemble",  target=="1 wk ahead inc death"), aes(group = model, color="red", shape = "17")) +
@@ -346,7 +346,7 @@ f4c <- ggplot(filter(avg_scores_byweek, target=="4 wk ahead inc death"), aes(x =
   geom_line(aes(group = model), color="darkgray", alpha=.5) +
   geom_point(aes(group = model), color="darkgray", alpha=.5, size = 2) +
   stat_summary(fun=mean, geom="line", aes(color="blue")) +
-  geom_vline(xintercept = range_fcast_dates, linetype = 2) +
+  #geom_vline(xintercept = range_fcast_dates, linetype = 2) +
   stat_summary(fun=mean, geom="point", aes(color="blue", shape = "blue")) +
   geom_line(data=filter(avg_scores_byweek, model=="COVIDhub-ensemble",  target=="4 wk ahead inc death"), aes(group = model, color="red")) +
   geom_point(data=filter(avg_scores_byweek, model=="COVIDhub-ensemble",  target=="4 wk ahead inc death"), aes(group = model, color="red", shape = "red")) +

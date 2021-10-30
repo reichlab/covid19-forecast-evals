@@ -141,7 +141,10 @@ count_models <- n_models_per_week %>%
             ensemble_week = "COVIDhub-ensemble" %in% model) %>%
   mutate(target_end_date_0wk_ahead = target_end_date -2)
     
-
+#avg number of submissions in 2021
+# count_models_2021avg <- count_models %>%
+#   filter(target_end_date_0wk_ahead > as.Date("2021-01-01")) %>%
+#   summarise(mean_models2021 = mean(total_models))
 
 p3 <- ggplot(count_models, aes(x=target_end_date_0wk_ahead)) +
   geom_col(aes(y=total_models)) +
