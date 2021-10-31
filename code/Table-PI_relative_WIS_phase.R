@@ -469,7 +469,7 @@ calib_pairwise_delta <- merge(calib_pairwise, pairwise_scores_MAE) %>% arrange(m
 
 
 #bind all 3 calibration tables
-calib_phase <- rbind(calib_pairwise_spring, calib_pairwise_summer, calib_pairwise_winter, calib_pairwise_winter)
+calib_phase <- rbind(calib_pairwise_spring, calib_pairwise_summer, calib_pairwise_winter, calib_pairwise_delta)
 
 write_csv(calib_phase, file = "paper-inputs/table-phase-performance.csv")
 

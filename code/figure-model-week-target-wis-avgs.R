@@ -202,7 +202,7 @@ baseline_avg <- avg_wis_by_model_target_phase %>%
 #   filter(!is.na(model)) %>%
 #   mutate(model = fct_relevel(model, model_levels_phases %>% pull(model))) 
 
-avg_phase <- inc_scores %>%
+avg_phase <- inc_scores_phase %>%
   group_by(target, seasonal_phase, model) %>%
   summarize(median_wis = median(wis, na.rm = T), mean_wis = mean(wis, na.rm=TRUE), nlocs=n())  %>%
   filter(!is.na(model)) 
@@ -237,11 +237,11 @@ jpeg(file = "figures/model-target-week-wis-avgs_phase_boxplot.jpg", width=12, he
 print(p_phase_boxplot)
 dev.off()
 
-better_than_med_2of3 <- avg_wis_by_model_target_phase %>% 
+better_than_med_3of4 <- avg_wis_by_model_target_phase %>% 
   group_by(target, seasonal_phase) %>%
   filter(mean_wis < mean_wis[model == "COVIDhub-baseline"]) %>% ungroup() %>%
   group_by(model,target) %>%
-  summarise(n_better_mean = n()) %>% filter(n_better_mean >= 2) %>% ungroup() %>%
+  summarise(n_better_mean = n()) %>% filter(n_better_mean >= 3) %>% ungroup() %>%
   group_by(model) %>% summarise(n_1and4 = n()) %>% filter(n_1and4 > 1)
 
 ##Figure 4 [average WIS over time]
@@ -276,6 +276,15 @@ avg_scores_byweek <- avg_wis_by_model_target_week %>%
 
 avg_scores_byweek$model <- factor(as.character(avg_scores_byweek$model))
 
+
+weeks_ensemble_outpeformed <- avg_scores_byweek %>% 
+  group_by(target_end_date_1wk_ahead, target) %>%
+  mutate(weekly_avg = mean(mean_wis),
+         weekly_baseline = mean_wis[model == "COVIDhub-baseline"]) %>% 
+  ungroup() %>%
+  filter(model %in% c("COVIDhub-ensemble")) %>%
+  select(model, target, mean_wis, weekly_avg, weekly_baseline) %>%
+  filter(mean_wis > weekly_baseline | mean_wis > weekly_baseline)
 
 # old f4, saved for now
 # f4 <- ggplot(avg_scores_byweek, aes(x = target_end_date, y= relative_wis, color = model, group = model)) +
