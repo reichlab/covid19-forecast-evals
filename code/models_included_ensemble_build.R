@@ -39,16 +39,18 @@ updated_csv <- dat_csv %>%
 
 #Filter out teams that were included in the preprint
 
-already_included <- read.csv("paper-inputs/All_Leads.csv")  %>% #leads of all teams already included 
-  filter(Team.Name != "")
+# already_included <- read.csv("paper-inputs/All_Leads.csv")  %>% #leads of all teams already included 
+#   filter(Team.Name != "")
 
-newly_added_teams <- updated_csv %>% anti_join(already_included) 
+already_included_peer_review <- read.csv("paper-inputs/Authorship on Forecast Evaluation Manuscript - for Peer Review.csv")
+
+newly_added_teams <- updated_csv %>% anti_join(already_included_peer_review) 
 
 #remove teams that changed their names and were already included
 newly_added_teams <- newly_added_teams %>% 
   filter(!Team.Name %in% c("RPI-UW-Mob-Collision", "UM_CFG-RidgeTfReg", 
                            "Microsoft-DeepSTIA", "USC-SI_kJalpha_RF",
-                           "Wadhwani_AI-BayesOpt"))
+                           "Wadhwani_AI-BayesOpt", "COVIDhub-baseline"))
 
 
 #There are 7 remaining teams. Two I reached out to before (JHU_CSSE and CAN-SEIR_CAN)
