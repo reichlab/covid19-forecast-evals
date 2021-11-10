@@ -626,12 +626,20 @@ fig_wis_loc_delta <- ggplot(to_plot_phase %>% filter(seasonal_phase == "delta"),
 library(cowplot)
 pdf(file = "figures/fig-wis-location_phase.pdf", width=20, height=30)
 ggdraw(plot_grid(
-  fig_wis_loc, fig_wis_loc_winter, fig_wis_loc_delta, nrow = 3))
+  fig_wis_loc, fig_wis_loc_winter, nrow = 2))
 dev.off()
 
 jpeg(file = "figures/fig-wis-location_phase.jpg", width=20, height=30, units="in", res=300)
 ggdraw(plot_grid(
-  fig_wis_loc, fig_wis_loc_winter,fig_wis_loc_delta, nrow = 3))
+  fig_wis_loc, fig_wis_loc_winter, nrow = 2))
+dev.off()
+
+pdf(file = "figures/fig-wis-location_phase_delta.pdf", width=20, height=15)
+print(fig_wis_loc_delta)
+dev.off()
+
+jpeg(file = "figures/fig-wis-location_phase_delta.jpg", width=20, height=15, units="in", res=300)
+print(fig_wis_loc_delta)
 dev.off()
 
 

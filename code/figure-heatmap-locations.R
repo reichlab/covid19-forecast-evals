@@ -31,8 +31,8 @@ scored_models_phase <- read_csv("paper-inputs/inc-scores.csv") %>%
   pull(model)
 
 model_change_dates <- as.data.frame(cbind(
-  model = c("JHU_IDD-CovidSP","LANL-GrowthRate",  "UA-EpiCovDA", "UMich-RidgeTfReg", "RobertWalraven-ESG", "IowaStateLW-STEM","IHME-CurveFit"),
-  sat_fcast_week = c("2020-12-14","2020-10-28","2020-07-05", "2020-11-30","2021-03-15" ,"2020-07-27","2020-06-24"),
+  model = c("JHU_IDD-CovidSP","LANL-GrowthRate",  "UA-EpiCovDA", "UMich-RidgeTfReg", "RobertWalraven-ESG", "IowaStateLW-STEM","IHME-CurveFit", "COVIDhub-ensemble"),
+  sat_fcast_week = c("2020-12-14","2020-10-28","2020-07-05", "2020-11-30","2021-03-15" ,"2020-07-27","2020-06-24", "2020-07-28"),
   n_loc = c("25","25","25","25","25","25", "25"),
   n_quant = c("23","23","23","23","23","23","23"))) %>%
   mutate(sat_fcast_week = as.Date(sat_fcast_week),

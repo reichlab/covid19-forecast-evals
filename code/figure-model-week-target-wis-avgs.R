@@ -213,36 +213,72 @@ avg_phase <- inc_scores_phase %>%
 avg_wis_by_model_target_week_phase <- avg_wis_by_model_target_week_phase %>% ungroup() %>%
   mutate(seasonal_phase = fct_relevel(factor(seasonal_phase), levels = c("spring", "summer", "winter", "delta"))) 
 
-p_phase_boxplot <- ggplot(avg_wis_by_model_target_week_phase, aes(x = reorder_within(model,relative_wis,seasonal_phase),
-                                                                  y= scales::oob_squish(mean_wis, range = c(0,500)))) +
-  facet_grid(rows = vars(target), cols = vars(factor(seasonal_phase, levels = c("spring", "summer", "winter", "delta"))), scales = "free_x", space="free") + #, scales="free_y") +
-  geom_boxplot(outlier.size = 0.5) +
-  geom_hline(data=baseline_avg,
-             aes(yintercept=mean_wis), linetype=2, color = "red") +
-  geom_point(data = avg_wis_by_model_target_phase, aes(y = mean_wis),  color = "blue", shape=4, size = 2) +
+p_phase_boxplot <- ggplot(avg_wis_by_model_target_week_phase %>% filter(seasonal_phase != "delta"), aes(y = reorder_within(model,-relative_wis,seasonal_phase),
+                                                                  x = scales::oob_squish(mean_wis, range = c(0,500)))) +
+  facet_grid(cols = vars(target), rows = vars(factor(seasonal_phase, levels = c("spring", "summer", "winter"))), scales = "free_y", space="free") + #, scales="free_y") +
+  geom_boxplot(outlier.size = 0.5, position=position_dodge(width = 2)) +
+  geom_vline(data=baseline_avg %>% filter(seasonal_phase != "delta"),
+             aes(xintercept=mean_wis), linetype=2, color = "red") +
+  geom_point(data = avg_wis_by_model_target_phase %>% filter(seasonal_phase != "delta"), aes(x = mean_wis),  color = "blue", shape=4, size = 2) +
   theme_bw() +
   theme(axis.text.x = element_text(size = 8, angle=90, vjust=0.5, hjust=1), 
+        axis.text.y = element_text(size = 8), 
         legend.position = "none") +
-  ylab("Average WIS") + xlab(NULL) +
+  xlab("Average WIS") + ylab(NULL) +
   scale_fill_date(name="forecast date") +
-  scale_y_continuous(trans = "log10") +
-  scale_x_reordered()
+  scale_x_continuous(trans = "log10") +
+  scale_y_reordered()
  
 
-pdf(file = "figures/model-target-week-wis-avgs_phase_boxplot.pdf", width=11, height=6)
+p_phase_boxplot_delta <- ggplot(avg_wis_by_model_target_week_phase %>% filter(seasonal_phase == "delta"), aes(y = reorder_within(model,-relative_wis,seasonal_phase),
+                                                                                                        x = scales::oob_squish(mean_wis, range = c(0,500)))) +
+  facet_grid(cols = vars(target), rows = vars(factor(seasonal_phase, levels = c("delta"))), scales = "free_y", space="free") + #, scales="free_y") +
+  geom_boxplot(outlier.size = 0.5, position=position_dodge(width = 2)) +
+  geom_vline(data=baseline_avg %>% filter(seasonal_phase == "delta"),
+             aes(xintercept=mean_wis), linetype=2, color = "red") +
+  geom_point(data = avg_wis_by_model_target_phase %>% filter(seasonal_phase == "delta"), aes(x = mean_wis),  color = "blue", shape=4, size = 2) +
+  theme_bw() +
+  theme(axis.text.x = element_text(size = 8, angle=90, vjust=0.5, hjust=1), 
+        axis.text.y = element_text(size = 8), 
+        legend.position = "none") +
+  xlab("Average WIS") + ylab(NULL) +
+  scale_fill_date(name="forecast date") +
+  scale_x_continuous(trans = "log10") +
+  scale_y_reordered()
+
+
+
+jpeg(file = "figures/model-target-week-wis-avgs_phase_boxplot.jpg", width=6, height=8, units="in", res=300)
 print(p_phase_boxplot)
 dev.off()
 
-jpeg(file = "figures/model-target-week-wis-avgs_phase_boxplot.jpg", width=12, height=8, units="in", res=200)
+pdf(file = "figures/model-target-week-wis-avgs_phase_boxplot.pdf", width=6, height=11)
 print(p_phase_boxplot)
 dev.off()
 
-better_than_med_3of4 <- avg_wis_by_model_target_phase %>% 
+jpeg(file = "figures/model-target-week-wis-avgs_phase_boxplot_delta.jpg", width=6, height=5, units="in", res=300)
+print(p_phase_boxplot_delta)
+dev.off()
+
+pdf(file = "figures/model-target-week-wis-avgs_phase_boxplot_delta.pdf", width=6, height=5)
+print(p_phase_boxplot_delta)
+dev.off()
+
+
+better_than_med_3of4 <- avg_wis_by_model_target_phase %>%  
   group_by(target, seasonal_phase) %>%
-  filter(mean_wis < mean_wis[model == "COVIDhub-baseline"]) %>% ungroup() %>%
+  filter(mean_wis < mean_wis[model == "COVIDhub-baseline"]) %>% ungroup() %>% #keep models that outperformed baseline
   group_by(model,target) %>%
-  summarise(n_better_mean = n()) %>% filter(n_better_mean >= 3) %>% ungroup() %>%
+  summarise(n_better_mean = n()) %>%  # number better than mean per team
+  filter(n_better_mean >= 3) %>% ungroup() %>%
   group_by(model) %>% summarise(n_1and4 = n()) %>% filter(n_1and4 > 1)
+
+
+top_performers <- model_levels_phases %>%  
+  group_by(seasonal_phase) %>%
+  slice_min(relative_wis, n = 3) %>% ungroup() %>%
+  group_by(model) %>% summarise(n_top3 = n())
+
 
 ##Figure 4 [average WIS over time]
 

@@ -118,7 +118,7 @@ err_by_model_horizon <- avg_wis_by_model_target_week %>%
          `# predictions` = nobs) %>%
   mutate(model = fct_recode(model, "IHME-SEIR" = "IHME-CurveFit"))
 
-model_colors <- palette.colors(n=6, palette="Set1")[c(3,5,4,1,2,6)]
+model_colors <- palette.colors(n=6, palette="Set1")[c(3,4,5,1,6,2)]
 
 panelC_new <- ggplot(err_by_model_horizon, 
                      aes(x=horizon, y=pi_cov_95, color=model, group=model)) +
@@ -234,7 +234,7 @@ panelB <- ggplot(filter(avg_wis_by_model_target_week, model!="COVIDhub-baseline"
 #     axis.text.x = element_text(vjust = 7.5, hjust = -0.4))
 
 #heights <- c(rep(2/7, 3), 1/7)
-jpeg(file = "figures/fig-by-horizon-week.jpg", width=8, height=10, units="in", res=200)
+jpeg(file = "figures/fig-by-horizon-week.jpg", width=10, height=10, units="in", res=200)
 ggdraw(
   plot_grid(
     plot_grid(panelA, panelB, align="v", ncol=1),
@@ -244,7 +244,7 @@ ggdraw(
   )
 dev.off()
 
-pdf(file = "figures/fig-by-horizon-week.pdf", width=8, height=10)
+pdf(file = "figures/fig-by-horizon-week.pdf", width=10, height=10)
 ggdraw(
   plot_grid(
     plot_grid(panelA, panelB, align="v", ncol=1),

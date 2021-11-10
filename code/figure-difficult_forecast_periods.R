@@ -207,9 +207,14 @@ p3_calib_graph_all <- ggplot(horizons_all_periods, aes(x=horizon, y=avg_90PI)) +
 
 
 #Merge 3 plots
-pdf(file = "figures/wis-difficult_forecast_periods.pdf", width=6, height=7)
+pdf(file = "figures/fig-difficult_forecast_periods.pdf", width=6, height=7)
 gridExtra::grid.arrange(p1_forecasts, p2_calib_graph_hardperiod, p3_calib_graph_all, layout_matrix = matrix(c(1,2,3), ncol=3))
 dev.off()
+
+jpeg(file = "figures/fig-difficult_forecast_periods.pdf",  width=6, height=7, units="in", res=200)
+gridExtra::grid.arrange(p1_forecasts, p2_calib_graph_hardperiod, p3_calib_graph_all, layout_matrix = matrix(c(1,2,3), ncol=3))
+dev.off()
+
 
 # pdf(file = "figures/wis-difficult_forecast_periods_point.pdf", width=8, height=9)
 # gridExtra::grid.arrange(p1_forecasts, p2_wis, p3_pi, layout_matrix = matrix(c(1,2,3), ncol=3))
