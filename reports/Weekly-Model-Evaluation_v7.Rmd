@@ -106,10 +106,10 @@ load(file = "score_case_all.rda")
 load(file = "score_inc_all.rda") 
 load(file = "score_hosp_all.rda") 
 
-# remove COVIDhub-4_week_ensemble model from cases and deaths and hosp for now 
+# remove COVIDhub-4_week_ensemble model from deaths 
 score_inc_all <- score_inc_all  %>% filter(model != "COVIDhub-4_week_ensemble")
-score_case_all <- score_case_all  %>% filter(model != "COVIDhub-4_week_ensemble")
-score_hosp_all <- score_hosp_all  %>% filter(model != "COVIDhub-4_week_ensemble")
+# score_case_all <- score_case_all  %>% filter(model != "COVIDhub-4_week_ensemble")
+# score_hosp_all <- score_hosp_all  %>% filter(model != "COVIDhub-4_week_ensemble")
 
 # remove most recent 4 weeks of truth/score for ohio
 truth_dat_inc_all_ohio <- truth_dat_inc_all  %>%
@@ -170,6 +170,7 @@ This report evaluates forecasts at the state and national level for newly report
 
 We evaluate models based on their [adjusted relative weighted interval scores (WIS, a measure of distributional accuracy)](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1008618), and adjusted relative mean absolute error (MAE). Scores are aggregated separately for the most recent 10 weeks and for 26 historical weeks. To account for the variation in difficult of forecasting different weeks and locations, a [pairwise approach](https://www.medrxiv.org/content/10.1101/2021.02.03.21250974v2) was used to calculated the relative adjusted WIS and MAE. Models with relative scores lower than 1 have been more accurate than the baseline on average, whereas relative scores greater than 1 indicate less accuracy than baseline on average.
 
+Starting on September 6, 2021, COVIDhub-ensemble only reported two-week ahead forecasts for cases, due to persistent large inaccuracies observed when forecasting beyond that. As of September 28, 2021, COVIDhub-ensemble only reports one-week ahead forecasts for cases and 14 day ahead forecasts for hospitalizations.  For a more complete explanation see our blog post [here](https://forecasters.org/blog/2021/09/28/on-the-predictability-of-covid-19/). 
 
 # Incident Case Forecasts {.tabset .tabset-fade}
 
@@ -632,7 +633,8 @@ sketch_recent_accuracy = htmltools::withTags(table(
  lapply((c("1 wk","2 wk","3 wk","4 wk","1 wk","2 wk","3 wk","4 wk")), th)))))
 
 leaderboard_table1<- leaderboard_table %>%
- arrange(relative_wis) %>%    
+ arrange(relative_wis) %>%  
+  mutate(model = ifelse(model == "COVIDhub-ensemble", "COVIDhub-ensemble**",model)) %>%
   select (model, "# recent forecasts",  "1 wk relWIS",  "2 wk relWIS","3 wk relWIS","4 wk relWIS","1 wk relMAE","2 wk relMAE","3 wk relMAE","4 wk relMAE") 
 
 datatable(leaderboard_table1,
@@ -647,6 +649,8 @@ datatable(leaderboard_table1,
               filter = c("top")
 
 ```
+
+** When comparing results, keep in mind that starting on September 6, 2021, COVIDhub-ensemble only reported two-week ahead forecasts for cases and as of September 28, 2021 COVIDhub-ensemble only reports one-week ahead forecasts for cases. 
 
 To calculate each column in our table, different inclusion criteria were applied. This table only includes forecasts for the last `r n_weeks_eval` weeks, since `r format(first_eval_sat, "%B %d, %Y")`.The models included have submitted  at least 50% of forecasts during this time, where one forecast is a location, target, forecast date combination.  The data are initially ordered by model based on their relative WIS aggregated across horizons, with the most accurate models at the top. 
 
@@ -675,7 +679,8 @@ sketch_historical_accuracy = htmltools::withTags(table(
  lapply((c("1 wk","2 wk","3 wk","4 wk","1 wk","2 wk","3 wk","4 wk")), th)))))
 
 leaderboard_table_historical1<- leaderboard_table_historical %>%
- arrange(relative_wis) %>%    
+ arrange(relative_wis) %>%  
+  mutate(model = ifelse(model == "COVIDhub-ensemble", "COVIDhub-ensemble**",model)) %>%
   select (model, "# historical forecasts",  "1 wk relWIS",  "2 wk relWIS","3 wk relWIS","4 wk relWIS","1 wk relMAE","2 wk relMAE","3 wk relMAE","4 wk relMAE") 
 
 datatable(leaderboard_table_historical1,
@@ -690,6 +695,7 @@ datatable(leaderboard_table_historical1,
               filter = c("top")
 ```
 
+** When comparing results, keep in mind that starting on September 6, 2021, COVIDhub-ensemble only reported two-week ahead forecasts for cases and as of September 28, 2021 COVIDhub-ensemble only reports one-week ahead forecasts for cases.
 
 To calculate each column in our table, different inclusion criteria were applied. This table only includes forecasts for the last `r n_weeks_history` weeks, since `r format(first_eval_sat_hist, "%B %d, %Y")`. The models included have submitted  at least 50% of forecasts during this time, where one forecast is a location, target, forecast date combination. The data are initially  ordered based on their relative WIS score aggregated across horizons. 
 
@@ -817,6 +823,7 @@ calib_model_order_historical <- calibration_table_hist %>%   arrange(diff_95) %>
 
 This table only includes forecasts for the last `r n_weeks_eval` weeks, since `r format(first_eval_sat, "%B %d, %Y")`. For inclusion in this table,  a model must have contributed forecasts for 5 or more weeks total during this period, or have submitted forecasts during at least 2 out of the last 3 evaluated weeks. This inclusion criteria was applied in order to score models that submitted for a substantial amount of weeks at any point during the pandemic but may no longer be submitting, while also evaluating new teams that have recently joined our forecasting efforts. The data are initially ordered by model based on their 95% PI coverage, aggregated across horizons, with the most accurate models at the top. 
 
+
 ```{r recent Leaderboard CASES coverage}
 
 # a custom table container
@@ -834,6 +841,7 @@ sketch_recent_coverage = htmltools::withTags(table(
 
 calibration_table1<- calibration_table %>%
  arrange(diff_95)%>%    
+  mutate(model = ifelse(model == "COVIDhub-ensemble", "COVIDhub-ensemble**",model)) %>%
   select (model, "# recent forecasts",  "1 wk 50% coverage", "2 wk 50% coverage", "3 wk 50% coverage", "4 wk 50% coverage","1 wk 95% coverage", "2 wk 95% coverage", "3 wk 95% coverage", "4 wk 95% coverage") 
 
 datatable(calibration_table1,
@@ -847,10 +855,12 @@ datatable(calibration_table1,
           colnames = c("Model", "# recent forecasts",  "1 wk 50% coverage", "2 wk 50% coverage", "3 wk 50% coverage", "4 wk 50% coverage","1 wk 95% coverage", "2 wk 95% coverage", "3 wk 95% coverage", "4 wk 95% coverage"), container=sketch_recent_coverage) 
 ```
 
+** When comparing results, keep in mind that starting on September 6, 2021, COVIDhub-ensemble only reported two-week ahead forecasts for cases and as of September 28, 2021 COVIDhub-ensemble only reports one-week ahead forecasts for cases.
 
 ### Historical coverage
 
 This table only includes forecasts for the last `r n_weeks_history` weeks, since `r format(first_eval_sat_hist, "%B %d, %Y")`. For inclusion in this table, a model most have contributed forecasts for 5 or more weeks total during this period, or have submitted forecasts during at least 2 out of the last 3 evaluated weeks. This inclusion criteria was applied in order to score models that submitted for a substantial amount of weeks at any point during the pandemic but may no longer be submitting, while also evaluating new teams that have recently joined our forecasting efforts. The data are initially ordered by model based on their 95% PI coverage, aggregated across horizons, with the most accurate models at the top. 
+
 
 ```{r historical Leaderboard CASES coverage}
 # a custom table container
@@ -867,7 +877,8 @@ sketch_historical_coverage = htmltools::withTags(table(
  lapply((c("1 wk","2 wk","3 wk","4 wk","1 wk","2 wk","3 wk","4 wk")), th)))))
 
 calibration_table_hist1<- calibration_table_hist %>%
- arrange(diff_95) %>%    
+ arrange(diff_95) %>%  
+  mutate(model = ifelse(model == "COVIDhub-ensemble", "COVIDhub-ensemble**",model)) %>%
   select (model, "# historical forecasts",  "1 wk 50% coverage", "2 wk 50% coverage", "3 wk 50% coverage", "4 wk 50% coverage","1 wk 95% coverage", "2 wk 95% coverage", "3 wk 95% coverage", "4 wk 95% coverage") 
 
 datatable(calibration_table_hist1,
@@ -882,7 +893,7 @@ datatable(calibration_table_hist1,
 
 ```  
 
-
+** When comparing results, keep in mind that starting on September 6, 2021, COVIDhub-ensemble only reported two-week ahead forecasts for cases and as of September 28, 2021 COVIDhub-ensemble only reports one-week ahead forecasts for cases.
 
 ## WIS components
 
@@ -891,10 +902,18 @@ The data in this graph has been aggregated over all locations and submission wee
 
 The sum of the bars adds up to the WIS score. Of note, these values may not be exactly the same as the relative WIS scores shown in the leaderboard table because these are not adjusted for weeks or locations missing.  The data are ordered on the x axis based on their relative WIS score shown in the accuracy table, aggregated across horizons. 
 
+
+
 ```{r wis bar function, fig.height= 8, fig.width=13}
+# Add ** to COVIDhub-ensemble
+score_case_all <-   score_case_all  %>%
+    mutate(model = ifelse(model == "COVIDhub-ensemble", "COVIDhub-ensemble**",model)) 
+pairwise_scores <-   pairwise_scores  %>%
+    mutate(model = ifelse(model == "COVIDhub-ensemble", "COVIDhub-ensemble**",model))
+
 wis_barplot_function(x = score_case_all, y = pairwise_scores, order = case_model_order)
 ```
-
+** When comparing results, keep in mind that starting on September 6, 2021, COVIDhub-ensemble only reported two-week ahead forecasts for cases and as of September 28, 2021 COVIDhub-ensemble only reports one-week ahead forecasts for cases.
 
 ## Evaluation by Week  {.tabset .tabset-fade}
 
@@ -968,10 +987,19 @@ This figures below show recent model performance stratified by location. We only
 
 The color scheme shows the WIS score relative to the baseline, across all horizons. The only locations evaluated are 50 states and a national level forecast. The data are ordered on the x axis based on their relative WIS score shown in the accuracy table, aggregated across horizons.  
 
+
 ```{r, fig.width=12, fig.height=16}
+# Add ** to COVIDhub-ensemble
+case_accuracy_recent <-   case_accuracy_recent  %>%
+    mutate(model = ifelse(model == "COVIDhub-ensemble", "COVIDhub-ensemble**",model)) 
+# case_model_order<-   case_model_order  %>%
+#     mutate(model = ifelse(model == "COVIDhub-ensemble", "COVIDhub-ensemble**",model)) 
+# location_order_case<-   location_order_case  %>%
+#     mutate(model = ifelse(model == "COVIDhub-ensemble", "COVIDhub-ensemble**",model)) 
 plot_by_location_wis(case_accuracy_recent, order = case_model_order, location_order  = location_order_case)
 ```
 
+** When comparing results, keep in mind that starting on September 6, 2021, COVIDhub-ensemble only reported two-week ahead forecasts for cases and as of September 28, 2021 COVIDhub-ensemble only reports one-week ahead forecasts for cases.
 
 ## Evaluation Periods  {.tabset .tabset-fade}
 
@@ -1432,6 +1460,7 @@ sketch_recent_accuracy = htmltools::withTags(table(
 
 leaderboard_table1<- leaderboard_table %>%
  arrange(relative_wis) %>%    
+    mutate(model = ifelse(model == "COVIDhub-ensemble", "COVIDhub-ensemble**",model)) %>%
   select (model, "# recent forecasts",  "1 wk relWIS",  "2 wk relWIS","3 wk relWIS","4 wk relWIS","1 wk relMAE","2 wk relMAE","3 wk relMAE","4 wk relMAE") 
 
 datatable(leaderboard_table1,
@@ -1446,6 +1475,8 @@ datatable(leaderboard_table1,
               filter = c("top")
 
 ```
+** When comparing results, keep in mind that as of September 28, 2021 COVIDhub-ensemble only reports 14 day ahead forecasts for hospitalizations.
+
 To calculate each column in our table, different inclusion criteria were applied. This table only includes forecasts for the last `r n_weeks_eval` weeks, since `r format(first_eval_sat, "%B %d, %Y")`. The models included have submitted  at least 50% of forecasts during this time, where one forecast is a location, target, forecast date combination.  The data are initially ordered by model based on their relative WIS score aggregated across horizons, with the most accurate models at the top. 
 
 * The column titled, "# recent forecasts" lists the number of forecasts a team has submitted with a target end date over the most recent `r n_weeks_eval` week period.
@@ -1472,6 +1503,7 @@ sketch_historical_accuracy = htmltools::withTags(table(
 
 leaderboard_table_historical1<- leaderboard_table_historical %>%
  arrange(relative_wis) %>%    
+    mutate(model = ifelse(model == "COVIDhub-ensemble", "COVIDhub-ensemble**",model)) %>%
   select (model, "# historical forecasts",  "1 wk relWIS",  "2 wk relWIS","3 wk relWIS","4 wk relWIS","1 wk relMAE","2 wk relMAE","3 wk relMAE","4 wk relMAE") 
 
 datatable(leaderboard_table_historical1,
@@ -1485,7 +1517,7 @@ datatable(leaderboard_table_historical1,
           colnames = c("Model", "# historical forecasts",  "1 wk relWIS",  "2 wk relWIS","3 wk relWIS","4 wk relWIS","1 wk relMAE","2 wk relMAE","3 wk relMAE","4 wk relMAE"), container=sketch_historical_accuracy) 
               filter = c("top")
 ```
-
+** When comparing results, keep in mind that as of September 28, 2021 COVIDhub-ensemble only reports 14 day ahead forecasts for hospitalizations.
 
 To calculate each column in our table, different inclusion criteria were applied. This table only includes forecasts for the last `r n_weeks_history` weeks, since `r format(first_eval_sat_hist, "%B %d, %Y")`. The models included have submitted  at least 50% of forecasts during this time, where one forecast is a location, target, forecast date combination. The data are initially ordered  by model based on their relative WIS score aggregated across horizons, with the most accurate models at the top. 
 
@@ -1616,6 +1648,7 @@ calib_model_order_historical <- calibration_table_hist %>%   arrange(diff_95) %>
 
 This table only includes forecasts for the last `r n_weeks_eval` weeks, since `r format(first_eval_sat, "%B %d, %Y")`. For inclusion in this table,  a model must have contributed forecasts for 5 or more weeks total during this period, or have submitted forecasts during at least 2 out of the last 3 evaluated weeks. This inclusion criteria was applied in order to score models that submitted for a substantial amount of weeks at any point during the pandemic but may no longer be submitting, while also evaluating new teams that have recently joined our forecasting efforts. The data are initially ordered by model based on their 95% PI coverage, aggregated across horizons, with the most accurate models at the top. 
 
+
 ```{r recent Leaderboard HOSP coverage}
 
 # a custom table container
@@ -1632,7 +1665,8 @@ sketch_recent_coverage = htmltools::withTags(table(
  lapply((c("1 wk","2 wk","3 wk","4 wk","1 wk","2 wk","3 wk","4 wk")), th)))))
 
 calibration_table1<- calibration_table %>%
- arrange(diff_95)%>%    
+ arrange(diff_95)%>%   
+    mutate(model = ifelse(model == "COVIDhub-ensemble", "COVIDhub-ensemble**",model)) %>%
   select (model, "# recent forecasts",  "1 wk 50% coverage", "2 wk 50% coverage", "3 wk 50% coverage", "4 wk 50% coverage","1 wk 95% coverage", "2 wk 95% coverage", "3 wk 95% coverage", "4 wk 95% coverage") 
 
 datatable(calibration_table1,
@@ -1645,11 +1679,12 @@ datatable(calibration_table1,
               # filter = c("top")
           colnames = c("Model", "# recent forecasts",  "1 wk 50% coverage", "2 wk 50% coverage", "3 wk 50% coverage", "4 wk 50% coverage","1 wk 95% coverage", "2 wk 95% coverage", "3 wk 95% coverage", "4 wk 95% coverage"), container=sketch_recent_coverage) 
 ```
-
+** When comparing results, keep in mind that as of September 28, 2021 COVIDhub-ensemble only reports 14 day ahead forecasts for hospitalizations.
 
 ### Historical coverage
 
 This table only includes forecasts for the last `r n_weeks_history` weeks, since `r format(first_eval_sat_hist, "%B %d, %Y")`. For inclusion in this table, a model most have contributed forecasts for 5 or more weeks total during this period, or have submitted forecasts during at least 2 out of the last 3 evaluated weeks. This inclusion criteria was applied in order to score models that submitted for a substantial amount of weeks at any point during the pandemic but may no longer be submitting, while also evaluating new teams that have recently joined our forecasting efforts. The data are initially ordered by model based on their 95% PI coverage, aggregated across horizons, with the most accruate models at the top. 
+
 
 ```{r historical Leaderboard HOSP coverage}
 # a custom table container
@@ -1667,6 +1702,7 @@ sketch_historical_coverage = htmltools::withTags(table(
 
 calibration_table_hist1<- calibration_table_hist %>%
  arrange(diff_95) %>%    
+    mutate(model = ifelse(model == "COVIDhub-ensemble", "COVIDhub-ensemble**",model)) %>%
   select (model, "# historical forecasts",  "1 wk 50% coverage", "2 wk 50% coverage", "3 wk 50% coverage", "4 wk 50% coverage","1 wk 95% coverage", "2 wk 95% coverage", "3 wk 95% coverage", "4 wk 95% coverage") 
 
 datatable(calibration_table_hist1,
@@ -1680,7 +1716,7 @@ datatable(calibration_table_hist1,
           colnames = c("Model", "# recent forecasts",  "1 wk 50% coverage", "2 wk 50% coverage", "3 wk 50% coverage", "4 wk 50% coverage","1 wk 95% coverage", "2 wk 95% coverage", "3 wk 95% coverage", "4 wk 95% coverage"), container=sketch_recent_coverage) 
 
 ```  
-
+** When comparing results, keep in mind that as of September 28, 2021 COVIDhub-ensemble only reports 14 day ahead forecasts for hospitalizations.
 
 
 ## WIS components
@@ -1690,10 +1726,17 @@ The data in this graph has been aggregated over all locations and submission wee
 
 The sum of the bars adds up to the WIS score. Of note, these values may not be exactly the same as the relative WIS scores shown in the leaderboard table because these are not adjusted for weeks or locations missing.  The data are ordered on the x axis based on their relative WIS score shown in the accuracy table, aggregated across horizons. 
 
+
 ```{r wis bar function HOSP, fig.height= 8, fig.width=13}
+# Add ** to COVIDhub-ensemble
+score_hosp_all <-   score_hosp_all  %>%
+    mutate(model = ifelse(model == "COVIDhub-ensemble", "COVIDhub-ensemble**",model)) 
+pairwise_scores <-   pairwise_scores  %>%
+    mutate(model = ifelse(model == "COVIDhub-ensemble", "COVIDhub-ensemble**",model))
+
 wis_barplot_function(x = score_hosp_all, y = pairwise_scores, order = hosp_model_order)
 ```
-
+** When comparing results, keep in mind that as of September 28, 2021 COVIDhub-ensemble only reports 14 day ahead forecasts for hospitalizations.
 
 ## Evaluation by Week  {.tabset .tabset-fade}
 
@@ -1773,10 +1816,15 @@ This figures below show recent model performance stratified by location. We only
 
 The color scheme shows the WIS score relative to the baseline, across all horizons. The only locations evaluated are 50 states and a national level forecast. The data are ordered on the x axis based on their relative WIS score shown in the accuracy table, aggregated across horizons.  
 
+
 ```{r, fig.width=12, fig.height=16}
+# Add ** to COVIDhub-ensemble
+hosp_accuracy_recent <-   hosp_accuracy_recent  %>%
+    mutate(model = ifelse(model == "COVIDhub-ensemble", "COVIDhub-ensemble**",model)) 
+
 plot_by_location_wis(hosp_accuracy_recent, order = hosp_model_order, location_order  = location_order_hosp)
 ```
-
+** When comparing results, keep in mind that as of September 28, 2021 COVIDhub-ensemble only reports 14 day ahead forecasts for hospitalizations.
 
 ## Evaluation Periods  {.tabset .tabset-fade}
 
