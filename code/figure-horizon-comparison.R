@@ -25,9 +25,17 @@ longterm_dat2 <- load_latest_forecasts(models = c("IHME-CurveFit", "Covid19Sim-S
                                        source = "zoltar") %>%
   mutate(model = ifelse(model=="IHME-CurveFit", "IHME-SEIR", model))
 
+longterm_dat3 <- load_latest_forecasts(models = c("IHME-CurveFit", "Covid19Sim-Simulator"),
+                                       last_forecast_date = as.Date("2021-05-07"), forecast_date_window_size = 6,
+                                       locations = "US",
+                                       types = c("quantile", "point"), 
+                                       targets = paste(1:20, "wk ahead inc death"),
+                                       source = "zoltar") %>%
+  mutate(model = ifelse(model=="IHME-CurveFit", "IHME-SEIR", model))
+
 truth_dat <- load_truth(truth_source = "JHU", target_variable = "inc death", locations = "US")
 
-panelA <- plot_forecasts(bind_rows(longterm_dat1, longterm_dat2), 
+panelA <- plot_forecasts(bind_rows(longterm_dat1, longterm_dat2, longterm_dat3), 
   truth_data = truth_dat, 
   #model = "IHME-CurveFit", 
   target_variable = "inc death", 
@@ -118,7 +126,7 @@ err_by_model_horizon <- avg_wis_by_model_target_week %>%
          `# predictions` = nobs) %>%
   mutate(model = fct_recode(model, "IHME-SEIR" = "IHME-CurveFit"))
 
-model_colors <- palette.colors(n=6, palette="Set1")[c(3,4,5,1,6,2)]
+model_colors <- palette.colors(n=7, palette="Set1")[c(3,4,5,1,7,2)]
 
 panelC_new <- ggplot(err_by_model_horizon, 
                      aes(x=horizon, y=pi_cov_95, color=model, group=model)) +
