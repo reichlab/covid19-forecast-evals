@@ -51,6 +51,9 @@ figures/calibration_plot_diagonal.jpg: code/figure-calibration_plot_diagonal.R p
 	
 figures/fig-difficult_forecast_periods.jpg: code/figure-difficult_forecast_periods.R paper-inputs/inc-scores.csv code/load-global-analysis-dates.R 
 	Rscript code/figure-difficult_forecast_periods.R
+	
+figures/component_plot.jpg: code/figure-component_wis.R paper-inputs/inc-scores.csv 
+	Rscript code/figure-component_wis.R
 
 network-graph: 
 	make -Bnd |  ~/Applications/makefile2graph/make2graph | dot -Tpng -o makefile-network-graph.png

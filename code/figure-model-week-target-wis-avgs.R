@@ -322,6 +322,12 @@ weeks_ensemble_outpeformed <- avg_scores_byweek %>%
   select(model, target, mean_wis, weekly_avg, weekly_baseline) %>%
   filter(mean_wis > weekly_baseline | mean_wis > weekly_baseline)
 
+#ensemble outperformed January
+Jan_outperform <- avg_scores_byweek %>% 
+  filter(target_end_date_1wk_ahead == as.Date("2020-11-14")) %>%
+  filter(target == "4 wk ahead inc death") %>%
+  mutate(weekly_avg = mean(mean_wis)) 
+
 # old f4, saved for now
 # f4 <- ggplot(avg_scores_byweek, aes(x = target_end_date, y= relative_wis, color = model, group = model)) +
 #   #scale_x_date(date_labels = "%Y-%m-%d", breaks = c(unique(avg_scores_byweek$target_end_date_0wk_ahead)),name = "Forecast Week",
