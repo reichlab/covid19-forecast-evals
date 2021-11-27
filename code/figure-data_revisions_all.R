@@ -53,35 +53,35 @@ for(i in 1:7) {
 dev.off()
 
 
-#Select locations for manuscript figure
-weekly_inc_deaths_select_loc <- weekly_inc_deaths %>%
-  filter(abbreviation %in% c("MI", "OR", "DE", "NJ", "NY", "TX")) %>%
-  filter(MMWRweek <= 39)
-
-pdf('figures/data_revisions_select_states.pdf', height=6, width=8)
-  {fig_revisions_select <- ggplot(data = weekly_inc_deaths_select_loc, aes(x = date, y = inc, color = factor(revision_date))) +
-    geom_line() +
-    geom_point(size = 1) +
-    theme_bw() +
-    #scale_x_continuous(breaks = unique(weekly_inc_deaths$MMWRweek)[c(TRUE, FALSE)]) + 
-    #geom_vline(aes(xintercept = weekly_counts$first_fcast_date_impacted), linetype = "dashed") +
-    #scale_x_date(date_labels = "%Y-%m-%d", breaks = c(mondays), name = "Date") +
-    theme(
-      axis.text.x = element_text(angle = 45, hjust = 1, size = 7),
-      legend.text = element_text(size = 7),
-      legend.title = element_text(size = 8),
-      legend.position = "bottom") +
-    #ggforce::facet_wrap_paginate(~location_name, ncol = 2, nrow = 4,  scales = "free_y", page = i) +
-    facet_wrap(~abbreviation, scales = "free_y") +
-    ylab("Incident deaths reported") + labs(color = "Revision Date") + xlab("Epi Week")
-  print(fig_revisions_select)
-}
-dev.off()
-
-
-#Table of revisions
-anomaly_table <- weekly_inc_deaths %>%
-  filter(abbreviation %in% c("MI", "OR", "DE", "NJ", "NY", "TX", "MS")) %>%
-  filter(MMWRweek > 21 & MMWRweek <= 31) %>%
-  filter(date >= first_1wk_target_end_date) %>%
-  filter(revision_date < Sys.Date())
+# #Select locations for manuscript figure
+# weekly_inc_deaths_select_loc <- weekly_inc_deaths %>%
+#   filter(abbreviation %in% c("MI", "OR", "DE", "NJ", "NY", "TX")) %>%
+#   filter(MMWRweek <= 39)
+# 
+# pdf('figures/data_revisions_select_states.pdf', height=6, width=8)
+#   {fig_revisions_select <- ggplot(data = weekly_inc_deaths_select_loc, aes(x = date, y = inc, color = factor(revision_date))) +
+#     geom_line() +
+#     geom_point(size = 1) +
+#     theme_bw() +
+#     #scale_x_continuous(breaks = unique(weekly_inc_deaths$MMWRweek)[c(TRUE, FALSE)]) + 
+#     #geom_vline(aes(xintercept = weekly_counts$first_fcast_date_impacted), linetype = "dashed") +
+#     #scale_x_date(date_labels = "%Y-%m-%d", breaks = c(mondays), name = "Date") +
+#     theme(
+#       axis.text.x = element_text(angle = 45, hjust = 1, size = 7),
+#       legend.text = element_text(size = 7),
+#       legend.title = element_text(size = 8),
+#       legend.position = "bottom") +
+#     #ggforce::facet_wrap_paginate(~location_name, ncol = 2, nrow = 4,  scales = "free_y", page = i) +
+#     facet_wrap(~abbreviation, scales = "free_y") +
+#     ylab("Incident deaths reported") + labs(color = "Revision Date") + xlab("Epi Week")
+#   print(fig_revisions_select)
+# }
+# dev.off()
+# 
+# 
+# #Table of revisions
+# anomaly_table <- weekly_inc_deaths %>%
+#   filter(abbreviation %in% c("MI", "OR", "DE", "NJ", "NY", "TX", "MS")) %>%
+#   filter(MMWRweek > 21 & MMWRweek <= 31) %>%
+#   filter(date >= first_1wk_target_end_date) %>%
+#   filter(revision_date < Sys.Date())

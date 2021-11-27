@@ -210,8 +210,9 @@ avg_phase <- inc_scores_phase %>%
 
 #box plot 
 
-avg_wis_by_model_target_week_phase <- avg_wis_by_model_target_week_phase %>% ungroup() %>%
-  mutate(seasonal_phase = fct_relevel(factor(seasonal_phase), levels = c("spring", "summer", "winter", "delta"))) 
+avg_wis_by_model_target_week_phase <- avg_wis_by_model_target_week_phase %>% ungroup() 
+
+#  %>% mutate(seasonal_phase = fct_relevel(factor(seasonal_phase), levels = c("spring", "summer", "winter", "delta"))) 
 
 p_phase_boxplot <- ggplot(avg_wis_by_model_target_week_phase %>% filter(seasonal_phase != "delta"), aes(y = reorder_within(model,-relative_wis,seasonal_phase),
                                                                   x = scales::oob_squish(mean_wis, range = c(0,500)))) +
@@ -368,8 +369,8 @@ Jan_outperform <- avg_scores_byweek %>%
 
 
 f4b <- ggplot(filter(avg_scores_byweek, target=="1 wk ahead inc death"), aes(x = target_end_date, y = mean_wis)) +
-  geom_line(aes(group = model), color="darkgray", alpha=.5) +
-  geom_point(aes(group = model), color="darkgray", alpha=.5, size = 2) +
+  geom_line(aes(group = model), color="gray", alpha=.5) +
+  geom_point(aes(group = model), color="gray", alpha=.5, size = 2) +
   stat_summary(fun=mean, geom="line", aes(color="blue")) +
   #geom_vline(xintercept = range_fcast_dates, linetype = 2) +
   stat_summary(fun=mean, geom="point", aes(color="blue",  shape = "19")) +
@@ -394,8 +395,8 @@ f4b <- ggplot(filter(avg_scores_byweek, target=="1 wk ahead inc death"), aes(x =
       
 
 f4c <- ggplot(filter(avg_scores_byweek, target=="4 wk ahead inc death"), aes(x = target_end_date, y = mean_wis)) +
-  geom_line(aes(group = model), color="darkgray", alpha=.5) +
-  geom_point(aes(group = model), color="darkgray", alpha=.5, size = 2) +
+  geom_line(aes(group = model), color="gray", alpha=.5) +
+  geom_point(aes(group = model), color="gray", alpha=.5, size = 2) +
   stat_summary(fun=mean, geom="line", aes(color="blue")) +
   #geom_vline(xintercept = range_fcast_dates, linetype = 2) +
   stat_summary(fun=mean, geom="point", aes(color="blue", shape = "blue")) +
