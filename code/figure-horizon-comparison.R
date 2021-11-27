@@ -25,9 +25,17 @@ longterm_dat2 <- load_latest_forecasts(models = c("IHME-CurveFit", "Covid19Sim-S
                                        source = "zoltar") %>%
   mutate(model = ifelse(model=="IHME-CurveFit", "IHME-SEIR", model))
 
+longterm_dat3 <- load_latest_forecasts(models = c("IHME-CurveFit", "Covid19Sim-Simulator"),
+                                       last_forecast_date = as.Date("2021-05-07"), forecast_date_window_size = 6,
+                                       locations = "US",
+                                       types = c("quantile", "point"), 
+                                       targets = paste(1:20, "wk ahead inc death"),
+                                       source = "zoltar") %>%
+  mutate(model = ifelse(model=="IHME-CurveFit", "IHME-SEIR", model))
+
 truth_dat <- load_truth(truth_source = "JHU", target_variable = "inc death", locations = "US")
 
-panelA <- plot_forecasts(bind_rows(longterm_dat1, longterm_dat2), 
+panelA <- plot_forecasts(bind_rows(longterm_dat1, longterm_dat2, longterm_dat3), 
   truth_data = truth_dat, 
   #model = "IHME-CurveFit", 
   target_variable = "inc death", 
@@ -45,7 +53,7 @@ panelA <- plot_forecasts(bind_rows(longterm_dat1, longterm_dat2),
     legend.key.size = unit(0.15, "cm"),
     legend.background=element_rect(fill = alpha("white", 0.5)),
     plot.margin = margin(10, 15, 10, 10),axis.ticks.length.x = unit(0.5, "cm"),
-    axis.text.x = element_text(vjust = 7, hjust = -0.2)
+    axis.text.x = element_text(vjust = 7, hjust = -0.1)
   ) 
 
 
@@ -118,7 +126,7 @@ err_by_model_horizon <- avg_wis_by_model_target_week %>%
          `# predictions` = nobs) %>%
   mutate(model = fct_recode(model, "IHME-SEIR" = "IHME-CurveFit"))
 
-model_colors <- palette.colors(n=5, palette="Set1")[c(3,5,4,1,2)]
+model_colors <- palette.colors(n=7, palette="Set1")[c(3,4,5,1,7,2)]
 
 panelC_new <- ggplot(err_by_model_horizon, 
                      aes(x=horizon, y=pi_cov_95, color=model, group=model)) +
@@ -167,14 +175,14 @@ wis_component_by_horizon <- comp_err_by_model_horizon %>%
 
 
 ## rel error by week
-avg_wis_by_model_target_week %>% 
-  filter(model %in% c("IHME-CurveFit", "Covid19Sim-Simulator")) %>%
-  group_by(model, horizon, target_end_date) %>%
-  summarize(avg_wis = mean(mean_wis)) %>%
-  group_by(model, target_end_date) %>%
-  mutate(h1_avg_wis = min(avg_wis), rel_wis = avg_wis/h1_avg_wis) %>%
-  mutate(model = ifelse(model=="IHME-CurveFit", "IHME-SEIR", model))
-  print(n=Inf)
+# avg_wis_by_model_target_week %>% 
+#   filter(model %in% c("IHME-CurveFit", "Covid19Sim-Simulator")) %>%
+#   group_by(model, horizon, target_end_date) %>%
+#   summarize(avg_wis = mean(mean_wis)) %>%
+#   group_by(model, target_end_date) %>%
+#   mutate(h1_avg_wis = min(avg_wis), rel_wis = avg_wis/h1_avg_wis) %>%
+#   mutate(model = ifelse(model=="IHME-CurveFit", "IHME-SEIR", model))
+#   print(n=Inf)
 
 ## panel B: figure mean wis by date color by horizon
 panelB <- ggplot(filter(avg_wis_by_model_target_week, model!="COVIDhub-baseline", horizon %in% horizon_subset), 
@@ -197,7 +205,7 @@ panelB <- ggplot(filter(avg_wis_by_model_target_week, model!="COVIDhub-baseline"
     #legend.box = "horizontal",
     legend.justification = c(0,1),
     axis.ticks.length.x = unit(0.5, "cm"),
-    axis.text.x = element_text(vjust = 7, hjust = -0.2)) +
+    axis.text.x = element_text(vjust = 7, hjust = -0.1)) +
   guides(linetype=guide_legend(keywidth = 2))
 # 
 # panelC <- ggplot(filter(avg_wis_by_model_target_week, model!="COVIDhub-baseline", horizon %in% horizon_subset), 
@@ -234,7 +242,7 @@ panelB <- ggplot(filter(avg_wis_by_model_target_week, model!="COVIDhub-baseline"
 #     axis.text.x = element_text(vjust = 7.5, hjust = -0.4))
 
 #heights <- c(rep(2/7, 3), 1/7)
-jpeg(file = "figures/fig-by-horizon-week.jpg", width=8, height=10, units="in", res=200)
+jpeg(file = "figures/fig-by-horizon-week.jpg", width=10, height=10, units="in", res=200)
 ggdraw(
   plot_grid(
     plot_grid(panelA, panelB, align="v", ncol=1),
@@ -244,7 +252,7 @@ ggdraw(
   )
 dev.off()
 
-pdf(file = "figures/fig-by-horizon-week.pdf", width=8, height=10)
+pdf(file = "figures/fig-by-horizon-week.pdf", width=10, height=10)
 ggdraw(
   plot_grid(
     plot_grid(panelA, panelB, align="v", ncol=1),

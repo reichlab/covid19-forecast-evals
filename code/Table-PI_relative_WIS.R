@@ -21,6 +21,16 @@ scores <- read_csv("paper-inputs/inc-scores.csv") %>%
   filter(horizon %in% c(1:4)) %>%
   filter(!is.na(wis)) 
 
+
+#number of weeks each model submitted 
+count_n_submissions <- scores %>%
+  filter(horizon == "1") %>%
+  filter(location == "01") %>%
+  group_by(model) %>%
+  summarise(n_weeks_submitted = n()) %>% 
+  filter(n_weeks_submitted > 65)
+
+
 calib_table <- scores %>%
   group_by(model) %>%
   summarise(n_forecasts = n(),

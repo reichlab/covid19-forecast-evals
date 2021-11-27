@@ -1,5 +1,5 @@
 # make paper-inputs
-paper-inputs: figures/data-and-forecast.jpg figures/pi-coverage.jpg figures/model-target-week-wis-avgs.jpg figures/inc-loc-heatmap.jpg figures/fig-by-horizon-week.jpg figures/fig-wis-location.jpg figures/fig-model-ranks.jpg figures/calibration_plot_diagonal.jpg paper-inputs/table-overall-performance.csv
+paper-inputs: figures/data-and-forecast.jpg figures/pi-coverage.jpg figures/model-target-week-wis-avgs.jpg figures/inc-loc-heatmap.jpg figures/fig-by-horizon-week.jpg figures/fig-wis-location.jpg figures/fig-model-ranks.jpg figures/calibration_plot_diagonal.jpg figures/fig-difficult_forecast_periods.jpg paper-inputs/table-overall-performance.csv
 
 # processes scores after updates to anomaly dates, eligibility changes or new scores
 paper-inputs/inc-scores.csv: paper-inputs/model-eligibility-inc.csv code/load-global-analysis-dates.R code/get_forecasts_covidhubutils.R
@@ -48,6 +48,12 @@ figures/fig-wis-location.jpg: code/figure-wis_by_location.R paper-inputs/inc-sco
 
 figures/calibration_plot_diagonal.jpg: code/figure-calibration_plot_diagonal.R paper-inputs/inc-scores.csv code/load-global-analysis-dates.R
 	Rscript code/figure-calibration_plot_diagonal.R
+	
+figures/fig-difficult_forecast_periods.jpg: code/figure-difficult_forecast_periods.R paper-inputs/inc-scores.csv code/load-global-analysis-dates.R 
+	Rscript code/figure-difficult_forecast_periods.R
+	
+figures/component_plot.jpg: code/figure-component_wis.R paper-inputs/inc-scores.csv 
+	Rscript code/figure-component_wis.R
 
 network-graph: 
 	make -Bnd |  ~/Applications/makefile2graph/make2graph | dot -Tpng -o makefile-network-graph.png

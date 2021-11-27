@@ -1,0 +1,127 @@
+---
+title: "Authors and Affiliations"
+author: "Estee Y Cramer"
+date: "8/19/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+#Import authors and rename columns 
+dat_author <- read.csv("Authorship on Forecast Evaluation Manuscript.csv") %>%
+  rename(team = Team.Name, FirstName = Author.First.Name.s....Initial, 
+         LastName = Author.Last.Name, Affiliation1 = Author.institution.1,
+         Affiliation2 = Author.institution.2) %>%
+  filter(team != "")
+```
+
+
+```{r}
+dat_edit1 <- dat_author %>% 
+  # gather all affiliations in one column
+  gather(key = Number, value = Affiliation, Affiliation1,  Affiliation2) %>%
+  # remove rows with no Affiliations
+  filter(!is.na(Affiliation),
+         Affiliation != "",
+         Affiliation != " ") %>%
+  mutate(FirstName = trimws(FirstName, which = c("both"), whitespace = "[ \t\r\n]"),
+         LastName = trimws(LastName, which = c("both"), whitespace = "[ \t\r\n]"),
+         Email.Address = trimws(Email.Address, which = c("both"), whitespace = "[ \t\r\n]"),
+         assigned_authorship_order = "NA",
+         fct_name = as.factor(paste(FirstName, LastName))) %>%
+  arrange(desc(team), Lead.Author, LastName, Affiliation) %>% 
+  rowwise() 
+
+
+dat_edit1$fct_name <- fct_inorder(dat_edit1$fct_name) 
+
+
+dat_edit1$fct_name <- fct_relevel(dat_edit1$fct_name, 
+c("Estee Y Cramer",  "Evan L Ray", "Velma K Lopez","Johannes Bracher", "Andrea Brennen", "Alvaro J Castro Rivadeneira", "Aaron Gerding", "Tilmann Gneiting", "Katie H House","Yuxin Huang", "Dasuni Jayawardena", "Abdul H Kanji", "Ayush Khandelwal","Khoa Le", "Anja Mühlemann",  "Jarad Niemi",  "Apurv Shah", "Ariane Stark","Yijin Wang", "Nutcha Wattanachit", "Martha W Zorn"))
+
+dat_edit1$fct_name <- fct_relevel(dat_edit1$fct_name, 
+                                 c("Jo W Walker", "Rachel B Slayton", "Michael A Johansson", "Matthew Biggerstaff", "Nicholas G Reich"), after = Inf)
+```
+
+
+```{r}
+# Function to get affiliations ranked from 1 to n (this function was found on Stack Overflow)
+rankID <- function(x){
+  su=sort(unique(x))
+  for (i in 1:length(su)) x[x==su[i]] = i
+  return(x)
+}
+```
+
+```{r}
+NameAffList <- dat_edit1 %>%
+  arrange(levels = dat_edit1$fct_name) %>%
+  rowwise() %>% 
+  # extract the first letter of each first name and put a dot after each letter
+  # mutate(
+  #   Initials = paste(stringi::stri_extract_all(regex = "\\b([[:alpha:]])", str = FirstName, simplify = TRUE), collapse = ". "),
+  #   Initials = paste0(Initials, ".")) %>%
+  ungroup() %>% 
+  # add a column from 1 to n
+  mutate(ID = 1:n()) %>%
+  group_by(Affiliation) %>% 
+  # replace ID with min number (same affiliations become the same number)
+  mutate(ID = min(ID)) %>% 
+  ungroup() %>% 
+  # use function above to assign new ID from 1 to n
+  mutate(ID = rankID(ID)) %>%
+  #Paste Last and Initials
+  mutate(name = paste(FirstName, LastName)) %>% ungroup() %>%
+  group_by(Affiliation, FirstName, LastName, Email.Address) %>%
+  mutate(count_affilation = row_number()) %>% ungroup() %>%
+  filter(count_affilation == 1) 
+```
+
+```{r}
+concat_nameAffList <- NameAffList %>% 
+  group_by(Email.Address, FirstName, LastName) %>%
+  mutate(Affiliation_list = paste(Affiliation, collapse = "; ")) %>% ungroup() %>%
+  distinct(Email.Address, FirstName, LastName, .keep_all = TRUE) 
+
+csv_ordered <- concat_nameAffList %>%
+  select(ORCiD = Marshall,  Title = author.preferred.title..Dr..Mr..Ms..Mrs..Miss..,  `First Name` = FirstName, `Last Name` = LastName,
+Email = Email.Address,  Institution = Affiliation_list,  Address.1, Address.2, Funding.Sources)
+
+write.csv(csv_ordered, file = "Authorship_ordered.csv")
+```
+
+
+```{r, echo=FALSE}
+# Create a list with all names
+NameAffList %>%   
+  group_by(fct_name) %>% 
+  summarise(affs = paste(ID, collapse = ",")) %>% 
+  mutate(
+    affs = paste0("^", affs, "^"),
+    nameID = paste0(fct_name, affs)     
+         ) %>% 
+  pull(nameID) %>% 
+  paste(collapse = ", ")
+```
+
+Estee Y Cramer^1^, Evan L Ray^1^, Velma K Lopez^2^, Johannes Bracher^3,4^, Andrea Brennen^5^, Alvaro J Castro Rivadeneira^1^, Aaron Gerding^1^, Tilmann Gneiting^6^, Katie H House^1^, Yuxin Huang^1^, Dasuni Jayawardena^1^, Abdul H Kanji^1^, Ayush Khandelwal^1^, Khoa Le^1^, Anja Mühlemann^7^, Jarad Niemi^8^, Apurv Shah^1^, Ariane Stark^1^, Yijin Wang^1^, Nutcha Wattanachit^1^, Martha W Zorn^1^, Youyang Gu^9^, Sansiddh Jain^10^, Nayana Bannur^10^, Ayush Deva^10^, Mihir Kulkarni^10^, Srujana Merugu^10^, Alpan Raval^10^, Siddhant Shingi^10^, Avtansh Tiwari^10^, Jerome White^10^, Neil F Abernethy^11^, Spencer Woody^12^, Maytal Dahan^13^, Spencer Fox^12^, Kelly Gaither^13^, Michael Lachmann^14^, Lauren Ancel Meyers^12^, James G Scott^12^, Mauricio Tec^12^, Ajitesh Srivastava^15^, Glover E George^16^, Jeffrey C Cegan^16^, Ian D Dettwiller^16^, William P England^16^, Matthew W Farthing^16^, Robert H Hunter^16^, Brandon Lafferty^16^, Igor Linkov^16^, Michael L Mayo^16^, Matthew D Parno^16^, Michael A Rowland^16^, Benjamin D Trump^16^, Yanli Zhang-James^17^, Samuel Chen^17^, Stephen V Faraone^17^, Jonathan Hess^17^, Christopher P Morley^17^, Asif Salekin^18^, Dongliang Wang^17^, Sabrina M Corsetti^19^, Thomas M Baer^20^, Marisa C Eisenberg^19^, Karl Falb^19^, Yitao Huang^19^, Emily T Martin^19^, Ella McCauley^19^, Robert L Myers^19^, Tom Schwarz^19^, Daniel Sheldon^1^, Graham Casey Gibson^1^, Rose Yu^21,22^, Liyao Gao^11^, Yian Ma^22^, Dongxia Wu^22^, Xifeng Yan^23^, Xiaoyong Jin^23^, Yu-Xiang Wang^23^, YangQuan Chen^24^, Lihong Guo^25^, Yanting Zhao^26^, Quanquan Gu^27^, Jinghui Chen^27^, Lingxiao Wang^27^, Pan Xu^27^, Weitong Zhang^27^, Difan Zou^27^, Hannah Biegel^28^, Joceline Lega^28^, Steve McConnell^29^, VP Nagraj^30^, Stephanie L Guertin^30^, Christopher Hulme-Lowe^30^, Stephen D Turner^30^, Yunfeng Shi^31^, Xuegang Ban^11^, Robert Walraven^9^, Qi-Jun Hong^32,33^, Stanley Kong^34^, Axel van de Walle^33^, James A Turtle^35^, Michal Ben-Nun^35^, Steven Riley^36^, Pete Riley^35^, Ugur Koyluoglu^37^, David DesRoches^37^, Pedro Forli^37^, Bruce Hamory^37^, Christina Kyriakides^37^, Helen Leis^37^, John Milliken^37^, Michael Moloney^37^, James Morgan^37^, Ninad Nirgudkar^37^, Gokce Ozcan^37^, Noah Piwonka^37^, Matt Ravi^37^, Chris Schrader^37^, Elizabeth Shakhnovich^37^, Daniel Siegel^37^, Ryan Spatz^37^, Chris Stiefeling^37^, Barrie Wilkinson^37^, Alexander Wong^37^, Sean Cavany^38^, Guido España^38^, Sean Moore^38^, Rachel Oidtman^39,38^, Alex Perkins^38^, David Kraus^40^, Andrea Kraus^40^, Zhifeng Gao^41^, Jiang Bian^41^, Wei Cao^41^, Juan Lavista Ferres^41^, Chaozhuo Li^41^, Tie-Yan Liu^41^, Xing Xie^41^, Shun Zhang^41^, Shun Zheng^41^, Alessandro Vespignani^42,43^, Matteo Chinazzi^43^, Jessica T Davis^43^, Kunpeng Mu^43^, Ana Pastore y Piontti^43^, Xinyue Xiong^43^, Andrew Zheng^44^, Jackie Baek^44^, Vivek Farias^45^, Andreea Georgescu^44^, Retsef Levi^45^, Deeksha Sinha^44^, Joshua Wilde^44^, Georgia Perakis^46^, Mohammed Amine Bennouna^46^, David Nze-Ndong^46^, Divya Singhvi^47^, Ioannis Spantidakis^46^, Leann Thayaparan^46^, Asterios Tsiourvas^46^, Arnab Sarker^48^, Ali Jadbabaie^48^, Devavrat Shah^48^, Nicolas Della Penna^49^, Leo A Celi^49^, Saketh Sundar^50^, Russ Wolfinger^51^, Dave Osthus^52^, Lauren Castro^52^, Geoffrey Fairchild^52^, Isaac Michaud^52^, Dean Karlen^53,54^, Matt Kinsey^55^, Luke C. Mullany^55^, Kaitlin Rainwater-Lovett^55^, Lauren Shin^55^, Katharine Tallaksen^55^, Shelby Wilson^55^, Elizabeth C Lee^56^, Juan Dent^56^, Kyra H Grantz^56^, Alison L Hill^57^, Joshua Kaminsky^56^, Kathryn Kaminsky^9^, Lindsay T Keegan^58^, Stephen A Lauer^56^, Joseph C Lemaitre^59^, Justin Lessler^56^, Hannah R Meredith^56^, Javier Perez-Saez^56^, Sam Shah^9^, Claire P Smith^56^, Shaun A Truelove^56^, Josh Wills^9^, Maximilian Marshall^57^, Lauren Gardner^57^, Kristen Nixon^57^, John C. Burant^9^, Lily Wang^8^, Lei Gao^8^, Zhiling Gu^8^, Myungjin Kim^8^, Xinyi Li^60^, Guannan Wang^61^, Yueying Wang^8^, Shan Yu^62^, Robert C Reiner^11^, Ryan Barber^11^, Emmanuela Gaikedu^11^, Simon Hay^11^, Steve Lim^11^, Chris Murray^11^, David Pigott^11^, Heidi L Gurung^63^, Prasith Baccam^63^, Steven A Stage^63^, Bradley T Suchoski^63^, B. Aditya Prakash^64^, Bijaya Adhikari^65^, Jiaming Cui^64^, Alexander Rodríguez^64^, Anika Tabassum^64,66^, Jiajia Xie^64^, Pinar Keskinocak^67^, John Asplund^68^, Arden Baxter^67^, Buse Eylul Oruc^67^, Nicoleta Serban^67^, Sercan O Arik^69^, Mike Dusenberry^69^, Arkady Epshteyn^69^, Elli Kanal^69^, Long T Le^69^, Chun-Liang Li^69^, Tomas Pfister^69^, Dario Sava^69^, Rajarishi Sinha^69^, Thomas Tsai^70^, Nate Yoder^69^, Jinsung Yoon^69^, Leyou Zhang^69^, Sam Abbott^71^, Nikos I Bosse^71^, Sebastian Funk^71^, Joel Hellewell^71^, Sophie R Meakin^71^, Katharine Sherratt^71^, Mingyuan Zhou^72^, Rahi Kalantari^72^, Teresa K Yamana^73^, Sen Pei^73^, Jeffrey Shaman^73^, Michael L Li^44^, Dimitris Bertsimas^45^, Omar Skali Lami^44^, Saksham Soni^44^, Hamza Tazi Bouardi^44^, Turgay Ayer^74,67^, Madeline Adee^75^, Jagpreet Chhatwal^75^, Ozden O Dalgic^76^, Mary A Ladd^75^, Benjamin P Linas^77^, Peter Mueller^75^, Jade Xiao^67^, Yuanjia Wang^73^, Qinxia Wang^73^, Shanghong Xie^73^, Donglin Zeng^78^, Alden Green^79^, Jacob Bien^15^, Logan Brooks^79^, Addison J Hu^79^, Maria Jahja^79^, Daniel McDonald^80^, Balasubramanian Narasimhan^81^, Collin Politsch^79^, Samyak Rajanala^81^, Aaron Rumack^79^, Noah Simon^11^, Ryan J Tibshirani^79^, Rob Tibshirani^81^, Valerie Ventura^79^, Larry Wasserman^79^, Eamon B O'Dea^82^, John M Drake^82^, Robert Pagano^9^, Quoc T Tran^83^, Lam Si Tung Ho^84^, Huong Huynh^85^, Jo W Walker^2^, Rachel B Slayton^2^, Michael A Johansson^2^, Matthew Biggerstaff^2^, Nicholas G Reich^1^
+
+ 
+```{r, echo= FALSE}
+NameAffList %>%   
+  select(Affiliation, ID) %>% 
+    distinct(Affiliation, .keep_all = TRUE) %>%
+  mutate(affil_id = paste0( "^", ID, "^", Affiliation,  "<br/>")) %>%
+  pull(affil_id)  %>% 
+  paste(collapse = " ")
+```
+
+
+^1^University of Massachusetts, Amherst<br/> ^2^Centers for Disease Control and Prevention<br/> ^3^Chair of Econometrics and Statistics, Karlsruhe Institute of Technology<br/> ^4^Computational Statistics Group, Heidelberg Institute for Theoretical Studies<br/> ^5^IQT<br/> ^6^Institute of Stochastics, Karlsruhe Institute of Technology<br/> ^7^Institute of Mathematical Statistics and Actuarial Science, University of Bern<br/> ^8^Iowa State University<br/> ^9^Unaffiliated<br/> ^10^Wadhwani Institute of Artificial Intelligence <br/> ^11^University of Washington<br/> ^12^University of Texas at Austin<br/> ^13^Texas Advanced Computing Center<br/> ^14^Santa Fe Institute<br/> ^15^University of Southern California<br/> ^16^US Army Engineer Research and Development Center<br/> ^17^State University of New York Upstate Medical University<br/> ^18^Syracuse University<br/> ^19^University of Michigan - Ann Arbor<br/> ^20^Trinity University, San Antonio<br/> ^21^Northeastern University<br/> ^22^University of California, San Diego<br/> ^23^University of California at Santa Barbara<br/> ^24^University of California, Merced<br/> ^25^Jilin University<br/> ^26^University of Science and Technology of China<br/> ^27^University of California, Los Angeles<br/> ^28^University of Arizona<br/> ^29^Construx<br/> ^30^Signature Science, LLC<br/> ^31^Rensselaer Polytechnic Institute<br/> ^32^Arizona State University<br/> ^33^Brown University<br/> ^34^Manhasset Secondary School<br/> ^35^Predictive Science, Inc<br/> ^36^Imperial College, London<br/> ^37^Oliver Wyman<br/> ^38^University of Notre Dame<br/> ^39^University of Chicago<br/> ^40^Masaryk University<br/> ^41^Microsoft <br/> ^42^ISI Foundation<br/> ^43^Laboratory for the Modeling of Biological and Socio-technical Systems, Northeastern University<br/> ^44^Operations Research Center, Massachusetts Institute of Technology<br/> ^45^Sloan School of Management, Massachusetts Institute of Technology<br/> ^46^Massachusetts Institute of Technology<br/> ^47^New York University<br/> ^48^Institute for Data, Systems, and Society, Massachusetts Institute of Technology<br/> ^49^Laboratory for Computational Physiology, Massachusetts Institute of Technology<br/> ^50^River Hill High School<br/> ^51^SAS Institute Inc<br/> ^52^Los Alamos National Laboratory<br/> ^53^TRIUMF<br/> ^54^University of Victoria<br/> ^55^Johns Hopkins University Applied Physics Lab<br/> ^56^Johns Hopkins Bloomberg School of Public Health<br/> ^57^Johns Hopkins University<br/> ^58^University of Utah<br/> ^59^École Polytechnique Fédérale de Lausanne<br/> ^60^Clemson University<br/> ^61^College of William & Mary<br/> ^62^University of Virginia<br/> ^63^IEM, Inc.<br/> ^64^Georgia Institute of Technology<br/> ^65^University of Iowa<br/> ^66^Virginia Tech<br/> ^67^Georgia Insitute of Technology <br/> ^68^Metron, Inc.<br/> ^69^Google Cloud<br/> ^70^Harvard University<br/> ^71^London School of Hygiene & Tropical Medicine<br/> ^72^The University of Texas at Austin<br/> ^73^Columbia University<br/> ^74^Emory University Medical School<br/> ^75^MGH<br/> ^76^Value Analytics Labs<br/> ^77^Boston University School of Medicine<br/> ^78^UNC Chapel Hill<br/> ^79^Carnegie Mellon University<br/> ^80^University of British Columbia<br/> ^81^Stanford University<br/> ^82^University of Georgia<br/> ^83^Walmart Inc.<br/> ^84^Dalhousie University<br/> ^85^Virtual Power System Inc.<br/>"

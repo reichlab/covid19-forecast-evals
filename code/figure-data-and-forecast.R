@@ -14,7 +14,7 @@ eval_dates <- c(
 
 
 start_date <- as.Date("2020-02-22")
-end_date <- truth_date
+end_date <- last_target_end_date 
 
 data("hub_locations")
 
@@ -23,8 +23,7 @@ data("hub_locations")
 
 fcast_data <- load_forecasts(
   models = "COVIDhub-ensemble", 
-  dates = seq.Date(as.Date("2020-05-11"), 
-                            as.Date("2021-05-11"), 
+  dates = seq.Date(as.Date("2020-05-11"), last_timezero-14,  #subtract 3 so there isn't a tailing end
                             by="5 weeks"),
   targets = paste(1:4, "wk ahead inc death"),
   locations = "US" 
@@ -67,9 +66,13 @@ cum_death <- truth_dat %>% filter(target_variable == "cum death",
                                   target_end_date == last_target_end_date) %>%
   select(abbreviation, cum_death = value)
 
+neg_locations <- truth_dat %>%
+  filter(target_variable == "inc death") %>%
+  filter(death_bins == "<0")
 
 p2 <- truth_dat %>%
   filter(target_variable == "inc death") %>%
+  filter(target_end_date <= last_target_end_date) %>%
   left_join(cum_death) %>%
   filter(abbreviation != "US", !(is.na(value)), target_end_date <= end_date) %>%
   mutate(abbreviation = fct_reorder(abbreviation, cum_death)) %>%
@@ -100,34 +103,70 @@ weekly_forecast_dates <- seq.Date(as.Date("2020-03-16"), end_date, by="7 days")
 
 all_primary_models <- get_model_designations(source="zoltar") %>%
   filter(designation != "other") %>%
+  filter(model != "COVIDhub_CDC-ensemble") %>%
   pull(model)
 
-n_models_per_week <- map_dfr(
-  1:length(weekly_forecast_dates),
-  function(x){
-    fcasts <- load_latest_forecasts(
+# n_models_per_week <- map_dfr(
+#   1:length(weekly_forecast_dates),
+#   function(x){
+#     fcasts <- load_latest_forecasts(
+#       models = all_primary_models,
+#       last_forecast_date = weekly_forecast_dates[x],
+#       forecast_date_window_size = 6,
+#       locations = hub_locations %>% filter(geo_type == "state") %>% pull(fips),
+#       types = c("point", "quantile"), 
+#       targets = "1 wk ahead inc death",
+#       source="zoltar") 
+#     n_models = length(unique(fcasts$model))
+#     
+#     return(tibble(target_end_date_0wk_ahead = weekly_forecast_dates[x]-2, 
+#       total_models = n_models, 
+#       ensemble_week = "COVIDhub-ensemble" %in% fcasts$model))
+#   }
+# )
+
+# return(tibble(target_end_date_0wk_ahead = weekly_forecast_dates[x]-2, 
+#               total_models = n_models, 
+#               ensemble_week = "COVIDhub-ensemble" %in% fcasts$model))
+# }
+# )
+
+n_models_per_week <-  load_forecasts(
       models = all_primary_models,
-      last_forecast_date = weekly_forecast_dates[x],
-      forecast_date_window_size = 6,
+      dates = weekly_forecast_dates,
+      date_window_size = 6,
       locations = hub_locations %>% filter(geo_type == "state") %>% pull(fips),
       types = c("point", "quantile"), 
       targets = "1 wk ahead inc death",
-      source="zoltar") 
-    n_models = length(unique(fcasts$model))
-    
-    return(tibble(target_end_date_0wk_ahead = weekly_forecast_dates[x]-2, 
-      total_models = n_models, 
-      ensemble_week = "COVIDhub-ensemble" %in% fcasts$model))
-  }
-)
+      source="zoltar") %>%
+  filter(target_end_date <= last_target_end_date)
 
-p3 <- ggplot(n_models_per_week, aes(x=target_end_date_0wk_ahead)) +
+
+count_models <- n_models_per_week %>%
+  group_by(target_end_date) %>%
+  summarise(total_models = length(unique(model)),
+            ensemble_week = "COVIDhub-ensemble" %in% model) %>%
+  mutate(target_end_date_0wk_ahead = target_end_date -2) 
+    
+#teams with over 75 weeks 
+over75weeks <- n_models_per_week %>% 
+  group_by(model, target_end_date) %>%
+  summarise(ignore_this = n()) %>% ungroup() %>%
+  group_by(model) %>% summarise(n_weeks = n()) %>% filter(n_weeks >= 75)
+
+#avg number of submissions in 2021
+count_models_2021avg <- count_models %>%
+  filter(target_end_date_0wk_ahead > as.Date("2021-01-01")) %>%
+  filter(target_end_date_0wk_ahead < last_target_end_date) %>%
+  summarise(mean_models2021 = mean(total_models))
+
+p3 <- ggplot(count_models, aes(x=target_end_date_0wk_ahead)) +
   geom_col(aes(y=total_models)) +
-  geom_point(data=filter(n_models_per_week, ensemble_week), aes(y=5), shape=8, color="red") +
+  geom_point(data=filter(count_models, ensemble_week), aes(y=5), shape=8, color="red") +
   #geom_text(aes(y=.5)) +
   scale_y_continuous(name="# models")+
   scale_x_date(
-    limits=c(start_date, end_date + 3), # +3 needed to make room for last bar
+    limits=c(start_date, end_date), # +3 needed to make room for last bar
     date_breaks = "1 month",
     date_labels = "%b",
     name=element_blank(), 

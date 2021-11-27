@@ -386,8 +386,90 @@ calib_pairwise <- merge(calib_table %>% filter(seasonal_phase == "winter"), pair
 calib_pairwise_winter <- merge(calib_pairwise, pairwise_scores_MAE) %>% arrange(model)
 
 
+
+#DELTA
+# select relevant columns:
+
+scores_delta <- scores %>% 
+  filter(seasonal_phase == "delta") %>%
+  select("seasonal_phase", "model", "target_end_date_1wk_ahead", "location", "location_name", "horizon", "abs_error", "wis") %>% droplevels()
+
+# the included models and locations:
+models <- unique(scores_delta$model)
+locations <- unique(scores_delta$location)
+location_names <- unique(scores_delta$location_name)
+
+results_ratio <- results_pval <- results_pval_fcd <- matrix(ncol = length(models),
+                                                            nrow = length(models),
+                                                            dimnames = list(models, models))
+
+for(mx in seq_along(models)){
+  for(my in 1:mx){
+    pwc <- pairwise_comparison_NA(scores = scores_delta, mx = models[mx], my = models[my],
+                                  permutation_test = FALSE)
+    results_ratio[mx, my] <- pwc$ratio
+    results_ratio[my, mx] <- 1/pwc$ratio
+  }
+}
+
+ind_baseline <- which(rownames(results_ratio) == "COVIDhub-baseline")
+geom_mean_ratios <- exp(rowMeans(log(results_ratio[, -ind_baseline]), na.rm = TRUE))
+ratios_baseline <- results_ratio[, "COVIDhub-baseline"]
+ratios_baseline2 <- geom_mean_ratios/geom_mean_ratios["COVIDhub-baseline"]
+
+tab <- data.frame(model = names(geom_mean_ratios),
+                  geom_mean_ratios = geom_mean_ratios,
+                  ratios_baseline = ratios_baseline,
+                  ratios_baseline2 = ratios_baseline2)
+
+tab <- tab[order(tab$ratios_baseline2), ]
+
+pairwise_scores <- tab %>%
+  mutate(relative_wis = round(ratios_baseline2, 2)) %>%
+  select(model, relative_wis) %>%
+  mutate(relative_wis = ifelse(is.na(relative_wis), "1", relative_wis)) %>% #SOMETHING IS WRONG WITH COLUMBIA_UNC
+  arrange(relative_wis)
+
+# function for pairwise comparison of models
+results_ratio <- results_pval <- results_pval_fcd <- matrix(ncol = length(models),
+                                                            nrow = length(models),
+                                                            dimnames = list(models, models)) 
+set.seed(123) # set seed for permutation tests
+
+for(mx in seq_along(models)){
+  for(my in 1:mx){
+    pwc <- pairwise_comparison_NA_MAE(scores = scores_delta, mx = models[mx], my = models[my],
+                                      permutation_test = FALSE)
+    results_ratio[mx, my] <- pwc$ratio
+    results_ratio[my, mx] <- 1/pwc$ratio
+  }
+}
+
+ind_baseline <- which(rownames(results_ratio) == "COVIDhub-baseline")
+geom_mean_ratios <- exp(rowMeans(log(results_ratio[, -ind_baseline]), na.rm = TRUE))
+ratios_baseline <- results_ratio[, "COVIDhub-baseline"]
+ratios_baseline2 <- geom_mean_ratios/geom_mean_ratios["COVIDhub-baseline"]
+
+tab <- data.frame(model = names(geom_mean_ratios),
+                  geom_mean_ratios = geom_mean_ratios,
+                  ratios_baseline = ratios_baseline,
+                  ratios_baseline2 = ratios_baseline2)
+
+tab <- tab[order(tab$ratios_baseline2), ]
+
+pairwise_scores_MAE <- tab %>%
+  mutate(relative_abs_error = round(ratios_baseline2, 2)) %>%
+  select(model, relative_abs_error) 
+
+#Merge PI and Pairwise 
+calib_pairwise <- merge(calib_table %>% filter(seasonal_phase == "delta"), pairwise_scores)
+
+#merge with MAE
+calib_pairwise_delta <- merge(calib_pairwise, pairwise_scores_MAE) %>% arrange(model)
+
+
 #bind all 3 calibration tables
-calib_phase <- rbind(calib_pairwise_spring, calib_pairwise_summer, calib_pairwise_winter)
+calib_phase <- rbind(calib_pairwise_spring, calib_pairwise_summer, calib_pairwise_winter, calib_pairwise_delta)
 
 write_csv(calib_phase, file = "paper-inputs/table-phase-performance.csv")
 

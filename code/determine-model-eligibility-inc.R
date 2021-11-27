@@ -5,6 +5,7 @@ library(tidyverse)
 library(lubridate)
 source("code/unit_timezero_forecast_complete.R") 
 
+
 ## loads in important dates about analysis including a the_timezeros_inc vector
 source("code/load-global-analysis-dates.R") 
 
@@ -26,7 +27,8 @@ timezero_weeks <- tibble(
 
 # 1. subset models to "primary" and "secondary" designated models
 primary_models <- models(zoltar_connection, project_url) %>%
-    filter(notes %in% c("primary", "secondary"))
+    filter(notes %in% c("primary", "secondary")) %>%
+    filter(model_abbr != "COVID_CDC-ensemble")
 
 # 2. obtain timezeroes for remaining models, eliminate ones that don't have the right dates
 date_filtered_models <- tibble(model=character(), forecast_date=Date(), target_end_date_1wk_ahead=Date())
@@ -69,7 +71,6 @@ the_targets <- c(inc_targets)#, cum_targets)
 ## store vectors of models to consider
 date_eligible_models <- unique(date_filtered_models$model)
 
-
 model_completes <- tibble(model=character(), forecast_date=Date(), target_end_date_1wk_ahead=Date(),
     target_group=character(), num_units_eligible=numeric())
 
@@ -85,7 +86,7 @@ for(this_model in date_eligible_models){
         # targets = inc_targets) %>%
         targets = inc_targets, 
         source = "local_zoltar",
-        zoltar_sqlite_file = "../covid19-forecast-evals/data-raw/db-deaths-2021-10-21.sqlite3",
+        zoltar_sqlite_file = "../covid19-forecast-evals/data-raw/db-deaths-2021-11-16.sqlite3",
         local_zoltpy_path = "../zoltpy/"
     ) %>%
         mutate(target_group = "inc")
@@ -152,8 +153,11 @@ inc_model_completes <- inc_model_overall %>%
                                                forecast_date >= first_timezero_winter & forecast_date  < first_timezero_delta ~ "winter",
                                                forecast_date >= first_timezero_delta ~ "delta")) %>%
   mutate(include_overall = ifelse(is.na(include_overall),  "FALSE", "TRUE"),
-         include_phases = ifelse(is.na(include_phases), "FALSE", "TRUE"))
+         include_phases = ifelse(is.na(include_phases), "FALSE", "TRUE")) 
+
+inc_model_completes <- inc_model_completes %>%
+  filter(model != "COVIDhub_CDC-ensemble")
   
 
 ## output data.frame with list of models and eligibility
-write_csv(inc_model_completes, file="paper-inputs/model-eligibility-inc.csv")
+write_csv(inc_model_completes, file= "../covid19-forecast-evals/paper-inputs/model-eligibility-inc.csv")

@@ -60,7 +60,7 @@ inc_scores_covidhub_utils <- map_dfr(
     types = c("quantile", "point"), 
     targets = c(paste(1:20, "wk ahead inc death")),
     source = "local_zoltar",
-    zoltar_sqlite_file = "../covid19-forecast-evals/data-raw/db-deaths-2021-10-21.sqlite3",
+    zoltar_sqlite_file = "../covid19-forecast-evals/data-raw/db-deaths-2021-11-16.sqlite3",
     local_zoltpy_path = "../zoltpy/"
     )
     return(score_forecasts(forecasts, truth))

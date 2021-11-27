@@ -46,9 +46,9 @@ calib_ensemble <- calib_data_long %>%
 
 
 calib_graph <- ggplot(calib_data_long, aes(x=expected_cov, y=emperical_cov)) + 
-  geom_line(aes(group=model), color = "darkgray", alpha = 0.5)+
+  geom_line(aes(group=model), color = "gray", alpha = 0.5)+
   theme_bw() +
-  geom_point(aes(group=model),color = "darkgray", alpha = 0.5, size = 2) + 
+  geom_point(aes(group=model),color = "gray", alpha = 0.5, size = 2) + 
   facet_wrap(~target) + 
   geom_abline(slope = 1, intercept = 0, size = 0.8, linetype = "dashed") +
   geom_line(data = calib_avg, aes(color = "blue")) + 

@@ -10,6 +10,7 @@ source("code/unit_timezero_forecast_complete.R")
 #1. Load all forecasts 
 the_models <- get_model_designations(source = "zoltar") %>% 
   filter(designation %in% c("primary", "secondary")) %>%
+  filter(model != "COVID_CDC-ensemble") %>%
   pull(model)
 
 the_locations <- hub_locations %>% filter(geo_type == "state") %>% pull(fips)

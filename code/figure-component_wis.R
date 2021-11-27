@@ -20,7 +20,7 @@ wis_wide <- pivot_longer(wis_plot,
                         cols = c("overprediction", "dispersion", "underprediction"),
                         names_to = "score_name") %>%
   mutate(model = fct_relevel(model, model_levels)) %>%
-  mutate(model = ifelse(model=="IHME-CurveFit", "IHME-SEIR", model)) 
+  mutate(model = fct_recode(model,  "IHME-SEIR" = "IHME-CurveFit")) 
   
 component_plot <- ggplot(wis_wide, aes(fill=score_name, y=value, x=model)) + 
   geom_bar(position="stack", stat="identity", width = .75) +

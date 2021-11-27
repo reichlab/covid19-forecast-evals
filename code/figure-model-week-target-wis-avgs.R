@@ -180,7 +180,7 @@ avg_wis_by_model_target_week_phase <- inc_scores_phase %>%
   group_by(model, target, seasonal_phase, target_end_date_1wk_ahead) %>%
   summarize(median_wis = median(wis), mean_wis = mean(wis, na.rm=TRUE), nlocs=n()) %>%
   left_join(model_levels_phases %>% mutate(model = recode(model, "IHME-CurveFit" = "IHME-SEIR"))) %>%
-  mutate(model = fct_reorder(model, relative_wis)) %>% droplevels()
+  mutate(model = fct_reorder(model, relative_wis)) %>% ungroup() 
 
 ## by model and target
 avg_wis_by_model_target_phase <- inc_scores_phase %>%
@@ -202,7 +202,7 @@ baseline_avg <- avg_wis_by_model_target_phase %>%
 #   filter(!is.na(model)) %>%
 #   mutate(model = fct_relevel(model, model_levels_phases %>% pull(model))) 
 
-avg_phase <- inc_scores %>%
+avg_phase <- inc_scores_phase %>%
   group_by(target, seasonal_phase, model) %>%
   summarize(median_wis = median(wis, na.rm = T), mean_wis = mean(wis, na.rm=TRUE), nlocs=n())  %>%
   filter(!is.na(model)) 
@@ -210,38 +210,76 @@ avg_phase <- inc_scores %>%
 
 #box plot 
 
+avg_wis_by_model_target_week_phase <- avg_wis_by_model_target_week_phase %>% ungroup() 
 
-p_phase_boxplot <- ggplot(avg_wis_by_model_target_week_phase, aes(x = reorder_within(model,relative_wis,seasonal_phase),
-                                                                  y= scales::oob_squish(mean_wis, range = c(0,500)))) +
-  facet_grid(rows = vars(target), cols = vars(seasonal_phase), scales = "free_x", space="free") + #, scales="free_y") +
-  geom_boxplot(outlier.size = 0.5) +
-  geom_hline(data=baseline_avg,
-             aes(yintercept=mean_wis), linetype=2, color = "red") +
-  geom_point(data = avg_wis_by_model_target_phase, aes(y = mean_wis),  color = "blue", shape=4, size = 2) +
+#  %>% mutate(seasonal_phase = fct_relevel(factor(seasonal_phase), levels = c("spring", "summer", "winter", "delta"))) 
+
+p_phase_boxplot <- ggplot(avg_wis_by_model_target_week_phase %>% filter(seasonal_phase != "delta"), aes(y = reorder_within(model,-relative_wis,seasonal_phase),
+                                                                  x = scales::oob_squish(mean_wis, range = c(0,500)))) +
+  facet_grid(cols = vars(target), rows = vars(factor(seasonal_phase, levels = c("spring", "summer", "winter"))), scales = "free_y", space="free") + #, scales="free_y") +
+  geom_boxplot(outlier.size = 0.5, position=position_dodge(width = 2)) +
+  geom_vline(data=baseline_avg %>% filter(seasonal_phase != "delta"),
+             aes(xintercept=mean_wis), linetype=2, color = "red") +
+  geom_point(data = avg_wis_by_model_target_phase %>% filter(seasonal_phase != "delta"), aes(x = mean_wis),  color = "blue", shape=4, size = 2) +
   theme_bw() +
-  theme(axis.text.x = element_text(angle=90, vjust=0.5, hjust=1), 
+  theme(axis.text.x = element_text(size = 8, angle=90, vjust=0.5, hjust=1), 
+        axis.text.y = element_text(size = 8), 
         legend.position = "none") +
-  ylab("Average WIS") + xlab(NULL) +
+  xlab("Average WIS") + ylab(NULL) +
   scale_fill_date(name="forecast date") +
-  scale_y_continuous(trans = "log10") +
-  scale_x_reordered()
+  scale_x_continuous(trans = "log10") +
+  scale_y_reordered()
  
 
+p_phase_boxplot_delta <- ggplot(avg_wis_by_model_target_week_phase %>% filter(seasonal_phase == "delta"), aes(y = reorder_within(model,-relative_wis,seasonal_phase),
+                                                                                                        x = scales::oob_squish(mean_wis, range = c(0,500)))) +
+  facet_grid(cols = vars(target), rows = vars(factor(seasonal_phase, levels = c("delta"))), scales = "free_y", space="free") + #, scales="free_y") +
+  geom_boxplot(outlier.size = 0.5, position=position_dodge(width = 2)) +
+  geom_vline(data=baseline_avg %>% filter(seasonal_phase == "delta"),
+             aes(xintercept=mean_wis), linetype=2, color = "red") +
+  geom_point(data = avg_wis_by_model_target_phase %>% filter(seasonal_phase == "delta"), aes(x = mean_wis),  color = "blue", shape=4, size = 2) +
+  theme_bw() +
+  theme(axis.text.x = element_text(size = 8, angle=90, vjust=0.5, hjust=1), 
+        axis.text.y = element_text(size = 8), 
+        legend.position = "none") +
+  xlab("Average WIS") + ylab(NULL) +
+  scale_fill_date(name="forecast date") +
+  scale_x_continuous(trans = "log10") +
+  scale_y_reordered()
 
-pdf(file = "figures/model-target-week-wis-avgs_phase_boxplot.pdf", width=10, height=6)
+
+
+jpeg(file = "figures/model-target-week-wis-avgs_phase_boxplot.jpg", width=6, height=8, units="in", res=300)
 print(p_phase_boxplot)
 dev.off()
 
-jpeg(file = "figures/model-target-week-wis-avgs_phase_boxplot.jpg", width=10, height=6, units="in", res=200)
+pdf(file = "figures/model-target-week-wis-avgs_phase_boxplot.pdf", width=6, height=11)
 print(p_phase_boxplot)
 dev.off()
 
-better_than_med_2of3 <- avg_wis_by_model_target_phase %>% 
+jpeg(file = "figures/model-target-week-wis-avgs_phase_boxplot_delta.jpg", width=6, height=5, units="in", res=300)
+print(p_phase_boxplot_delta)
+dev.off()
+
+pdf(file = "figures/model-target-week-wis-avgs_phase_boxplot_delta.pdf", width=6, height=5)
+print(p_phase_boxplot_delta)
+dev.off()
+
+
+better_than_med_3of4 <- avg_wis_by_model_target_phase %>%  
   group_by(target, seasonal_phase) %>%
-  filter(mean_wis < mean_wis[model == "COVIDhub-baseline"]) %>% ungroup() %>%
+  filter(mean_wis < mean_wis[model == "COVIDhub-baseline"]) %>% ungroup() %>% #keep models that outperformed baseline
   group_by(model,target) %>%
-  summarise(n_better_mean = n()) %>% filter(n_better_mean >= 2) %>% ungroup() %>%
+  summarise(n_better_mean = n()) %>%  # number better than mean per team
+  filter(n_better_mean >= 3) %>% ungroup() %>%
   group_by(model) %>% summarise(n_1and4 = n()) %>% filter(n_1and4 > 1)
+
+
+top_performers <- model_levels_phases %>%  
+  group_by(seasonal_phase) %>%
+  slice_min(relative_wis, n = 3) %>% ungroup() %>%
+  group_by(model) %>% summarise(n_top3 = n())
+
 
 ##Figure 4 [average WIS over time]
 
@@ -275,6 +313,21 @@ avg_scores_byweek <- avg_wis_by_model_target_week %>%
 
 avg_scores_byweek$model <- factor(as.character(avg_scores_byweek$model))
 
+
+weeks_ensemble_outpeformed <- avg_scores_byweek %>% 
+  group_by(target_end_date_1wk_ahead, target) %>%
+  mutate(weekly_avg = mean(mean_wis),
+         weekly_baseline = mean_wis[model == "COVIDhub-baseline"]) %>% 
+  ungroup() %>%
+  filter(model %in% c("COVIDhub-ensemble")) %>%
+  select(model, target, mean_wis, weekly_avg, weekly_baseline) %>%
+  filter(mean_wis > weekly_baseline | mean_wis > weekly_baseline)
+
+#ensemble outperformed January
+Jan_outperform <- avg_scores_byweek %>% 
+  filter(target_end_date_1wk_ahead == as.Date("2020-11-14")) %>%
+  filter(target == "4 wk ahead inc death") %>%
+  mutate(weekly_avg = mean(mean_wis)) 
 
 # old f4, saved for now
 # f4 <- ggplot(avg_scores_byweek, aes(x = target_end_date, y= relative_wis, color = model, group = model)) +
@@ -316,10 +369,10 @@ avg_scores_byweek$model <- factor(as.character(avg_scores_byweek$model))
 
 
 f4b <- ggplot(filter(avg_scores_byweek, target=="1 wk ahead inc death"), aes(x = target_end_date, y = mean_wis)) +
-  geom_line(aes(group = model), color="darkgray", alpha=.5) +
-  geom_point(aes(group = model), color="darkgray", alpha=.5, size = 2) +
+  geom_line(aes(group = model), color="gray", alpha=.5) +
+  geom_point(aes(group = model), color="gray", alpha=.5, size = 2) +
   stat_summary(fun=mean, geom="line", aes(color="blue")) +
-  geom_vline(xintercept = range_fcast_dates, linetype = 2) +
+  #geom_vline(xintercept = range_fcast_dates, linetype = 2) +
   stat_summary(fun=mean, geom="point", aes(color="blue",  shape = "19")) +
   geom_line(data=filter(avg_scores_byweek, model=="COVIDhub-ensemble",  target=="1 wk ahead inc death"), aes(group = model, color="red")) +
   geom_point(data=filter(avg_scores_byweek, model=="COVIDhub-ensemble",  target=="1 wk ahead inc death"), aes(group = model, color="red", shape = "17")) +
@@ -342,10 +395,10 @@ f4b <- ggplot(filter(avg_scores_byweek, target=="1 wk ahead inc death"), aes(x =
       
 
 f4c <- ggplot(filter(avg_scores_byweek, target=="4 wk ahead inc death"), aes(x = target_end_date, y = mean_wis)) +
-  geom_line(aes(group = model), color="darkgray", alpha=.5) +
-  geom_point(aes(group = model), color="darkgray", alpha=.5, size = 2) +
+  geom_line(aes(group = model), color="gray", alpha=.5) +
+  geom_point(aes(group = model), color="gray", alpha=.5, size = 2) +
   stat_summary(fun=mean, geom="line", aes(color="blue")) +
-  geom_vline(xintercept = range_fcast_dates, linetype = 2) +
+  #geom_vline(xintercept = range_fcast_dates, linetype = 2) +
   stat_summary(fun=mean, geom="point", aes(color="blue", shape = "blue")) +
   geom_line(data=filter(avg_scores_byweek, model=="COVIDhub-ensemble",  target=="4 wk ahead inc death"), aes(group = model, color="red")) +
   geom_point(data=filter(avg_scores_byweek, model=="COVIDhub-ensemble",  target=="4 wk ahead inc death"), aes(group = model, color="red", shape = "red")) +
