@@ -1,5 +1,6 @@
 #WIS components 
 library(tidyverse)
+library(covidHubUtils)
 
 wis_plot <- read_csv("paper-inputs/inc-scores.csv") %>% 
   filter(include_overall == "TRUE") %>%

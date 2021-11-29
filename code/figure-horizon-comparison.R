@@ -124,9 +124,10 @@ err_by_model_horizon <- avg_wis_by_model_target_week %>%
   filter(max_horizon > 8, nobs>100) %>%
   mutate(model = reorder(model, -pi_cov_95),
          `# predictions` = nobs) %>%
+  filter(model != "BPagano-RtDriven") %>%
   mutate(model = fct_recode(model, "IHME-SEIR" = "IHME-CurveFit"))
 
-model_colors <- palette.colors(n=7, palette="Set1")[c(3,4,5,1,7,2)]
+model_colors <- palette.colors(n=6, palette="Set1")[c(3,4,5,1,2)]
 
 panelC_new <- ggplot(err_by_model_horizon, 
                      aes(x=horizon, y=pi_cov_95, color=model, group=model)) +
@@ -148,6 +149,7 @@ panelC_new <- ggplot(err_by_model_horizon,
   #coord_cartesian(ylim=c(0.9,5)) 
 
 comp_err_by_model_horizon <- err_by_model_horizon %>%
+  filter(model != "BPagano-RtDriven") %>%
   select(model, horizon, dispersion, overprediction, underprediction) %>%
   group_by(model, horizon) %>%
   mutate(pct_sharpness = dispersion/(dispersion + overprediction + underprediction),
