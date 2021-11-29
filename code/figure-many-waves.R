@@ -7,8 +7,9 @@ source("code/plot_wave_forecasts.R")
 data(hub_locations)
 
 ## read date info
-wave_sheet_url <- "https://docs.google.com/spreadsheets/d/1Qa0yIZCcb7YnF8y8REIyU6bcGweK9ejXN6NDBbchLuE/edit#gid=0"
-wave_data <- read_sheet(wave_sheet_url, col_types = "cccDDnll") %>%
+# wave_sheet_url <- "https://docs.google.com/spreadsheets/d/1Qa0yIZCcb7YnF8y8REIyU6bcGweK9ejXN6NDBbchLuE/edit#gid=0"
+# wave_data <- read_sheet(wave_sheet_url, col_types = "cccDDnll") %>%
+wave_data <-read_csv("data-raw/wave-list.csv") %>%
   left_join(filter(hub_locations, geo_type=="state")) %>% ## need to filter to leave out DC row with county FIPS
   filter(!revised) %>% ## filters out location-waves that were revised during the wave
   mutate(wave_name = factor(wave_name, 

@@ -1,0 +1,37 @@
+outcome_variable,wave_name,location_name,first_target_end_date,last_target_end_date,peak_num,revised,date_annotated
+death,summer_2020,Louisiana,2020-07-04,2020-10-10,,FALSE,2021-11-23
+death,summer_2020,Florida,2020-06-27,2020-10-31,,FALSE,2021-11-23
+death,summer_2020,Georgia,2020-07-11,2020-10-31,,FALSE,2021-11-23
+death,summer_2020,Nevada,2020-07-04,2020-10-03,,FALSE,2021-11-23
+death,summer_2020,South Carolina,2020-06-27,2020-10-17,,FALSE,2021-11-23
+death,summer_2020,Texas,2020-06-13,2020-10-24,,TRUE,2021-11-23
+death,summer_2020,Utah,2020-07-04,2020-09-19,,FALSE,2021-11-23
+death,summer_2020,Mississippi,2020-06-27,2020-10-17,,FALSE,2021-11-23
+death,summer_2020,Arizona,2020-05-30,2020-10-10,,FALSE,2021-11-23
+death,summer_2020,California,2020-06-27,2020-11-14,,FALSE,2021-11-23
+death,fall_2020,North Dakota,2020-08-29,2021-02-06,,FALSE,2021-11-23
+death,fall_2020,Delaware,2020-11-14,2021-02-20,,TRUE,2021-11-23
+death,fall_2020,Colorado,2020-10-31,2021-01-23,,FALSE,2021-11-23
+death,fall_2020,Idaho,2020-10-03,2021-02-20,,FALSE,2021-11-23
+death,fall_2020,Indiana,2020-09-12,2021-03-20,,TRUE,2021-11-23
+death,fall_2020,Minnesota,2020-10-03,2021-02-20,,FALSE,2021-11-23
+death,fall_2020,Nevada,2020-11-07,2021-03-20,,FALSE,2021-11-23
+death,fall_2020,Pennsylvania,2020-10-10,2021-03-06,,FALSE,2021-11-23
+death,fall_2020,Puerto Rico,2020-10-31,2021-04-03,,FALSE,2021-11-23
+death,fall_2020,California,2020-11-14,2021-06-19,,FALSE,2021-11-23
+death,fall_2020,District of Columbia,2020-10-24,2021-06-26,,FALSE,2021-11-23
+death,alpha_2021,Michigan,2021-03-20,2021-07-03,,FALSE,2021-11-23
+death,alpha_2021,Puerto Rico,2021-04-03,2021-07-10,,FALSE,2021-11-23
+death,alpha_2021,Minnesota,2021-03-27,2021-07-10,,FALSE,2021-11-23
+death,alpha_2021,Pennsylvania,2021-04-03,2021-07-10,,FALSE,2021-11-23
+death,alpha_2021,Colorado,2021-04-03,2021-07-24,,FALSE,2021-11-23
+death,alpha_2021,Illinois,2021-04-10,2021-07-03,,FALSE,2021-11-23
+death,delta_2021,Florida,2021-07-17,2021-11-20,,FALSE,2021-11-23
+death,delta_2021,Alabama,2021-07-24,2021-11-20,,FALSE,2021-11-23
+death,delta_2021,North Carolina,2021-07-17,2021-11-20,,FALSE,2021-11-23
+death,delta_2021,Louisiana,2021-07-17,2021-11-20,,FALSE,2021-11-23
+death,delta_2021,Georgia,2021-07-24,2021-11-20,,FALSE,2021-11-23
+death,delta_2021,Puerto Rico,2021-07-17,2021-11-20,,FALSE,2021-11-23
+death,delta_2021,North Carolina,2021-07-24,2021-11-20,,FALSE,2021-11-23
+death,delta_2021,Mississippi,2021-07-10,2021-11-20,,FALSE,2021-11-23
+death,delta_2021,Texas,2021-07-10,2021-11-20,,FALSE,2021-11-23
