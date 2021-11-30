@@ -41,8 +41,8 @@ import os
 import time
 from datetime import timezone
 
+import click
 import pandas as pd
-import pytz
 from github import Github
 from zoltpy import util
 from zoltpy.connection import ZoltarConnection
@@ -50,10 +50,93 @@ from zoltpy.covid19 import COVID_TARGETS, covid19_row_validator, COVID_ADDL_REQ_
 from zoltpy.quantile_io import json_io_dict_from_quantile_csv_file
 
 
-# Fill out github username and password
+@click.command()
+@click.argument('data_processed_dir', type=click.Path(file_okay=False, exists=True))
+def app(data_processed_dir):
+    # Get all models' directory
+    path_to_data = data_processed_dir
+    list_of_model_directories = []
+    for directory in os.listdir(path_to_data):
+        if "." not in directory:
+            list_of_model_directories.append(directory)
+    df = pd.DataFrame(columns={"model": str,
+                               "timezero": str,
+                               "v1_github_timestamp": str,
+                               "v2_github_timestamp": str,
+                               "v3_github_timestamp": str,
+                               "in_zoltar": str})
 
-est = pytz.timezone('US/Eastern')
-utc = pytz.utc
+    # Connect to Zoltar
+    conn = ZoltarConnection()
+    conn.authenticate(os.environ.get("Z_USERNAME"), os.environ.get("Z_PASSWORD"))
+
+    # Loop through each model and perform the query
+    for model in list_of_model_directories:
+        forecasts = os.listdir(path_to_data + model)
+        model_df = pd.DataFrame(columns={"model": str,
+                                         "timezero": str,
+                                         "v1_github_timestamp": str,
+                                         "v2_github_timestamp": str,
+                                         "v3_github_timestamp": str,
+                                         "in_zoltar": str})
+        try:
+            for forecast in forecasts:
+                forecast_df = pd.DataFrame(columns={"model": str,
+                                                    "timezero": str,
+                                                    "v1_github_timestamp": str,
+                                                    "v2_github_timestamp": str,
+                                                    "v3_github_timestamp": str,
+                                                    "in_zoltar": str})
+                # Skip metadata text file
+                if not forecast.endswith('.csv'):
+                    continue
+                time_zero_date = forecast.split(model)[0][:-1]
+                month = time_zero_date.split('-')[1]
+                year = time_zero_date.split('-')[0]
+                if int(month) < 5 and year == '2020':
+                    continue
+                forecast_df.at[0, 'timezero'] = time_zero_date
+                model_name = model.split('/')[-1]
+                forecast_df.at[0, 'model'] = model_name
+                result = None
+                time_stamps, forecast_files = get_github_time_stamps_of_forecast(model_name, time_zero_date)
+
+                if len(time_stamps) != len(forecast_files):
+                    print(forecast)
+                    print("sth wrong")
+                    break
+                forecast_df.at[0, 'v1_github_timestamp'] = time_stamps[0]
+                if len(time_stamps) < 2:
+                    forecast_df.at[0, 'in_zoltar'] = 'v1'
+                else:
+                    result = compare_forecast(conn, model_name, time_zero_date, forecast_files)
+                    print(result)
+                    if len(time_stamps) >= 2:
+                        forecast_df.at[0, 'v2_github_timestamp'] = time_stamps[1]
+                    if len(time_stamps) >= 3:
+                        forecast_df.at[0, 'v3_github_timestamp'] = time_stamps[2]
+                    if True not in result:
+                        print("Forecast version does not match on zoltar for this forecast: " + forecast)
+                        continue
+                    for res in range(len(result)):
+                        if result[res]:
+                            forecast_df.at[0, 'in_zoltar'] = 'v' + str(res + 1)
+                model_df = model_df.append(forecast_df)
+                print(forecast)
+                time.sleep(0.25)
+        except Exception as ex:
+            print(ex)
+            continue
+        df = df.append(model_df)
+        model_df.to_csv("individual_models/" + model + ".csv", index=False)
+
+    # finish
+    list_of_results = os.listdir("individual_models")
+    for result in list_of_results:
+        model_df = pd.read_csv('individual_models/' + result)
+        df = df.append(model_df)
+    df = df.sort_values(['model', 'timezero'])
+    df.to_csv("model-forecast-versions-latest.csv", index=False)
 
 
 # Change the time queried to EST time zone
@@ -172,87 +255,5 @@ def compare_forecast(conn, model, timezero, github_forecasts):
     return result
 
 
-# Get all models' directory
-path_to_data = "../../../covid19-forecast-hub/data-processed/"
-list_of_model_directories = []
-for directory in os.listdir(path_to_data):
-    if "." not in directory:
-        list_of_model_directories.append(directory)
-df = pd.DataFrame(columns={"model": str,
-                           "timezero": str,
-                           "v1_github_timestamp": str,
-                           "v2_github_timestamp": str,
-                           "v3_github_timestamp": str,
-                           "in_zoltar": str})
-
-# Connect to Zoltar
-conn = ZoltarConnection()
-conn.authenticate(os.environ.get("Z_USERNAME"), os.environ.get("Z_PASSWORD"))
-
-# Loop through each model and perform the query
-for model in list_of_model_directories:
-    forecasts = os.listdir(path_to_data + model)
-    model_df = pd.DataFrame(columns={"model": str,
-                                     "timezero": str,
-                                     "v1_github_timestamp": str,
-                                     "v2_github_timestamp": str,
-                                     "v3_github_timestamp": str,
-                                     "in_zoltar": str})
-    try:
-        for forecast in forecasts:
-            forecast_df = pd.DataFrame(columns={"model": str,
-                                                "timezero": str,
-                                                "v1_github_timestamp": str,
-                                                "v2_github_timestamp": str,
-                                                "v3_github_timestamp": str,
-                                                "in_zoltar": str})
-            # Skip metadata text file
-            if not forecast.endswith('.csv'):
-                continue
-            time_zero_date = forecast.split(model)[0][:-1]
-            month = time_zero_date.split('-')[1]
-            year = time_zero_date.split('-')[0]
-            if int(month) < 5 and year == '2020':
-                continue
-            forecast_df.at[0, 'timezero'] = time_zero_date
-            model_name = model.split('/')[-1]
-            forecast_df.at[0, 'model'] = model_name
-            result = None
-            time_stamps, forecast_files = get_github_time_stamps_of_forecast(model_name, time_zero_date)
-
-            if len(time_stamps) != len(forecast_files):
-                print(forecast)
-                print("sth wrong")
-                break
-            forecast_df.at[0, 'v1_github_timestamp'] = time_stamps[0]
-            if len(time_stamps) < 2:
-                forecast_df.at[0, 'in_zoltar'] = 'v1'
-            else:
-                result = compare_forecast(conn, model_name, time_zero_date, forecast_files)
-                print(result)
-                if len(time_stamps) >= 2:
-                    forecast_df.at[0, 'v2_github_timestamp'] = time_stamps[1]
-                if len(time_stamps) >= 3:
-                    forecast_df.at[0, 'v3_github_timestamp'] = time_stamps[2]
-                if True not in result:
-                    print("Forecast version does not match on zoltar for this forecast: " + forecast)
-                    continue
-                for res in range(len(result)):
-                    if result[res]:
-                        forecast_df.at[0, 'in_zoltar'] = 'v' + str(res + 1)
-            model_df = model_df.append(forecast_df)
-            print(forecast)
-            time.sleep(0.25)
-    except Exception as ex:
-        print(ex)
-        continue
-    df = df.append(model_df)
-    model_df.to_csv("individual_models/" + model + ".csv", index=False)
-
-# finish
-list_of_results = os.listdir("individual_models")
-for result in list_of_results:
-    model_df = pd.read_csv('individual_models/' + result)
-    df = df.append(model_df)
-df = df.sort_values(['model', 'timezero'])
-df.to_csv("model-forecast-versions-latest.csv", index=False)
+if __name__ == '__main__':
+    app()
