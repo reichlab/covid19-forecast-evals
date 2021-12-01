@@ -9,7 +9,8 @@ model_levels <- read_csv("paper-inputs/table-overall-performance.csv") %>%
 
 model_levels_phases <- read_csv("paper-inputs/table-phase-performance.csv") %>%
   group_by(seasonal_phase) %>% arrange(seasonal_phase, relative_wis) %>% 
-  select(model, seasonal_phase,relative_wis)
+  select(model, seasonal_phase,relative_wis) %>%
+  mutate(model_num_order = row_number())
 
 theme_set(theme_bw())
 
@@ -214,9 +215,11 @@ avg_wis_by_model_target_week_phase <- avg_wis_by_model_target_week_phase %>% ung
 
 #  %>% mutate(seasonal_phase = fct_relevel(factor(seasonal_phase), levels = c("spring", "summer", "winter", "delta"))) 
 
-p_phase_boxplot <- ggplot(avg_wis_by_model_target_week_phase %>% filter(seasonal_phase != "delta"), aes(y = reorder_within(model,-relative_wis,seasonal_phase),
+p_phase_boxplot <- ggplot(avg_wis_by_model_target_week_phase %>% filter(seasonal_phase != "delta"),
+                          aes(y = reorder_within(model, -model_num_order, seasonal_phase),
                                                                   x = scales::oob_squish(mean_wis, range = c(0,500)))) +
-  facet_grid(cols = vars(target), rows = vars(factor(seasonal_phase, levels = c("spring", "summer", "winter"))), scales = "free_y", space="free") + #, scales="free_y") +
+  facet_grid(cols = vars(target), rows = vars(factor(seasonal_phase, 
+                                      levels = c("spring", "summer", "winter"))), scales = "free_y", space="free") + #, scales="free_y") +
   geom_boxplot(outlier.size = 0.5, position=position_dodge(width = 2)) +
   geom_vline(data=baseline_avg %>% filter(seasonal_phase != "delta"),
              aes(xintercept=mean_wis), linetype=2, color = "red") +
@@ -231,13 +234,16 @@ p_phase_boxplot <- ggplot(avg_wis_by_model_target_week_phase %>% filter(seasonal
   scale_y_reordered()
  
 
-p_phase_boxplot_delta <- ggplot(avg_wis_by_model_target_week_phase %>% filter(seasonal_phase == "delta"), aes(y = reorder_within(model,-relative_wis,seasonal_phase),
-                                                                                                        x = scales::oob_squish(mean_wis, range = c(0,500)))) +
-  facet_grid(cols = vars(target), rows = vars(factor(seasonal_phase, levels = c("delta"))), scales = "free_y", space="free") + #, scales="free_y") +
+p_phase_boxplot_delta <- ggplot(avg_wis_by_model_target_week_phase %>% filter(seasonal_phase == "delta"), 
+                          aes(y = reorder_within(model, -model_num_order, seasonal_phase),
+                                                             x = scales::oob_squish(mean_wis, range = c(0,500)))) +
+  facet_grid(cols = vars(target), rows = vars(factor(seasonal_phase,
+                                                     levels = c("delta"))), scales = "free_y", space="free") + #, scales="free_y") +
   geom_boxplot(outlier.size = 0.5, position=position_dodge(width = 2)) +
   geom_vline(data=baseline_avg %>% filter(seasonal_phase == "delta"),
              aes(xintercept=mean_wis), linetype=2, color = "red") +
-  geom_point(data = avg_wis_by_model_target_phase %>% filter(seasonal_phase == "delta"), aes(x = mean_wis),  color = "blue", shape=4, size = 2) +
+  geom_point(data = avg_wis_by_model_target_phase %>%
+               filter(seasonal_phase == "delta"), aes(x = mean_wis),  color = "blue", shape=4, size = 2) +
   theme_bw() +
   theme(axis.text.x = element_text(size = 8, angle=90, vjust=0.5, hjust=1), 
         axis.text.y = element_text(size = 8), 
@@ -245,7 +251,7 @@ p_phase_boxplot_delta <- ggplot(avg_wis_by_model_target_week_phase %>% filter(se
   xlab("Average WIS") + ylab(NULL) +
   scale_fill_date(name="forecast date") +
   scale_x_continuous(trans = "log10") +
-  scale_y_reordered()
+  scale_y_reordered() 
 
 
 
@@ -485,3 +491,35 @@ obs_inc_deaths_wdiff <- load_truth("JHU", "inc death", locations="US") %>%
 #   bs="cs", k=list(2,2), data=score_comparison_dat)
 # plot(sm(getViz(tmp2),1))
 # 
+
+
+
+library(tidytext)
+library(babynames)
+
+
+top_names <- babynames %>%
+  filter(year >= 1950,
+         year < 1990) %>%
+  mutate(decade = (year %/% 10) * 10) %>%
+  group_by(decade) %>%
+  count(name, wt = n, sort = TRUE) %>%
+  ungroup() %>%
+  mutate(n = ifelse(decade == "1950" & name == "Michael", 846042, n))
+
+test <- top_names %>%
+  group_by(decade) %>%
+  top_n(15) %>%
+  ungroup %>%
+  mutate(decade = as.factor(decade),
+         name = reorder_within(name, n, decade)) %>%
+  ggplot(aes(name, n, fill = decade)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~decade, scales = "free_y") +
+  coord_flip() +
+  scale_x_reordered() +
+  scale_y_continuous(expand = c(0,0)) +
+  labs(y = "Number of babies per decade",
+       x = NULL,
+       title = "What were the most common baby names in each decade?",
+       subtitle = "Via US Social Security Administration")
