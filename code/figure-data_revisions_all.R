@@ -85,3 +85,11 @@ dev.off()
 #   filter(MMWRweek > 21 & MMWRweek <= 31) %>%
 #   filter(date >= first_1wk_target_end_date) %>%
 #   filter(revision_date < Sys.Date())
+
+#Determine number of states with revisions 
+states_revision <- weekly_inc_deaths %>% 
+  group_by(location_name, date) %>%
+  filter(min(inc) != max(inc)) %>% 
+  filter(inc == min(inc) | inc == max(inc)) %>% 
+  ungroup() 
+
