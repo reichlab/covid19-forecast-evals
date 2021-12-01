@@ -17,22 +17,23 @@
 # which made the version on Zoltar different from the one on GitHub on some rows An example of this is
 # 2020-09-13-JHU_IDD-CovidSP.csv
 #
-# 2021-06-21: Updated by Matt Cornell (cornell@umass.edu) to handle GitHub API rate limits that this program is now
-# hitting ("API rate limit exceeded for user ID", presumably due to Zoltar having many more forecasts than the last time
-# the program was run. See `get_repo()`'s "sleep if hitting rate limit" section.
 #
-# To run the program I:
-# - copied this file to <local repo dir>/covid19-forecast-hub/code
-# - updated Pipfile: commented out the two lines starting "[packages.3effbcc]"
-# - obtained a GitHub personal access token as above
-# - created a virtual environment for that repo:
-#   $ cd <local repo dir>/covid19-forecast-hub/
-#   $ pipenv --three
-#   $ pipenv install
-#   $ pipenv shell
-#   $ export auth_token=<token>
-#   $ python3 <local repo dir>/covid19-forecast-hub/code/forecast_evals/get_file_version_version_full.py
-# Note that it took many hours to complete.
+# 2021-06-21: Updated by Matt Cornell (cornell@umass.edu) to handle GitHub API rate limits that this program is now
+# hitting ("API rate limit exceeded for user ID"), presumably due to Zoltar having many more forecasts than the last
+# time the program was run. See `get_repo()`'s "sleep if hitting rate limit" section.
+#
+# To run the program:
+# - get a GitHub personal access token as above
+# $ cd <this repo's root dir>
+# $ mkdir individual_models/
+# $ pipenv --three
+# $ pipenv install
+# $ pipenv shell
+# $ export auth_token=<token>
+# $ export Z_USERNAME=<your zoltar username>
+# $ export Z_PASSWORD=<your zoltar password>
+# $ python3 code/get_file_version_version_full.py <path_to_covid19-forecast-hub/data-processed>
+# Note that it took ~seven hours to complete.
 
 
 import calendar
