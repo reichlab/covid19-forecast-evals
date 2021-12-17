@@ -106,8 +106,11 @@ load(file = "score_case_all.rda")
 load(file = "score_inc_all.rda") 
 load(file = "score_hosp_all.rda") 
 
-# remove COVIDhub-4_week_ensemble model from deaths 
-score_inc_all <- score_inc_all  %>% filter(model != "COVIDhub-4_week_ensemble")
+# remove COVIDhub-ensemble and CDVID_CDC-ensemble models 
+score_inc_all <- score_inc_all  %>% filter(model != "COVIDhub-ensemble" & model != "COVIDhub_CDC-ensemble")
+score_case_all <- score_case_all  %>% filter(model != "COVIDhub-ensemble" & model != "COVIDhub_CDC-ensemble")
+score_hosp_all <- score_hosp_all  %>% filter(model != "COVIDhub-ensemble" & model != "COVIDhub_CDC-ensemble")
+
 # score_case_all <- score_case_all  %>% filter(model != "COVIDhub-4_week_ensemble")
 # score_hosp_all <- score_hosp_all  %>% filter(model != "COVIDhub-4_week_ensemble")
 
@@ -166,11 +169,15 @@ Additionally, we have included a historical score report to aggregate scores fro
 
 In collaboration with the US Centers for Disease Control and Prevention (CDC), the COVID-19 Forecast hub collects short-term COVID-19 forecasts from dozens of research groups around the globe. Every week we combine the most recent forecasts from each team into a single "ensemble" forecast for each of the targets. This forecast is used as the official ensemble forecast of the CDC, typically appearing on their [forecasting website](https://www.cdc.gov/coronavirus/2019-ncov/covid-data/mathematical-modeling.html) on Wednesday.  You can explore the full set of models, including their forecasts for past weeks online at the [Forecast Hub interactive visualization](https://viz.covid19forecasthub.org/).  Other related resources include CMU Delphi's [forecast evaluation dashboard](https://delphi.cmu.edu/forecast-eval/), a separate product of the Forecast Evaluation Research Collaborative, as well as the preprint [Evaluation of individual and ensemble probabilistic forecasts of COVID-19 mortality in the US.](https://www.medrxiv.org/content/10.1101/2021.02.03.21250974v2)
 
-This report evaluates forecasts at the state and national level for newly reported weekly cases, deaths and hospitalizations due to COVID-19. Data from the [JHU CSSE dashboard](https://coronavirus.jhu.edu/) is used as ground truth data for evaluating the forecasts.
+This report evaluates forecasts at the state and national level for newly reported weekly cases, deaths and hospitalizations due to COVID-19.  Data from the [JHU CSSE dashboard](https://coronavirus.jhu.edu/) is used as ground truth data for evaluating the forecasts.
+
+Starting on September 6, 2021, COVIDhub-ensemble only reported two-week ahead forecasts for cases, due to persistent large inaccuracies observed when forecasting beyond that. As of September 28, 2021, COVIDhub-ensemble only reports one-week ahead forecasts for cases and 14 day ahead forecasts for hospitalizations.  For a more complete explanation see our blog post [here](https://forecasters.org/blog/2021/09/28/on-the-predictability-of-covid-19/). 
+
+To reduce duplication of results, the COVIDhub_CDC-ensemble and COVIDhub-ensemble are omitted from this evaluation. The COVIDhub_CDC-ensemble pulls a subset of forecasts of cases and hospitalizations from the COVIDhub-4_week_ensemble and forecasts of deaths from the COVIDhub-trained_ensemble, and the COVIDhub-ensemble nearly matches the COVIDhub-4_week_ensemble and COVIDhub-trained_ensemble predictions for those targets up to occasional small differences in the included models. As a result, the performance of the COVIDhub_CDC-ensemble and COVIDhub-ensemble models matches or nearly matches the performance of the COVIDhub-4_week_ensemble and COVIDhub-trained_ensemble on those targets. For more information about COVID19 forecast hub ensemble methods see [this page](https://covid19forecasthub.org/doc/ensemble/).
 
 We evaluate models based on their [adjusted relative weighted interval scores (WIS, a measure of distributional accuracy)](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1008618), and adjusted relative mean absolute error (MAE). Scores are aggregated separately for the most recent 10 weeks and for 26 historical weeks. To account for the variation in difficult of forecasting different weeks and locations, a [pairwise approach](https://www.medrxiv.org/content/10.1101/2021.02.03.21250974v2) was used to calculated the relative adjusted WIS and MAE. Models with relative scores lower than 1 have been more accurate than the baseline on average, whereas relative scores greater than 1 indicate less accuracy than baseline on average.
 
-Starting on September 6, 2021, COVIDhub-ensemble only reported two-week ahead forecasts for cases, due to persistent large inaccuracies observed when forecasting beyond that. As of September 28, 2021, COVIDhub-ensemble only reports one-week ahead forecasts for cases and 14 day ahead forecasts for hospitalizations.  For a more complete explanation see our blog post [here](https://forecasters.org/blog/2021/09/28/on-the-predictability-of-covid-19/). 
+
 
 # Incident Case Forecasts {.tabset .tabset-fade}
 
@@ -650,7 +657,7 @@ datatable(leaderboard_table1,
 
 ```
 
-** When comparing results, keep in mind that starting on September 6, 2021, COVIDhub-ensemble only reported two-week ahead forecasts for cases and as of September 28, 2021 COVIDhub-ensemble only reports one-week ahead forecasts for cases. 
+<!-- ** When comparing results, keep in mind that starting on September 6, 2021, COVIDhub-ensemble only reported two-week ahead forecasts for cases and as of September 28, 2021 COVIDhub-ensemble only reports one-week ahead forecasts for cases.  -->
 
 To calculate each column in our table, different inclusion criteria were applied. This table only includes forecasts for the last `r n_weeks_eval` weeks, since `r format(first_eval_sat, "%B %d, %Y")`.The models included have submitted  at least 50% of forecasts during this time, where one forecast is a location, target, forecast date combination.  The data are initially ordered by model based on their relative WIS aggregated across horizons, with the most accurate models at the top. 
 
@@ -695,7 +702,7 @@ datatable(leaderboard_table_historical1,
               filter = c("top")
 ```
 
-** When comparing results, keep in mind that starting on September 6, 2021, COVIDhub-ensemble only reported two-week ahead forecasts for cases and as of September 28, 2021 COVIDhub-ensemble only reports one-week ahead forecasts for cases.
+<!-- ** When comparing results, keep in mind that starting on September 6, 2021, COVIDhub-ensemble only reported two-week ahead forecasts for cases and as of September 28, 2021 COVIDhub-ensemble only reports one-week ahead forecasts for cases. -->
 
 To calculate each column in our table, different inclusion criteria were applied. This table only includes forecasts for the last `r n_weeks_history` weeks, since `r format(first_eval_sat_hist, "%B %d, %Y")`. The models included have submitted  at least 50% of forecasts during this time, where one forecast is a location, target, forecast date combination. The data are initially  ordered based on their relative WIS score aggregated across horizons. 
 
@@ -855,7 +862,7 @@ datatable(calibration_table1,
           colnames = c("Model", "# recent forecasts",  "1 wk 50% coverage", "2 wk 50% coverage", "3 wk 50% coverage", "4 wk 50% coverage","1 wk 95% coverage", "2 wk 95% coverage", "3 wk 95% coverage", "4 wk 95% coverage"), container=sketch_recent_coverage) 
 ```
 
-** When comparing results, keep in mind that starting on September 6, 2021, COVIDhub-ensemble only reported two-week ahead forecasts for cases and as of September 28, 2021 COVIDhub-ensemble only reports one-week ahead forecasts for cases.
+<!-- ** When comparing results, keep in mind that starting on September 6, 2021, COVIDhub-ensemble only reported two-week ahead forecasts for cases and as of September 28, 2021 COVIDhub-ensemble only reports one-week ahead forecasts for cases. -->
 
 ### Historical coverage
 
@@ -893,7 +900,7 @@ datatable(calibration_table_hist1,
 
 ```  
 
-** When comparing results, keep in mind that starting on September 6, 2021, COVIDhub-ensemble only reported two-week ahead forecasts for cases and as of September 28, 2021 COVIDhub-ensemble only reports one-week ahead forecasts for cases.
+<!-- ** When comparing results, keep in mind that starting on September 6, 2021, COVIDhub-ensemble only reported two-week ahead forecasts for cases and as of September 28, 2021 COVIDhub-ensemble only reports one-week ahead forecasts for cases. -->
 
 ## WIS components
 
@@ -913,7 +920,7 @@ pairwise_scores <-   pairwise_scores  %>%
 
 wis_barplot_function(x = score_case_all, y = pairwise_scores, order = case_model_order)
 ```
-** When comparing results, keep in mind that starting on September 6, 2021, COVIDhub-ensemble only reported two-week ahead forecasts for cases and as of September 28, 2021 COVIDhub-ensemble only reports one-week ahead forecasts for cases.
+<!-- ** When comparing results, keep in mind that starting on September 6, 2021, COVIDhub-ensemble only reported two-week ahead forecasts for cases and as of September 28, 2021 COVIDhub-ensemble only reports one-week ahead forecasts for cases. -->
 
 ## Evaluation by Week  {.tabset .tabset-fade}
 
@@ -999,7 +1006,7 @@ case_accuracy_recent <-   case_accuracy_recent  %>%
 plot_by_location_wis(case_accuracy_recent, order = case_model_order, location_order  = location_order_case)
 ```
 
-** When comparing results, keep in mind that starting on September 6, 2021, COVIDhub-ensemble only reported two-week ahead forecasts for cases and as of September 28, 2021 COVIDhub-ensemble only reports one-week ahead forecasts for cases.
+<!-- ** When comparing results, keep in mind that starting on September 6, 2021, COVIDhub-ensemble only reported two-week ahead forecasts for cases and as of September 28, 2021 COVIDhub-ensemble only reports one-week ahead forecasts for cases. -->
 
 ## Evaluation Periods  {.tabset .tabset-fade}
 
@@ -1475,7 +1482,7 @@ datatable(leaderboard_table1,
               filter = c("top")
 
 ```
-** When comparing results, keep in mind that as of September 28, 2021 COVIDhub-ensemble only reports 14 day ahead forecasts for hospitalizations.
+<!-- ** When comparing results, keep in mind that as of September 28, 2021 COVIDhub-ensemble only reports 14 day ahead forecasts for hospitalizations. -->
 
 To calculate each column in our table, different inclusion criteria were applied. This table only includes forecasts for the last `r n_weeks_eval` weeks, since `r format(first_eval_sat, "%B %d, %Y")`. The models included have submitted  at least 50% of forecasts during this time, where one forecast is a location, target, forecast date combination.  The data are initially ordered by model based on their relative WIS score aggregated across horizons, with the most accurate models at the top. 
 
@@ -1517,7 +1524,7 @@ datatable(leaderboard_table_historical1,
           colnames = c("Model", "# historical forecasts",  "1 wk relWIS",  "2 wk relWIS","3 wk relWIS","4 wk relWIS","1 wk relMAE","2 wk relMAE","3 wk relMAE","4 wk relMAE"), container=sketch_historical_accuracy) 
               filter = c("top")
 ```
-** When comparing results, keep in mind that as of September 28, 2021 COVIDhub-ensemble only reports 14 day ahead forecasts for hospitalizations.
+<!-- ** When comparing results, keep in mind that as of September 28, 2021 COVIDhub-ensemble only reports 14 day ahead forecasts for hospitalizations. -->
 
 To calculate each column in our table, different inclusion criteria were applied. This table only includes forecasts for the last `r n_weeks_history` weeks, since `r format(first_eval_sat_hist, "%B %d, %Y")`. The models included have submitted  at least 50% of forecasts during this time, where one forecast is a location, target, forecast date combination. The data are initially ordered  by model based on their relative WIS score aggregated across horizons, with the most accurate models at the top. 
 
@@ -1679,7 +1686,7 @@ datatable(calibration_table1,
               # filter = c("top")
           colnames = c("Model", "# recent forecasts",  "1 wk 50% coverage", "2 wk 50% coverage", "3 wk 50% coverage", "4 wk 50% coverage","1 wk 95% coverage", "2 wk 95% coverage", "3 wk 95% coverage", "4 wk 95% coverage"), container=sketch_recent_coverage) 
 ```
-** When comparing results, keep in mind that as of September 28, 2021 COVIDhub-ensemble only reports 14 day ahead forecasts for hospitalizations.
+<!-- ** When comparing results, keep in mind that as of September 28, 2021 COVIDhub-ensemble only reports 14 day ahead forecasts for hospitalizations. -->
 
 ### Historical coverage
 
@@ -1716,7 +1723,7 @@ datatable(calibration_table_hist1,
           colnames = c("Model", "# recent forecasts",  "1 wk 50% coverage", "2 wk 50% coverage", "3 wk 50% coverage", "4 wk 50% coverage","1 wk 95% coverage", "2 wk 95% coverage", "3 wk 95% coverage", "4 wk 95% coverage"), container=sketch_recent_coverage) 
 
 ```  
-** When comparing results, keep in mind that as of September 28, 2021 COVIDhub-ensemble only reports 14 day ahead forecasts for hospitalizations.
+<!-- ** When comparing results, keep in mind that as of September 28, 2021 COVIDhub-ensemble only reports 14 day ahead forecasts for hospitalizations. -->
 
 
 ## WIS components
@@ -1736,7 +1743,7 @@ pairwise_scores <-   pairwise_scores  %>%
 
 wis_barplot_function(x = score_hosp_all, y = pairwise_scores, order = hosp_model_order)
 ```
-** When comparing results, keep in mind that as of September 28, 2021 COVIDhub-ensemble only reports 14 day ahead forecasts for hospitalizations.
+<!-- ** When comparing results, keep in mind that as of September 28, 2021 COVIDhub-ensemble only reports 14 day ahead forecasts for hospitalizations. -->
 
 ## Evaluation by Week  {.tabset .tabset-fade}
 
@@ -1824,7 +1831,7 @@ hosp_accuracy_recent <-   hosp_accuracy_recent  %>%
 
 plot_by_location_wis(hosp_accuracy_recent, order = hosp_model_order, location_order  = location_order_hosp)
 ```
-** When comparing results, keep in mind that as of September 28, 2021 COVIDhub-ensemble only reports 14 day ahead forecasts for hospitalizations.
+<!-- ** When comparing results, keep in mind that as of September 28, 2021 COVIDhub-ensemble only reports 14 day ahead forecasts for hospitalizations. -->
 
 ## Evaluation Periods  {.tabset .tabset-fade}
 
