@@ -120,14 +120,22 @@ pairwise_comparison <- function(scores, mx, my, subset = rep(TRUE, nrow(scores))
 # recent_coverage_filter: filter for inclusion in recent coverage table 
 
 #Filter WIS by week 
+#Filter WIS by week 
 by_week_function <- function(df, var) {
   df %>%
     filter(score_name == var) %>%
-    filter(location %in% c(US_fips)) %>%
+    # Calculate the number of US locations forecasted for each combination of
+    # model, target_end_date, horizon
     group_by(model, target_end_date, horizon) %>%
     mutate(n_US_location = n()) %>%
+    # Keep only those models that forecasted the maximum number of locations
+    # forecasted by any model for each target_end_date and horizon combination
+    # Note that the baseline model produces forecasts for all locations, so
+    # This is effectively all available locations
     ungroup() %>%
+    group_by(target_end_date, horizon) %>%
     filter(n_US_location == max(n_US_location)) %>%
+    # Calculate the mean score for each combination of model, target_end_date, horizon
     group_by(model,horizon, target_end_date) %>%
     summarise(mean_score = mean(score_value))
 }
@@ -168,13 +176,12 @@ recent_accuracy_filter <- function(x,y) {
 }
 
 #filter for inclusion in recent coverage table 
-#at least 5 weeks overall or at least 2 out of the last 3 weeks 
-recent_coverage_filter <- function(x) {
+recent_coverage_filter <- function(x,y) {
   x %>%
-    filter(n_weeks >= 5 |  n_weeks_3wksPrior >= 2) %>% 
+    filter(model %in% y) %>%
     filter(score_name %in% c("coverage_50")) %>%
-    filter(!is.na(score_value)) %>%  #remove NAs 
-    filter(target_end_date >= first_eval_sat) %>% #
+    filter(!is.na(score_value)) %>%  #remove NAs
+    filter(target_end_date >= first_eval_sat) %>% 
     group_by(model, score_name) %>%
     mutate(n_forecasts_50 = sum(score_name == "coverage_50" & !is.na(score_value)),
            n_forecasts_95 = sum(score_name == "coverage_95" & !is.na(score_value))) %>% ungroup() %>%
@@ -546,7 +553,7 @@ calib_table <- function(x){
   
   
   recent_calib  <- x  %>%
-    filter(n_weeks >= 5 |  n_weeks_3wksPrior >= 2) %>% 
+    filter(n_weeks_10wksPrior >= 5 |  n_weeks_3wksPrior >= 2) %>% 
     filter(!is.na(score_value))  %>%
     filter(score_name %in% c("coverage_50","coverage_95")) %>%
     filter(target_end_date >= first_eval_sat) %>%  droplevels() %>%

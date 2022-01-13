@@ -22,8 +22,13 @@ library(plotly)
 #Get Date Boundaries
 
 the_locations <- hub_locations %>% filter(geo_type == "state") %>% pull(fips) #states, us and territories
-
+county_fips <- hub_locations %>%  #counties: 500 most populous
+  filter(geo_type == "county") %>% 
+  filter(abbreviation %in% datasets::state.abb) %>% 
+  arrange(-population) %>% 
+  filter(row_number()<=500) %>% pull(fips)
 US_fips <- hub_locations %>%  filter(geo_type == "state") %>% filter(abbreviation %in% datasets::state.abb) %>% pull(fips) #only 50 states 
+
 
 n_weeks_eval <- 10 #weeks included in evaluation
 n_weeks_submitted <- 5 #number of weeks needed for inclusion if no longer submitting
@@ -52,17 +57,20 @@ mondays <- seq(first_mon_history, last_eval_sat, by = "week")
 saturdays <- seq(first_sat_history, last_eval_sat, by = "week")
 eval_sat <- c(first_eval_sat, last_eval_sat) #range of dates evaluated 
 
+# new way, but not working yet
+# hub_repo_path <- "C:\\Users\\mzorn\\Documents\\GitHub\\covid19-forecast-hub"
+# models_primary_secondary <- get_model_metadata(models = NULL, source = "local_hub_repo",hub_repo_path) %>% filter(designation %in% c("secondary", "primary")) %>% pull(model)
+
 models_primary_secondary <- get_model_designations(source = "zoltar") %>% filter(designation %in% c("secondary", "primary")) %>% pull(model)
 
-
 #function to load truth data for death and case targets
-truth_function <- function(x) {
+truth_function <- function(x,y) {
   load_truth(
     truth_source = "JHU",
     target_variable = c(x),
     truth_end_date = Sys.Date(),
     temporal_resolution = "weekly",
-    locations = the_locations)
+    locations = y)
 }
 
 # function to clean the datasets and add in columns to count the number of weeks, horizons, and locations
@@ -81,6 +89,8 @@ mutate_scores <- function(x) {
     ungroup()  %>%
     mutate(submission_sat = as.Date(calc_target_week_end_date(forecast_date, horizon=0))) 
 }
+
+
 
 #iterate function
 forecasts_inc_function <- function(x,y) {map_dfr(
@@ -194,7 +204,8 @@ align_forecasts_one_temporal_resolution <- function(
 ###########################
 # CASES
 # Load truth data
-truth_dat_case_all <- truth_function("inc case") 
+state_county <- c(the_locations,county_fips)
+truth_dat_case_all <- truth_function("inc case",state_county) 
 
 #filter for last 6 months
 truth_dat_case <- truth_dat_case_all  %>%
@@ -207,7 +218,7 @@ forecasts_case <- map_dfr(
       models = c(models_primary_secondary),
       dates = the_weeks,
       date_window_size = 6,
-      locations = the_locations,
+      locations = state_county,
       types = "quantile",
       targets = paste(1:4, "wk ahead inc case"),
       source = "zoltar")
@@ -220,7 +231,7 @@ forecasts_case_cte <-
       models = "COVIDhub-trained_ensemble",
       dates = mondays,
       date_window_size = 6,
-      locations = the_locations,
+      locations = state_county,
       types = "quantile",
       targets = paste(1:4, "wk ahead inc case"),
       source = "zoltar")
@@ -230,7 +241,7 @@ forecasts_case_c4e <-
     models = "COVIDhub-4_week_ensemble",
     dates = mondays,
     date_window_size = 6,
-    locations = the_locations,
+    locations = state_county,
     types = "quantile",
     targets = paste(1:4, "wk ahead inc case"),
     source = "zoltar")
@@ -238,16 +249,81 @@ forecasts_case_c4e <-
 forecasts_case_all <- bind_rows(forecasts_case,forecasts_case_cte,forecasts_case_c4e)
 
 #ensure there are no duplicates
-forecasts_case_update <- unique(forecasts_case_all) 
+#divide into smaller groups
+forecasts_case_x1 <- forecasts_case_all %>%
+  filter(forecast_date <= mondays[5])
+
+forecasts_case_x2 <- forecasts_case_all %>%
+  filter(forecast_date > mondays[5] & forecast_date <= mondays[10])
+
+forecasts_case_x3 <- forecasts_case_all %>%
+  filter(forecast_date > mondays[10] & forecast_date <= mondays[15])
+
+forecasts_case_x4 <- forecasts_case_all %>%
+  filter(forecast_date > mondays[15] & forecast_date <= mondays[20])
+
+forecasts_case_x5 <- forecasts_case_all %>%
+  filter(forecast_date > mondays[20])
+
+#ensure there are no duplicates in each smaller group (may have to increase memory limit memory.limit(24000))
+memory.limit(30000)
+forecasts_case_x1_update <- unique(forecasts_case_x1)
+forecasts_case_x2_update <- unique(forecasts_case_x2)
+forecasts_case_x3_update <- unique(forecasts_case_x3)
+forecasts_case_x4_update <- unique(forecasts_case_x4)
+forecasts_case_x5_update <- unique(forecasts_case_x5)
+
+forecasts_case_update <- rbind(forecasts_case_x1_update,forecasts_case_x2_update,forecasts_case_x3_update,forecasts_case_x4_update,forecasts_case_x5_update)
+save(forecasts_case_update, file = "reports/forecasts_case_update.rda")
+
+load(file = "reports/forecasts_case_update.rda") 
+load(file = "reports/truth_dat_case.rda") 
+
+# divide up forecasts into managable size to score (by horizon)
+forecasts_case_update_x1 <- forecasts_case_update %>%
+  filter(horizon == 1)
+forecasts_case_update_x2 <- forecasts_case_update %>%
+  filter(horizon == 2)
+forecasts_case_update_x3 <- forecasts_case_update %>%
+  filter(horizon == 3)
+forecasts_case_update_x4 <- forecasts_case_update %>%
+  filter(horizon == 4)
 
 #covidhub utils function to score the data
-score_case <- score_forecasts(forecasts = forecasts_case_update,
-                              truth = truth_dat_case,
-                              return_format = "long",
-                              use_median_as_point = TRUE)
+score_case_x1 <- score_forecasts(forecasts = forecasts_case_update_x1,
+                                 truth = truth_dat_case,
+                                 return_format = "long",
+                                 use_median_as_point = TRUE)
+score_case_x2 <- score_forecasts(forecasts = forecasts_case_update_x2,
+                                 truth = truth_dat_case,
+                                 return_format = "long",
+                                 use_median_as_point = TRUE)
+score_case_x3 <- score_forecasts(forecasts = forecasts_case_update_x3,
+                                 truth = truth_dat_case,
+                                 return_format = "long",
+                                 use_median_as_point = TRUE)
+score_case_x4 <- score_forecasts(forecasts = forecasts_case_update_x4,
+                                 truth = truth_dat_case,
+                                 return_format = "long",
+                                 use_median_as_point = TRUE)
 
 # clean the datasets and add in columns to count the number of weeks, horizons, and locations
-score_case_all <- mutate_scores(score_case)
+score_case_x1_all <- mutate_scores(score_case_x1)
+score_case_x2_all <- mutate_scores(score_case_x2)
+score_case_x3_all <- mutate_scores(score_case_x3)
+score_case_x4_all <- mutate_scores(score_case_x4)
+
+save(score_case_x1_all, file = "reports/score_case_x1_all.rda")
+save(score_case_x2_all, file = "reports/score_case_x2_all.rda")
+save(score_case_x3_all, file = "reports/score_case_x3_all.rda")
+save(score_case_x4_all, file = "reports/score_case_x4_all.rda")
+
+load(file = "reports/score_case_x1_all.rda")
+load(file = "reports/score_case_x2_all.rda")
+load(file = "reports/score_case_x3_all.rda")
+load(file = "reports/score_case_x4_all.rda")
+
+score_case_all <- rbind(score_case_x1_all,score_case_x2_all,score_case_x3_all,score_case_x4_all)
 
 #write rda to save scores and truth (this will be taken out if we use a csv pipeline)
 save(score_case_all, file = "reports/score_case_all.rda")
@@ -257,7 +333,7 @@ save(truth_dat_case_all, file = "reports/truth_dat_case_all.rda")
 ###########################
 # DEATHS
 # Load truth data
-truth_dat_inc_all <- truth_function("inc death") 
+truth_dat_inc_all <- truth_function("inc death",the_locations) 
 
 #filter for last 6 months
 truth_dat_inc <- truth_dat_inc_all  %>%
@@ -318,7 +394,7 @@ save(truth_dat_inc_all, file = "reports/truth_dat_inc_all.rda")
 # Load truth data
 truth_dat_hosp_all <- load_truth(
   truth_source = "HealthData",
-  target_variable = c("inc hosp"),
+  target_variable = c("inc hosp",the_locations),
   truth_end_date = Sys.Date(),
   temporal_resolution = "daily",
   locations = the_locations)
@@ -327,7 +403,9 @@ truth_dat_hosp_all <- load_truth(
 truth_dat_hosp <- truth_dat_hosp_all  %>%
   filter(target_end_date >= first_mon_history) 
 
-
+#write rda to save truth
+save(truth_dat_hosp, file = "reports/truth_dat_hosp.rda")
+save(truth_dat_hosp_all, file = "reports/truth_dat_hosp_all.rda")
 
 #query forecast data from zoltar for past 6 month submission weeks. 
 forecasts_hosp <- map_dfr(
@@ -407,14 +485,18 @@ forecasts_hosp_x5_update <- unique(forecasts_hosp_x5)
 forecasts_hosp_update <- rbind(forecasts_hosp_x1_update,forecasts_hosp_x2_update,forecasts_hosp_x3_update,forecasts_hosp_x4_update,forecasts_hosp_x5_update)
 save(forecasts_hosp_update, file = "reports/forecasts_hosp_update.rda")
 
+load(file = "reports/forecasts_hosp_update.rda")
+load( file = "reports/truth_dat_hosp.rda")
+
 #covidhub utils function to score the data
 score_hosp <- score_forecasts(forecasts = forecasts_hosp_update,
                               truth = truth_dat_hosp,
                               return_format = "long",
                               use_median_as_point = TRUE)
 save(score_hosp, file = "reports/score_hosp.rda")
-load(file = "score_hosp_all.rda") 
 
+load(file = "reports/score_hosp_all.rda") 
+load( file = "reports/truth_dat_hosp.rda")
 #convert scores to weekly
 score_hosp_wk <- score_hosp %>%
   rename(horz_day = horizon)  %>%
