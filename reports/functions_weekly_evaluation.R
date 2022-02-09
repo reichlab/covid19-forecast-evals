@@ -500,9 +500,9 @@ plot_truth <- function(dat,tar) {
     labs(title = paste(tar),
          caption="source: JHU CSSE (observed data)")+
     theme(legend.position = c(.05,.95), legend.justification = c(0,1)) +
-    geom_vline(aes(xintercept= c(first_eval_sat -3.5), color = "Recent Start Date"), linetype=2) +
-    geom_vline(aes(xintercept= c(first_eval_sat_hist - 3.5), color = "Historic Start Date"), linetype=2) + 
-    scale_color_manual(name = "", values = c("Recent Start Date" = "blue","Historic Start Date" ="black"))# , "Submission Date Boundaries" = "red"))
+    geom_vline(aes(xintercept= c(first_eval_sat -3.5), color = "Recent Start Date"), linetype=2, size=1) +
+    geom_vline(aes(xintercept= c(first_eval_sat_hist - 3.5), color = "Historic Start Date"), linetype=6, size=1) + 
+    scale_color_manual(name = "", values = c("Recent Start Date" = "blue","Historic Start Date" ="darkgreen"))# , "Submission Date Boundaries" = "red"))
 }
 
 #WIS barplot function

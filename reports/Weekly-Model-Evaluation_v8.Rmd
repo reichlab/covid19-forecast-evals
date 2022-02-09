@@ -189,7 +189,7 @@ In this weekly report we are evaluating forecasts made in 57 different locations
 Additionally, we have included a historical score report to aggregate scores from forecasts that have been submitted to the forecast hub since the first week in April.
 -->
 
-In collaboration with the US Centers for Disease Control and Prevention (CDC), the COVID-19 Forecast hub collects short-term COVID-19 forecasts from dozens of research groups around the globe. Every week we combine the most recent forecasts from each team into a single "ensemble" forecast for each of the targets. This forecast is used as the official ensemble forecast of the CDC, typically appearing on their [forecasting website](https://www.cdc.gov/coronavirus/2019-ncov/covid-data/mathematical-modeling.html) on Wednesday.  You can explore the full set of models, including their forecasts for past weeks online at the [Forecast Hub interactive visualization](https://viz.covid19forecasthub.org/).  Other related resources include CMU Delphi's [forecast evaluation dashboard](https://delphi.cmu.edu/forecast-eval/), a separate product of the Forecast Evaluation Research Collaborative, as well as the preprint [Evaluation of individual and ensemble probabilistic forecasts of COVID-19 mortality in the US.](https://www.medrxiv.org/content/10.1101/2021.02.03.21250974v2)
+In collaboration with the US Centers for Disease Control and Prevention (CDC), the COVID-19 Forecast hub collects short-term COVID-19 forecasts from dozens of research groups around the globe. Every week we combine the most recent forecasts from each team into a single "ensemble" forecast for each of the targets. This forecast is used as the official ensemble forecast of the CDC, typically appearing on their [forecasting website](https://www.cdc.gov/coronavirus/2019-ncov/covid-data/mathematical-modeling.html) on Wednesday.  You can explore the full set of models, including their forecasts for past weeks online at the [Forecast Hub interactive visualization](https://viz.covid19forecasthub.org/).  Other related resources include CMU Delphi's [forecast evaluation dashboard](https://delphi.cmu.edu/forecast-eval/), a separate product of the Forecast Evaluation Research Collaborative, as well as the preprint [Evaluation of individual and ensemble probabilistic forecasts of COVID-19 mortality in the US.](https://www.medrxiv.org/content/10.1101/2021.02.03.21250974v3)
 
 This report evaluates forecasts at the state and national level for newly reported weekly cases, deaths and hospitalizations due to COVID-19.  Data from the [JHU CSSE dashboard](https://coronavirus.jhu.edu/) is used as ground truth data for evaluating the forecasts.
 
@@ -893,7 +893,7 @@ datatable(calibration_table_hist1,
                              columnDefs = list(list(width = '100px', targets = "_all", render = render)), 
                              ordering = TRUE),
               # filter = c("top")
-          colnames = c("Model", "# recent forecasts",  "1 wk 50% coverage", "2 wk 50% coverage", "3 wk 50% coverage", "4 wk 50% coverage","1 wk 95% coverage", "2 wk 95% coverage", "3 wk 95% coverage", "4 wk 95% coverage"), container=sketch_recent_coverage) 
+          colnames = c("Model", "# historical forecasts",  "1 wk 50% coverage", "2 wk 50% coverage", "3 wk 50% coverage", "4 wk 50% coverage","1 wk 95% coverage", "2 wk 95% coverage", "3 wk 95% coverage", "4 wk 95% coverage"), container=sketch_historical_coverage) 
 
 ```  
 
@@ -986,8 +986,7 @@ plot_by_location_wis(inc_accuracy_recent, order = inc_model_order, location_orde
 
 ## Evaluation Periods  {.tabset .tabset-fade}
 
-
-This plot shows the observed number of incident deaths over time in the US. The period between the vertical blue lines shows the weeks included in the "recent" model evaluations.
+This figure shows the number of incident reported COVID-19 deaths reported each week in the US. The vertical blue line indicates the beginning of the “recent” model evaluation period. The vertical green line indicates the beginning of the “historical” model evaluation period.
 
 
 ```{r, fig.width=8, fig.height=5}
@@ -1706,7 +1705,7 @@ datatable(calibration_table_hist1,
                              columnDefs = list(list(width = '100px', targets = "_all", render = render)), 
                              ordering = TRUE),
               # filter = c("top")
-          colnames = c("Model", "# recent forecasts",  "1 wk 50% coverage", "2 wk 50% coverage", "3 wk 50% coverage", "4 wk 50% coverage","1 wk 95% coverage", "2 wk 95% coverage", "3 wk 95% coverage", "4 wk 95% coverage"), container=sketch_recent_coverage) 
+          colnames = c("Model", "# historical forecasts",  "1 wk 50% coverage", "2 wk 50% coverage", "3 wk 50% coverage", "4 wk 50% coverage","1 wk 95% coverage", "2 wk 95% coverage", "3 wk 95% coverage", "4 wk 95% coverage"), container=sketch_historical_coverage) 
 
 ```  
 <!-- ** When comparing results, keep in mind that as of September 28, 2021 COVIDhub-ensemble only reports 14 day ahead forecasts for hospitalizations. -->
@@ -1822,7 +1821,7 @@ plot_by_location_wis(hosp_accuracy_recent, order = hosp_model_order, location_or
 ## Evaluation Periods  {.tabset .tabset-fade}
 
 
-This figure shows the number of incident reported Daily COVID-19 hospitalizations reported in the US. The period between the vertical blue line and the black shows the weeks included in the "recent" model evaluations. The period between the vertical red line and the black shows the weeks included in the "historical" model evaluations.
+This figure shows the number of incident reported Daily COVID-19 hospitalizations reported in the US. The vertical blue line indicates the beginning of the “recent” model evaluation period. The vertical green line indicates the beginning of the “historical” model evaluation period.
 
 ```{r, fig.width=8, fig.height=5}
 truth_US_hosp <- truth_dat_hosp_all %>%
@@ -2563,7 +2562,7 @@ datatable(calibration_table_hist1,
                              columnDefs = list(list(width = '100px', targets = "_all", render = render)), 
                              ordering = TRUE),
               # filter = c("top")
-          colnames = c("Model", "# recent forecasts",  "1 wk 50% coverage", "2 wk 50% coverage", "3 wk 50% coverage", "4 wk 50% coverage","1 wk 95% coverage", "2 wk 95% coverage", "3 wk 95% coverage", "4 wk 95% coverage"), container=sketch_recent_coverage) 
+          colnames = c("Model", "# historical forecasts",  "1 wk 50% coverage", "2 wk 50% coverage", "3 wk 50% coverage", "4 wk 50% coverage","1 wk 95% coverage", "2 wk 95% coverage", "3 wk 95% coverage", "4 wk 95% coverage"), container=sketch_historical_coverage) 
 
 ```  
 
@@ -2678,7 +2677,7 @@ plot_by_location_wis(case_accuracy_recent, order = case_model_order, location_or
 ## Evaluation Periods  {.tabset .tabset-fade}
 
 
-This figure shows the number of incident reported COVID-19 cases reported each week in the US. The period between the vertical blue line and the black shows the weeks included in the "recent" model evaluations. The period between the vertical red line and the black shows the weeks included in the "historical" model evaluations.
+This figure shows the number of incident reported COVID-19 cases reported each week in the US. The vertical blue line indicates the beginning of the “recent” model evaluation period. The vertical green line indicates the beginning of the “historical” model evaluation period.
 
 ```{r, fig.width=8, fig.height=5}
 truth_US_case <- truth_dat_case_all %>%
@@ -3438,7 +3437,7 @@ datatable(calibration_table_hist1,
                              columnDefs = list(list(width = '100px', targets = "_all", render = render)), 
                              ordering = TRUE),
               # filter = c("top")
-          colnames = c("Model", "# recent forecasts",  "1 wk 50% coverage", "2 wk 50% coverage", "3 wk 50% coverage", "4 wk 50% coverage","1 wk 95% coverage", "2 wk 95% coverage", "3 wk 95% coverage", "4 wk 95% coverage"), container=sketch_recent_coverage) 
+          colnames = c("Model", "# recent forecasts",  "1 wk 50% coverage", "2 wk 50% coverage", "3 wk 50% coverage", "4 wk 50% coverage","1 wk 95% coverage", "2 wk 95% coverage", "3 wk 95% coverage", "4 wk 95% coverage"), container=sketch_historical_coverage) 
 
 ```  
 
@@ -3529,7 +3528,7 @@ ggplotly(by_week_wis_4wk, tooltip = c("label", "labelx", "labely"))
 
 ## Evaluation Periods  {.tabset .tabset-fade}
 
-This figure shows the number of incident reported COVID-19 cases reported each week in the US. The period between the vertical blue line and the black shows the weeks included in the "recent" model evaluations. The period between the vertical red line and the black shows the weeks included in the "historical" model evaluations.
+This figure shows the number of incident reported COVID-19 cases reported each week in the US. The period between the vertical blue line and the black shows the weeks included in the "recent" model evaluations. The period between the vertical red line and the black shows the weeks included in the "historical" model evaluation period.
 
 ```{r, fig.width=8, fig.height=5}
 truth_US_case <- truth_dat_case_all %>%
