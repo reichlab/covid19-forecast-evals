@@ -701,23 +701,30 @@ To calculate each column in our table, different inclusion criteria were applied
 * Columns 7 through 10 calculate the adjusted relative MAE over the most recent `r n_weeks_history` week period by horizon. 
 
 
-For inclusion in this table, a model most have contributed forecasts for 5 or more weeks total since `r format(first_eval_sat_hist, "%B %d, %Y")`, or have submitted forecasts during at least 2 out of the last 3 evaluated weeks. This inclusion criteria was applied in order to score models that submitted for a substantial amount of weeks at any point during the pandemic but may no longer be submitting, while also evaluating new teams that have recently joined our forecasting efforts. 
-
 
 ```{r inclusion in coverage table recent: DEATHS}
 
-#filter for inclusion in recent coverage table 
-#at least 5 weeks overall or at least 2 out of the last 3 weeks 
-  inc_coverage_recent_models <- score_inc_all_ohio  %>%     
-    filter(target_end_date >= first_eval_sat) %>% 
-    filter(n_weeks_10wksPrior >= 5 |  n_weeks_3wksPrior >= 2)  %>% 
-    group_by(model)  %>% 
-   summarize(Freq=n()) %>% 
-    pull(model)
-#Filtered to include only models in scoreboard (coverage table) 
-#at least 5 weeks overall or at least 2 out of the last 3 weeks 
-inc_coverage_recent <- recent_coverage_filter(score_inc_all_ohio,inc_coverage_recent_models)
-inc_coverage_historical <- historical_coverage_filter(score_inc_all_ohio)
+# RECENT
+# at least 50% of recent coverage
+inc_coverage_recent <- recent_coverage_filter(score_inc_all_ohio,first_eval_sat)
+
+inc_scores <- inc_coverage_recent %>%
+  filter(!is.na(score_value)) %>%
+  filter(n_locations >= 25) %>% 
+  filter(n_weeks >= 4) %>%
+  droplevels()
+
+# bring all timezeros to Saturday:
+inc_scores$timezero <- inc_scores$submission_sat 
+# restrict to 1-4 wk ahead state-level 
+scores <- inc_scores %>% filter(horizon %in% paste(1:4), location %in% US_fips) %>%
+  filter(score_name %in% c("coverage_50", "coverage_95")) %>%
+  select("model", "timezero", "location", "horizon", "score_name", "score_value") %>%
+  pivot_wider(names_from = score_name, values_from = score_value) %>%
+  droplevels()
+
+# the included models:
+models <- unique(scores$model)
 
 #number of forecasts by model 
 inc_countc_fcasts_recent <-  inc_coverage_recent %>% group_by(model,score_name) %>%
@@ -727,31 +734,8 @@ inc_countc_fcasts_recent <-  inc_coverage_recent %>% group_by(model,score_name) 
   group_by(model) %>%
   summarise("# recent forecasts" = max(n_fcast)) 
 
-inc_countc_fcasts_historical <-  inc_coverage_historical %>% group_by(model,score_name) %>%
-    summarise(n_forecasts_50 = sum(score_name == "coverage_50" & !is.na(score_value)),
-           n_forecasts_95 = sum(score_name == "coverage_95" & !is.na(score_value))) %>% ungroup() %>%
-  mutate(n_fcast = ifelse(n_forecasts_50 > 0, n_forecasts_50, n_forecasts_95)) %>%
-  group_by(model) %>%
-  summarise("# historical forecasts" = max(n_fcast)) 
-
-  
-  historical_calib_50 <-  score_inc_all_ohio  %>% 
-    filter(n_weeks >= 5 |  n_weeks_3wksPrior >= 2) %>% 
-    filter(!is.na(score_value))  %>%
-    filter(score_name %in% c("coverage_50")) %>%
-    select(model,horizon,score_value,n_weeks)  %>%
-    group_by(model,horizon) %>%
-    summarise(mean_PI50 = round(sum(score_value, na.rm = TRUE) / n(),2)) %>%  
-  ungroup()  %>% 
-  pivot_wider(names_from = "horizon",values_from = "mean_PI50")  %>% 
-  rename("1 wk 50% coverage" = "1", "2 wk 50% coverage" = "2", "3 wk 50% coverage" = "3", "4 wk 50% coverage" = "4" ) %>% 
-  dplyr::rowwise() %>% 
-  dplyr::mutate(coverage_50 = mean(c_across(where(is.numeric)), na.rm = T)) %>%  
-  dplyr::ungroup()
-  
-  
   recent_calib_50  <- score_inc_all_ohio  %>%
-    filter(model %in% inc_coverage_recent_models) %>% 
+    filter(model %in% models) %>% 
     filter(!is.na(score_value))  %>%
     filter(score_name %in% c("coverage_50")) %>%
     filter(target_end_date >= first_eval_sat) %>%  droplevels() %>%
@@ -764,25 +748,9 @@ inc_countc_fcasts_historical <-  inc_coverage_historical %>% group_by(model,scor
   dplyr::rowwise() %>% 
   dplyr::mutate(coverage_50 = mean(c_across(where(is.numeric)), na.rm = T)) %>%  
   dplyr::ungroup() 
- 
-  historical_calib_95 <- score_inc_all_ohio  %>% 
-    filter(n_weeks >= 5 |  n_weeks_3wksPrior >= 2) %>% 
-    filter(!is.na(score_value))  %>%
-    filter(score_name %in% c("coverage_95")) %>%
-    select(model,horizon,score_value)  %>%
-    group_by(model,horizon) %>%
-    summarise(mean_PI95 = round(sum(score_value, na.rm = TRUE) / n(),2)) %>%  
-  ungroup()  %>% 
-  pivot_wider(names_from = "horizon",values_from = "mean_PI95")  %>% 
-  rename("1 wk 95% coverage" = "1", "2 wk 95% coverage" = "2", "3 wk 95% coverage" = "3", "4 wk 95% coverage" = "4" ) %>% 
-  dplyr::rowwise() %>% 
-  dplyr::mutate(coverage_95 = mean(c_across(where(is.numeric)), na.rm = T)) %>%  
-  dplyr::mutate(diff_95 = abs(0.95-coverage_95)) %>% 
-  dplyr::ungroup()
-  
   
   recent_calib_95  <- score_inc_all_ohio  %>%
-    filter(model %in% inc_coverage_recent_models) %>%
+    filter(model %in% models) %>%
     filter(!is.na(score_value))  %>%
     filter(score_name %in% c("coverage_95")) %>%
     filter(target_end_date >= first_eval_sat) %>%  droplevels() %>%
@@ -796,6 +764,69 @@ inc_countc_fcasts_historical <-  inc_coverage_historical %>% group_by(model,scor
   dplyr::mutate(coverage_95 = mean(c_across(where(is.numeric)), na.rm = T)) %>%  
   dplyr::mutate(diff_95 = abs(0.95-coverage_95)) %>% 
   dplyr::ungroup()
+    
+# HISTORICAL
+# at least 50% of historical coverage
+inc_coverage_historical <- historical_coverage_filter(score_inc_all_ohio)
+
+inc_scores_historical <- inc_coverage_historical %>%
+  filter(!is.na(score_value)) %>%
+  filter(n_locations >= 25) %>% 
+  filter(n_weeks >= 4) %>%
+  droplevels()
+
+# bring all timezeros to Saturday:
+inc_scores_historical$timezero <- inc_scores_historical$submission_sat 
+# restrict to 1-4 wk ahead state-level 
+scores_historical <- inc_scores_historical %>% filter(horizon %in% paste(1:4), location %in% US_fips) %>%
+  filter(score_name %in% c("coverage_50", "coverage_95")) %>%
+  select("model", "timezero", "location", "horizon", "score_name", "score_value") %>%
+  pivot_wider(names_from = score_name, values_from = score_value) %>%
+  droplevels()
+
+# the included models:
+models_historical <- unique(scores_historical$model)
+
+#number of forecasts by model 
+inc_countc_fcasts_historical <-  inc_coverage_historical %>% group_by(model,score_name) %>%
+    summarise(n_forecasts_50 = sum(score_name == "coverage_50" & !is.na(score_value)),
+           n_forecasts_95 = sum(score_name == "coverage_95" & !is.na(score_value))) %>% ungroup() %>%
+  mutate(n_fcast = ifelse(n_forecasts_50 > 0, n_forecasts_50, n_forecasts_95)) %>%
+  group_by(model) %>%
+  summarise("# historical forecasts" = max(n_fcast)) 
+
+  
+  historical_calib_50 <-  score_inc_all_ohio  %>% 
+  filter(model %in% models_historical) %>% 
+    filter(!is.na(score_value))  %>%
+    filter(score_name %in% c("coverage_50")) %>%
+    select(model,horizon,score_value,n_weeks)  %>%
+    group_by(model,horizon) %>%
+    summarise(mean_PI50 = round(sum(score_value, na.rm = TRUE) / n(),2)) %>%  
+  ungroup()  %>% 
+  pivot_wider(names_from = "horizon",values_from = "mean_PI50")  %>% 
+  rename("1 wk 50% coverage" = "1", "2 wk 50% coverage" = "2", "3 wk 50% coverage" = "3", "4 wk 50% coverage" = "4" ) %>% 
+  dplyr::rowwise() %>% 
+  dplyr::mutate(coverage_50 = mean(c_across(where(is.numeric)), na.rm = T)) %>%  
+  dplyr::ungroup()
+ 
+  historical_calib_95 <- score_inc_all_ohio  %>% 
+  filter(model %in% models_historical) %>% 
+    filter(!is.na(score_value))  %>%
+    filter(score_name %in% c("coverage_95")) %>%
+    select(model,horizon,score_value)  %>%
+    group_by(model,horizon) %>%
+    summarise(mean_PI95 = round(sum(score_value, na.rm = TRUE) / n(),2)) %>%  
+  ungroup()  %>% 
+  pivot_wider(names_from = "horizon",values_from = "mean_PI95")  %>% 
+  rename("1 wk 95% coverage" = "1", "2 wk 95% coverage" = "2", "3 wk 95% coverage" = "3", "4 wk 95% coverage" = "4" ) %>% 
+  dplyr::rowwise() %>% 
+  dplyr::mutate(coverage_95 = mean(c_across(where(is.numeric)), na.rm = T)) %>%  
+  dplyr::mutate(diff_95 = abs(0.95-coverage_95)) %>% 
+  dplyr::ungroup()
+  
+  
+
   
   calibration_table  <- inc_countc_fcasts_recent %>%
   full_join(recent_calib_50) %>%
@@ -829,7 +860,7 @@ calib_model_order_historical <- calibration_table_hist %>%   arrange(diff_95) %>
 
 ### Recent coverage
 
-This table only includes forecasts for the last `r n_weeks_eval` weeks, since `r format(first_eval_sat, "%B %d, %Y")`. For inclusion in this table,  a model must have contributed forecasts for 5 or more weeks total during this period, or have submitted forecasts during at least 2 out of the last 3 evaluated weeks. This inclusion criteria was applied in order to score models that submitted for a substantial amount of weeks at any point during the pandemic but may no longer be submitting, while also evaluating new teams that have recently joined our forecasting efforts. Some models have fewer evaluated forecasts because they did not submit for one or more weeks and/or, in weeks where they did submit, did not submit for every one of the 500 counties evaluated. The data are initially ordered by model based on their 95% PI coverage, aggregated across horizons, with the most accurate models at the top. 
+This table only includes forecasts for the last `r n_weeks_eval` weeks, since `r format(first_eval_sat, "%B %d, %Y")`. For inclusion in this table, the models must have submitted  at least 50% of forecasts during this time, where one forecast is a location, target, forecast date combination.  The data are initially ordered by model based on their 95% PI coverage, aggregated across horizons, with the most accurate models at the top. 
 
 ```{r recent Leaderboard DEATHS coverage}
 
@@ -864,7 +895,7 @@ datatable(calibration_table1,
 
 ### Historical coverage
 
-This table only includes forecasts for the last `r n_weeks_history` weeks, since `r format(first_eval_sat_hist, "%B %d, %Y")`. For inclusion in this table, a model most have contributed forecasts for 5 or more weeks total during this period, or have submitted forecasts during at least 2 out of the last 3 evaluated weeks. This inclusion criteria was applied in order to score models that submitted for a substantial amount of weeks at any point during the pandemic but may no longer be submitting, while also evaluating new teams that have recently joined our forecasting efforts. The data are initially ordered by model based on their 95% PI coverage, aggregated across horizons, with the most accurate models at the top. 
+This table only includes forecasts for the last `r n_weeks_history` weeks, since `r format(first_eval_sat_hist, "%B %d, %Y")`. For inclusion in this table, the models must have submitted  at least 50% of forecasts during this time, where one forecast is a location, target, forecast date combination. The data are initially ordered by model based on their 95% PI coverage, aggregated across horizons, with the most accurate models at the top. 
 
 
 ```{r historical Leaderboard DEATHS coverage}
@@ -1511,18 +1542,28 @@ To calculate each column in our table, different inclusion criteria were applied
 
 
 ```{r inclusion in coverage table recent HOSP}
-#filter for inclusion in recent coverage table 
-#at least 5 weeks overall or at least 2 out of the last 3 weeks 
-  hosp_coverage_recent_models <- score_hosp_all  %>%     
-    filter(target_end_date >= first_eval_sat) %>% 
-    filter(n_weeks_10wksPrior >= 5 |  n_weeks_3wksPrior >= 2)  %>% 
-    group_by(model)  %>% 
-   summarize(Freq=n()) %>% 
-    pull(model)
-#Filtered to include only models in scoreboard (coverage table) 
-#at least 5 weeks overall or at least 2 out of the last 3 weeks 
-hosp_coverage_recent <- recent_coverage_filter(score_hosp_all,hosp_coverage_recent_models)
-hosp_coverage_historical <- historical_coverage_filter(score_hosp_all)
+#RECENT
+# at least 50% of recent coverage 
+hosp_coverage_recent <- recent_coverage_filter(score_hosp_all,first_eval_sat)
+
+
+hosp_scores <- hosp_coverage_recent %>%
+  filter(!is.na(score_value)) %>%
+  filter(n_locations >= 25) %>% 
+  filter(n_weeks >= 4) %>%
+  droplevels()
+
+# bring all timezeros to Saturday:
+hosp_scores$timezero <- hosp_scores$submission_sat 
+# restrict to 1-4 wk ahead state-level 
+scores <- hosp_scores %>% filter(horizon %in% paste(1:4), location %in% US_fips) %>%
+  filter(score_name %in% c("coverage_50", "coverage_95")) %>%
+  select("model", "timezero", "location", "horizon", "score_name", "score_value") %>%
+  pivot_wider(names_from = score_name, values_from = score_value) %>%
+  droplevels()
+
+# the included models:
+models <- unique(scores$model)
 
 #number of forecasts by model 
 hosp_countc_fcasts_recent <-  hosp_coverage_recent %>% group_by(model,score_name) %>%
@@ -1532,6 +1573,61 @@ hosp_countc_fcasts_recent <-  hosp_coverage_recent %>% group_by(model,score_name
   group_by(model) %>%
   summarise("# recent forecasts" = max(n_fcast)) 
 
+  recent_calib_50  <- score_hosp_all  %>%
+    filter(model %in% models) %>% 
+    filter(!is.na(score_value))  %>%
+    filter(score_name %in% c("coverage_50")) %>%
+    filter(target_end_date >= first_eval_sat) %>%  droplevels() %>%
+    select(model,horizon,score_value)  %>%
+    group_by(model,horizon) %>%
+    summarise(mean_PI50 = round(sum(score_value, na.rm = TRUE) / n(),2)) %>%  
+  ungroup()  %>% 
+  pivot_wider(names_from = "horizon",values_from = "mean_PI50")  %>% 
+  rename("1 wk 50% coverage" = "1", "2 wk 50% coverage" = "2", "3 wk 50% coverage" = "3", "4 wk 50% coverage" = "4" ) %>% 
+  dplyr::rowwise() %>% 
+  dplyr::mutate(coverage_50 = mean(c_across(where(is.numeric)), na.rm = T)) %>%  
+  dplyr::ungroup() 
+  
+  recent_calib_95  <- score_hosp_all  %>%
+    filter(model %in% models) %>%
+    filter(!is.na(score_value))  %>%
+    filter(score_name %in% c("coverage_95")) %>%
+    filter(target_end_date >= first_eval_sat) %>%  droplevels() %>%
+    select(model,horizon,score_value)  %>%
+    group_by(model,horizon) %>%
+    summarise(mean_PI95 = round(sum(score_value, na.rm = TRUE) / n(),2)) %>%  
+  ungroup()  %>% 
+  pivot_wider(names_from = "horizon",values_from = "mean_PI95")  %>% 
+  rename("1 wk 95% coverage" = "1", "2 wk 95% coverage" = "2", "3 wk 95% coverage" = "3", "4 wk 95% coverage" = "4" ) %>% 
+  dplyr::rowwise() %>% 
+  dplyr::mutate(coverage_95 = mean(c_across(where(is.numeric)), na.rm = T)) %>%  
+  dplyr::mutate(diff_95 = abs(0.95-coverage_95)) %>% 
+  dplyr::ungroup()
+
+
+# HISTORICAL
+# at least 50% of historical coverage
+hosp_coverage_historical <- historical_coverage_filter(score_hosp_all)
+
+hosp_scores_historical <- hosp_coverage_historical %>%
+  filter(!is.na(score_value)) %>%
+  filter(n_locations >= 25) %>% 
+  filter(n_weeks >= 4) %>%
+  droplevels()
+
+# bring all timezeros to Saturday:
+hosp_scores_historical$timezero <- hosp_scores_historical$submission_sat 
+# restrict to 1-4 wk ahead state-level 
+scores_historical <- hosp_scores_historical %>% filter(horizon %in% paste(1:4), location %in% US_fips) %>%
+  filter(score_name %in% c("coverage_50", "coverage_95")) %>%
+  select("model", "timezero", "location", "horizon", "score_name", "score_value") %>%
+  pivot_wider(names_from = score_name, values_from = score_value) %>%
+  droplevels()
+
+# the included models:
+models_historical <- unique(scores_historical$model)
+
+#number of forecasts by model 
 hosp_countc_fcasts_historical <-  hosp_coverage_historical %>% group_by(model,score_name) %>%
     summarise(n_forecasts_50 = sum(score_name == "coverage_50" & !is.na(score_value)),
            n_forecasts_95 = sum(score_name == "coverage_95" & !is.na(score_value))) %>% ungroup() %>%
@@ -1539,11 +1635,9 @@ hosp_countc_fcasts_historical <-  hosp_coverage_historical %>% group_by(model,sc
   group_by(model) %>%
   summarise("# historical forecasts" = max(n_fcast)) 
 
-
   
-
   historical_calib_50 <-  score_hosp_all  %>% 
-    filter(n_weeks >= 5 |  n_weeks_3wksPrior >= 2) %>% 
+  filter(model %in% models_historical) %>% 
     filter(!is.na(score_value))  %>%
     filter(score_name %in% c("coverage_50")) %>%
     select(model,horizon,score_value,n_weeks)  %>%
@@ -1555,26 +1649,9 @@ hosp_countc_fcasts_historical <-  hosp_coverage_historical %>% group_by(model,sc
   dplyr::rowwise() %>% 
   dplyr::mutate(coverage_50 = mean(c_across(where(is.numeric)), na.rm = T)) %>%  
   dplyr::ungroup()
-  
-  
-  recent_calib_50  <- score_hosp_all  %>%
-    filter(model %in% hosp_coverage_recent_models) %>% 
-    filter(!is.na(score_value))  %>%
-    filter(score_name %in% c("coverage_50")) %>%
-     filter(target_end_date >= first_eval_sat) %>%  droplevels() %>%
-    droplevels() %>%
-    select(model,horizon,score_value)  %>%
-    group_by(model,horizon) %>%
-    summarise(mean_PI50 = round(sum(score_value, na.rm = TRUE) / n(),2)) %>%  
-  ungroup()  %>% 
-  pivot_wider(names_from = "horizon",values_from = "mean_PI50")  %>% 
-  rename("1 wk 50% coverage" = "1", "2 wk 50% coverage" = "2", "3 wk 50% coverage" = "3", "4 wk 50% coverage" = "4" ) %>% 
-  dplyr::rowwise() %>% 
-  dplyr::mutate(coverage_50 = mean(c_across(where(is.numeric)), na.rm = T)) %>%  
-  dplyr::ungroup() 
  
-  historical_calib_95 <-  score_hosp_all  %>% 
-    filter(n_weeks >= 5 |  n_weeks_3wksPrior >= 2) %>% 
+  historical_calib_95 <- score_hosp_all  %>% 
+  filter(model %in% models_historical) %>% 
     filter(!is.na(score_value))  %>%
     filter(score_name %in% c("coverage_95")) %>%
     select(model,horizon,score_value)  %>%
@@ -1588,23 +1665,9 @@ hosp_countc_fcasts_historical <-  hosp_coverage_historical %>% group_by(model,sc
   dplyr::mutate(diff_95 = abs(0.95-coverage_95)) %>% 
   dplyr::ungroup()
   
-  
-  recent_calib_95  <- score_hosp_all  %>%
-    filter(model %in% hosp_coverage_recent_models) %>% 
-    filter(!is.na(score_value))  %>%
-    filter(score_name %in% c("coverage_95")) %>%
-     filter(target_end_date >= first_eval_sat) %>%  droplevels() %>%
-    droplevels() %>%
-    select(model,horizon,score_value)  %>%
-    group_by(model,horizon) %>%
-    summarise(mean_PI95 = round(sum(score_value, na.rm = TRUE) / n(),2)) %>%  
-  ungroup()  %>% 
-  pivot_wider(names_from = "horizon",values_from = "mean_PI95")  %>% 
-  rename("1 wk 95% coverage" = "1", "2 wk 95% coverage" = "2", "3 wk 95% coverage" = "3", "4 wk 95% coverage" = "4" ) %>% 
-  dplyr::rowwise() %>% 
-  dplyr::mutate(coverage_95 = mean(c_across(where(is.numeric)), na.rm = T)) %>%  
-  dplyr::mutate(diff_95 = abs(0.95-coverage_95)) %>% 
-  dplyr::ungroup()
+
+
+
   
   calibration_table  <- hosp_countc_fcasts_recent %>%
   full_join(recent_calib_50) %>%
@@ -1638,7 +1701,7 @@ calib_model_order_historical <- calibration_table_hist %>%   arrange(diff_95) %>
 
 ### Recent coverage
 
-This table only includes forecasts for the last `r n_weeks_eval` weeks, since `r format(first_eval_sat, "%B %d, %Y")`. For inclusion in this table,  a model must have contributed forecasts for 5 or more weeks total during this period, or have submitted forecasts during at least 2 out of the last 3 evaluated weeks. This inclusion criteria was applied in order to score models that submitted for a substantial amount of weeks at any point during the pandemic but may no longer be submitting, while also evaluating new teams that have recently joined our forecasting efforts. Some models have fewer evaluated forecasts because they did not submit for one or more weeks and/or, in weeks where they did submit, did not submit for every one of the 500 counties evaluated. The data are initially ordered by model based on their 95% PI coverage, aggregated across horizons, with the most accurate models at the top. 
+This table only includes forecasts for the last `r n_weeks_eval` weeks, since `r format(first_eval_sat, "%B %d, %Y")`.  For inclusion in this table, the models must have submitted  at least 50% of forecasts during this time, where one forecast is a location, target, forecast date combination.  The data are initially ordered by model based on their 95% PI coverage, aggregated across horizons, with the most accurate models at the top. 
 
 
 ```{r recent Leaderboard HOSP coverage}
@@ -1675,7 +1738,7 @@ datatable(calibration_table1,
 
 ### Historical coverage
 
-This table only includes forecasts for the last `r n_weeks_history` weeks, since `r format(first_eval_sat_hist, "%B %d, %Y")`. For inclusion in this table, a model most have contributed forecasts for 5 or more weeks total during this period, or have submitted forecasts during at least 2 out of the last 3 evaluated weeks. This inclusion criteria was applied in order to score models that submitted for a substantial amount of weeks at any point during the pandemic but may no longer be submitting, while also evaluating new teams that have recently joined our forecasting efforts. The data are initially ordered by model based on their 95% PI coverage, aggregated across horizons, with the most accruate models at the top. 
+This table only includes forecasts for the last `r n_weeks_history` weeks, since `r format(first_eval_sat_hist, "%B %d, %Y")`.  For inclusion in this table, the models must have submitted  at least 50% of forecasts during this time, where one forecast is a location, target, forecast date combination.  The data are initially ordered by model based on their 95% PI coverage, aggregated across horizons, with the most accruate models at the top. 
 
 
 ```{r historical Leaderboard HOSP coverage}
@@ -2367,18 +2430,28 @@ To calculate each column in our table, different inclusion criteria were applied
 
 
 ```{r inclusion in coverage table recent}
-#Filtered to include only models in scoreboard (coverage table) 
-#at least 5 weeks overall or at least 2 out of the last 3 weeks 
-case_coverage_recent_models <- score_case_all_s %>%
-    filter(target_end_date >= first_eval_sat) %>% 
-    filter(n_weeks_10wksPrior >= 5 |  n_weeks_3wksPrior >= 2)  %>% 
-    group_by(model)  %>% 
-   summarize(Freq=n()) %>% 
-    pull(model)
-  
-  
-case_coverage_recent <- recent_coverage_filter(score_case_all_s,case_coverage_recent_models)
-case_coverage_historical <- historical_coverage_filter(score_case_all_s) 
+
+# RECENT
+# at least 50% of recent coverage
+case_coverage_recent <- recent_coverage_filter(score_case_all_s,first_eval_sat)
+
+case_scores <- case_coverage_recent %>%
+  filter(!is.na(score_value)) %>%
+  filter(n_locations >= 25) %>% 
+  filter(n_weeks >= 4) %>%
+  droplevels()
+
+# bring all timezeros to Saturday:
+case_scores$timezero <- case_scores$submission_sat 
+# restrict to 1-4 wk ahead state-level 
+scores <- case_scores %>% filter(horizon %in% paste(1:4), location %in% US_fips) %>%
+  filter(score_name %in% c("coverage_50", "coverage_95")) %>%
+  select("model", "timezero", "location", "horizon", "score_name", "score_value") %>%
+  pivot_wider(names_from = score_name, values_from = score_value) %>%
+  droplevels()
+
+# the included models:
+models <- unique(scores$model)
 
 #number of forecasts by model 
 case_countc_fcasts_recent <-  case_coverage_recent %>% group_by(model,score_name) %>%
@@ -2388,32 +2461,8 @@ case_countc_fcasts_recent <-  case_coverage_recent %>% group_by(model,score_name
   group_by(model) %>%
   summarise("# recent forecasts" = max(n_fcast)) 
 
-case_countc_fcasts_historical <-  case_coverage_historical %>% group_by(model,score_name) %>%
-    summarise(n_forecasts_50 = sum(score_name == "coverage_50" & !is.na(score_value)),
-           n_forecasts_95 = sum(score_name == "coverage_95" & !is.na(score_value))) %>% ungroup() %>%
-  mutate(n_fcast = ifelse(n_forecasts_50 > 0, n_forecasts_50, n_forecasts_95)) %>%
-  group_by(model) %>%
-  summarise("# historical forecasts" = max(n_fcast)) 
-
-
-  historical_calib_50 <-  score_case_all_s  %>% 
-  filter(location %in% the_locations)  %>% #states, us and territories
-    filter(n_weeks >= 5 |  n_weeks_3wksPrior >= 2) %>% 
-    filter(!is.na(score_value))  %>%
-    filter(score_name %in% c("coverage_50")) %>%
-    select(model,horizon,score_value,n_weeks)  %>%
-    group_by(model,horizon) %>%
-    summarise(mean_PI50 = round(sum(score_value, na.rm = TRUE) / n(),2)) %>%  
-  ungroup()  %>% 
-  pivot_wider(names_from = "horizon",values_from = "mean_PI50")  %>% 
-  rename("1 wk 50% coverage" = "1", "2 wk 50% coverage" = "2", "3 wk 50% coverage" = "3", "4 wk 50% coverage" = "4" ) %>% 
-  dplyr::rowwise() %>% 
-  dplyr::mutate(coverage_50 = mean(c_across(where(is.numeric)), na.rm = T)) %>%  
-  dplyr::ungroup()
-  
-  
   recent_calib_50  <- score_case_all_s  %>%
-    filter(model %in% case_coverage_recent_models) %>% 
+    filter(model %in% models) %>% 
     filter(!is.na(score_value))  %>%
     filter(score_name %in% c("coverage_50")) %>%
     filter(target_end_date >= first_eval_sat) %>%  droplevels() %>%
@@ -2426,32 +2475,12 @@ case_countc_fcasts_historical <-  case_coverage_historical %>% group_by(model,sc
   dplyr::rowwise() %>% 
   dplyr::mutate(coverage_50 = mean(c_across(where(is.numeric)), na.rm = T)) %>%  
   dplyr::ungroup() 
- 
-
- 
-  historical_calib_95 <-  score_case_all_s  %>% 
-    filter(location %in% the_locations)   %>% #states, us and territories
-    filter(n_weeks >= 5 |  n_weeks_3wksPrior >= 2) %>% 
-    filter(!is.na(score_value))  %>%
-    filter(score_name %in% c("coverage_95")) %>%
-    select(model,horizon,score_value)  %>%
-    group_by(model,horizon) %>%
-    summarise(mean_PI95 = round(sum(score_value, na.rm = TRUE) / n(),2)) %>%  
-  ungroup()  %>% 
-  pivot_wider(names_from = "horizon",values_from = "mean_PI95")  %>% 
-  rename("1 wk 95% coverage" = "1", "2 wk 95% coverage" = "2", "3 wk 95% coverage" = "3", "4 wk 95% coverage" = "4" ) %>% 
-  dplyr::rowwise() %>% 
-  dplyr::mutate(coverage_95 = mean(c_across(where(is.numeric)), na.rm = T)) %>%  
-  dplyr::mutate(diff_95 = abs(0.95-coverage_95)) %>% 
-  dplyr::ungroup()
-  
   
   recent_calib_95  <- score_case_all_s  %>%
-    filter(model %in% case_coverage_recent_models) %>%
+    filter(model %in% models) %>%
     filter(!is.na(score_value))  %>%
     filter(score_name %in% c("coverage_95")) %>%
-    filter(target_end_date >= first_eval_sat) %>%  
-    droplevels() %>%
+    filter(target_end_date >= first_eval_sat) %>%  droplevels() %>%
     select(model,horizon,score_value)  %>%
     group_by(model,horizon) %>%
     summarise(mean_PI95 = round(sum(score_value, na.rm = TRUE) / n(),2)) %>%  
@@ -2462,6 +2491,69 @@ case_countc_fcasts_historical <-  case_coverage_historical %>% group_by(model,sc
   dplyr::mutate(coverage_95 = mean(c_across(where(is.numeric)), na.rm = T)) %>%  
   dplyr::mutate(diff_95 = abs(0.95-coverage_95)) %>% 
   dplyr::ungroup()
+    
+# HISTORICAL
+# at least 50% of historical coverage
+case_coverage_historical <- historical_coverage_filter(score_case_all_s)
+
+case_scores_historical <- case_coverage_historical %>%
+  filter(!is.na(score_value)) %>%
+  filter(n_locations >= 25) %>% 
+  filter(n_weeks >= 4) %>%
+  droplevels()
+
+# bring all timezeros to Saturday:
+case_scores_historical$timezero <- case_scores_historical$submission_sat 
+# restrict to 1-4 wk ahead state-level 
+scores_historical <- case_scores_historical %>% filter(horizon %in% paste(1:4), location %in% US_fips) %>%
+  filter(score_name %in% c("coverage_50", "coverage_95")) %>%
+  select("model", "timezero", "location", "horizon", "score_name", "score_value") %>%
+  pivot_wider(names_from = score_name, values_from = score_value) %>%
+  droplevels()
+
+# the included models:
+models_historical <- unique(scores_historical$model)
+
+#number of forecasts by model 
+case_countc_fcasts_historical <-  case_coverage_historical %>% group_by(model,score_name) %>%
+    summarise(n_forecasts_50 = sum(score_name == "coverage_50" & !is.na(score_value)),
+           n_forecasts_95 = sum(score_name == "coverage_95" & !is.na(score_value))) %>% ungroup() %>%
+  mutate(n_fcast = ifelse(n_forecasts_50 > 0, n_forecasts_50, n_forecasts_95)) %>%
+  group_by(model) %>%
+  summarise("# historical forecasts" = max(n_fcast)) 
+
+  
+  historical_calib_50 <-  score_case_all_s  %>% 
+  filter(model %in% models_historical) %>% 
+    filter(!is.na(score_value))  %>%
+    filter(score_name %in% c("coverage_50")) %>%
+    select(model,horizon,score_value,n_weeks)  %>%
+    group_by(model,horizon) %>%
+    summarise(mean_PI50 = round(sum(score_value, na.rm = TRUE) / n(),2)) %>%  
+  ungroup()  %>% 
+  pivot_wider(names_from = "horizon",values_from = "mean_PI50")  %>% 
+  rename("1 wk 50% coverage" = "1", "2 wk 50% coverage" = "2", "3 wk 50% coverage" = "3", "4 wk 50% coverage" = "4" ) %>% 
+  dplyr::rowwise() %>% 
+  dplyr::mutate(coverage_50 = mean(c_across(where(is.numeric)), na.rm = T)) %>%  
+  dplyr::ungroup()
+ 
+  historical_calib_95 <- score_case_all_s  %>% 
+  filter(model %in% models_historical) %>% 
+    filter(!is.na(score_value))  %>%
+    filter(score_name %in% c("coverage_95")) %>%
+    select(model,horizon,score_value)  %>%
+    group_by(model,horizon) %>%
+    summarise(mean_PI95 = round(sum(score_value, na.rm = TRUE) / n(),2)) %>%  
+  ungroup()  %>% 
+  pivot_wider(names_from = "horizon",values_from = "mean_PI95")  %>% 
+  rename("1 wk 95% coverage" = "1", "2 wk 95% coverage" = "2", "3 wk 95% coverage" = "3", "4 wk 95% coverage" = "4" ) %>% 
+  dplyr::rowwise() %>% 
+  dplyr::mutate(coverage_95 = mean(c_across(where(is.numeric)), na.rm = T)) %>%  
+  dplyr::mutate(diff_95 = abs(0.95-coverage_95)) %>% 
+  dplyr::ungroup()
+  
+  
+
   
   calibration_table  <- case_countc_fcasts_recent %>%
   full_join(recent_calib_50) %>%
@@ -2494,7 +2586,7 @@ calib_model_order_historical <- calibration_table_hist %>%   arrange(diff_95) %>
 
 ### Recent coverage
 
-This table only includes forecasts for the last `r n_weeks_eval` weeks, since `r format(first_eval_sat, "%B %d, %Y")`. For inclusion in this table,  a model must have contributed forecasts for 5 or more weeks total during this period, or have submitted forecasts during at least 2 out of the last 3 evaluated weeks. This inclusion criteria was applied in order to score models that submitted for a substantial amount of weeks at any point during the pandemic but may no longer be submitting, while also evaluating new teams that have recently joined our forecasting efforts. Some models have fewer evaluated forecasts because they did not submit for one or more weeks and/or, in weeks where they did submit, did not submit for every one of the 500 counties evaluated. The data are initially ordered by model based on their 95% PI coverage, aggregated across horizons, with the most accurate models at the top. 
+This table only includes forecasts for the last `r n_weeks_eval` weeks, since `r format(first_eval_sat, "%B %d, %Y")`. or inclusion in this table, the models must have submitted  at least 50% of forecasts during this time, where one forecast is a location, target, forecast date combination. The data are initially ordered by model based on their 95% PI coverage, aggregated across horizons, with the most accurate models at the top. 
 
 
 ```{r recent Leaderboard CASES coverage}
@@ -2532,7 +2624,7 @@ datatable(calibration_table1,
 
 ### Historical coverage
 
-This table only includes forecasts for the last `r n_weeks_history` weeks, since `r format(first_eval_sat_hist, "%B %d, %Y")`. For inclusion in this table, a model most have contributed forecasts for 5 or more weeks total during this period, or have submitted forecasts during at least 2 out of the last 3 evaluated weeks. This inclusion criteria was applied in order to score models that submitted for a substantial amount of weeks at any point during the pandemic but may no longer be submitting, while also evaluating new teams that have recently joined our forecasting efforts. The data are initially ordered by model based on their 95% PI coverage, aggregated across horizons, with the most accurate models at the top. 
+This table only includes forecasts for the last `r n_weeks_history` weeks, since `r format(first_eval_sat_hist, "%B %d, %Y")`. or inclusion in this table, the models must have submitted  at least 50% of forecasts during this time, where one forecast is a location, target, forecast date combination.  The data are initially ordered by model based on their 95% PI coverage, aggregated across horizons, with the most accurate models at the top. 
 
 
 ```{r historical Leaderboard CASES coverage}
@@ -3221,19 +3313,27 @@ To calculate each column in our table, different inclusion criteria were applied
 
 ```{r inclusion in coverage table recent county}
 
-#filter for inclusion in recent coverage table 
-#at least 5 weeks overall or at least 2 out of the last 3 weeks 
-  case_coverage_recent_models <- score_case_all_c  %>%     
-    filter(target_end_date >= first_eval_sat) %>% 
-    filter(n_weeks_10wksPrior >= 5 |  n_weeks_3wksPrior >= 2)  %>% 
-    group_by(model)  %>% 
-   summarize(Freq=n()) %>% 
-    pull(model)
+# RECENT
+# at least 50% of recent coverage
+case_coverage_recent <- recent_coverage_filter(score_case_all_c,first_eval_sat)
 
-#Filtered to include only models in scoreboard (coverage table) 
-#at least 5 weeks overall or at least 2 out of the last 3 weeks 
-case_coverage_recent <- recent_coverage_filter(score_case_all_c, case_coverage_recent_models)
-case_coverage_historical <- historical_coverage_filter(score_case_all_c)
+case_scores <- case_coverage_recent %>%
+  filter(!is.na(score_value)) %>%
+  filter(n_locations >= 25) %>% 
+  filter(n_weeks >= 4) %>%
+  droplevels()
+
+# bring all timezeros to Saturday:
+case_scores$timezero <- case_scores$submission_sat 
+# restrict to 1-4 wk ahead county-level 
+scores <- case_scores %>% filter(horizon %in% paste(1:4), location %in% county_fips) %>%
+  filter(score_name %in% c("coverage_50", "coverage_95")) %>%
+  select("model", "timezero", "location", "horizon", "score_name", "score_value") %>%
+  pivot_wider(names_from = score_name, values_from = score_value) %>%
+  droplevels()
+
+# the included models:
+models <- unique(scores$model)
 
 #number of forecasts by model 
 case_countc_fcasts_recent <-  case_coverage_recent %>% group_by(model,score_name) %>%
@@ -3243,6 +3343,60 @@ case_countc_fcasts_recent <-  case_coverage_recent %>% group_by(model,score_name
   group_by(model) %>%
   summarise("# recent forecasts" = max(n_fcast)) 
 
+  recent_calib_50  <- score_case_all_c  %>%
+    filter(model %in% models) %>% 
+    filter(!is.na(score_value))  %>%
+    filter(score_name %in% c("coverage_50")) %>%
+    filter(target_end_date >= first_eval_sat) %>%  droplevels() %>%
+    select(model,horizon,score_value)  %>%
+    group_by(model,horizon) %>%
+    summarise(mean_PI50 = round(sum(score_value, na.rm = TRUE) / n(),2)) %>%  
+  ungroup()  %>% 
+  pivot_wider(names_from = "horizon",values_from = "mean_PI50")  %>% 
+  rename("1 wk 50% coverage" = "1", "2 wk 50% coverage" = "2", "3 wk 50% coverage" = "3", "4 wk 50% coverage" = "4" ) %>% 
+  dplyr::rowwise() %>% 
+  dplyr::mutate(coverage_50 = mean(c_across(where(is.numeric)), na.rm = T)) %>%  
+  dplyr::ungroup() 
+  
+  recent_calib_95  <- score_case_all_c  %>%
+    filter(model %in% models) %>%
+    filter(!is.na(score_value))  %>%
+    filter(score_name %in% c("coverage_95")) %>%
+    filter(target_end_date >= first_eval_sat) %>%  droplevels() %>%
+    select(model,horizon,score_value)  %>%
+    group_by(model,horizon) %>%
+    summarise(mean_PI95 = round(sum(score_value, na.rm = TRUE) / n(),2)) %>%  
+  ungroup()  %>% 
+  pivot_wider(names_from = "horizon",values_from = "mean_PI95")  %>% 
+  rename("1 wk 95% coverage" = "1", "2 wk 95% coverage" = "2", "3 wk 95% coverage" = "3", "4 wk 95% coverage" = "4" ) %>% 
+  dplyr::rowwise() %>% 
+  dplyr::mutate(coverage_95 = mean(c_across(where(is.numeric)), na.rm = T)) %>%  
+  dplyr::mutate(diff_95 = abs(0.95-coverage_95)) %>% 
+  dplyr::ungroup()
+    
+# HISTORICAL
+# at least 50% of historical coverage
+case_coverage_historical <- historical_coverage_filter(score_case_all_c)
+
+case_scores_historical <- case_coverage_historical %>%
+  filter(!is.na(score_value)) %>%
+  filter(n_locations >= 25) %>% 
+  filter(n_weeks >= 4) %>%
+  droplevels()
+
+# bring all timezeros to Saturday:
+case_scores_historical$timezero <- case_scores_historical$submission_sat 
+# restrict to 1-4 wk ahead state-level 
+scores_historical <- case_scores_historical %>% filter(horizon %in% paste(1:4), location %in% county_fips) %>%
+  filter(score_name %in% c("coverage_50", "coverage_95")) %>%
+  select("model", "timezero", "location", "horizon", "score_name", "score_value") %>%
+  pivot_wider(names_from = score_name, values_from = score_value) %>%
+  droplevels()
+
+# the included models:
+models_historical <- unique(scores_historical$model)
+
+#number of forecasts by model 
 case_countc_fcasts_historical <-  case_coverage_historical %>% group_by(model,score_name) %>%
     summarise(n_forecasts_50 = sum(score_name == "coverage_50" & !is.na(score_value)),
            n_forecasts_95 = sum(score_name == "coverage_95" & !is.na(score_value))) %>% ungroup() %>%
@@ -3250,14 +3404,9 @@ case_countc_fcasts_historical <-  case_coverage_historical %>% group_by(model,sc
   group_by(model) %>%
   summarise("# historical forecasts" = max(n_fcast)) 
 
-  historical_coverage <-  score_case_all_c  %>% 
-    filter(n_weeks >= 5 |  n_weeks_3wksPrior >= 2) %>% 
-    filter(!is.na(score_value))  %>%
-    filter(score_name %in% c("coverage_50"))
-  
   
   historical_calib_50 <-  score_case_all_c  %>% 
-    filter(n_weeks >= 5 |  n_weeks_3wksPrior >= 2) %>% 
+  filter(model %in% models_historical) %>% 
     filter(!is.na(score_value))  %>%
     filter(score_name %in% c("coverage_50")) %>%
     select(model,horizon,score_value,n_weeks)  %>%
@@ -3269,44 +3418,9 @@ case_countc_fcasts_historical <-  case_coverage_historical %>% group_by(model,sc
   dplyr::rowwise() %>% 
   dplyr::mutate(coverage_50 = mean(c_across(where(is.numeric)), na.rm = T)) %>%  
   dplyr::ungroup()
-  
-  
-  
-  historical_coverage_filter <- function(x) {
-  x %>%
-    filter(n_weeks >= 5 |  n_weeks_3wksPrior >= 2) %>% 
-    filter(score_name %in% c("coverage_50")) %>%
-    filter(!is.na(score_value)) %>%  #remove NAs 
-    group_by(model, score_name) %>%
-    mutate(n_forecasts_50 = sum(score_name == "coverage_50" & !is.na(score_value)),
-           n_forecasts_95 = sum(score_name == "coverage_95" & !is.na(score_value))) %>% ungroup() %>%
-    droplevels()
-}
-  
-  
-  recent_calib_50  <- score_case_all_c  %>%
-    filter(model %in% case_coverage_recent_models) %>% 
-    filter(!is.na(score_value))  %>%
-    filter(score_name %in% c("coverage_50")) %>%
-     filter(target_end_date >= first_eval_sat) %>%  droplevels() %>%
-    droplevels() %>%
-    select(model,horizon,score_value)  %>%
-    group_by(model,horizon) %>%
-    summarise(mean_PI50 = round(sum(score_value, na.rm = TRUE) / n(),2)) %>%  
-  ungroup()  %>% 
-  pivot_wider(names_from = "horizon",values_from = "mean_PI50")  %>% 
-  rename("1 wk 50% coverage" = "1", "2 wk 50% coverage" = "2", "3 wk 50% coverage" = "3", "4 wk 50% coverage" = "4" ) %>% 
-  dplyr::rowwise() %>% 
-  dplyr::mutate(coverage_50 = mean(c_across(where(is.numeric)), na.rm = T)) %>%  
-  dplyr::ungroup() 
  
-  
-
-    
-    
-    
-  historical_calib_95 <-  score_case_all_c  %>% 
-    filter(n_weeks >= 5 |  n_weeks_3wksPrior >= 2) %>% 
+  historical_calib_95 <- score_case_all_c  %>% 
+  filter(model %in% models_historical) %>% 
     filter(!is.na(score_value))  %>%
     filter(score_name %in% c("coverage_95")) %>%
     select(model,horizon,score_value)  %>%
@@ -3321,22 +3435,6 @@ case_countc_fcasts_historical <-  case_coverage_historical %>% group_by(model,sc
   dplyr::ungroup()
   
   
-  recent_calib_95  <- score_case_all_c  %>%
-    filter(model %in% case_coverage_recent_models) %>% 
-    filter(!is.na(score_value))  %>%
-    filter(score_name %in% c("coverage_95")) %>%
-     filter(target_end_date >= first_eval_sat) %>%  droplevels() %>%
-    droplevels() %>%
-    select(model,horizon,score_value)  %>%
-    group_by(model,horizon) %>%
-    summarise(mean_PI95 = round(sum(score_value, na.rm = TRUE) / n(),2)) %>%  
-  ungroup()  %>% 
-  pivot_wider(names_from = "horizon",values_from = "mean_PI95")  %>% 
-  rename("1 wk 95% coverage" = "1", "2 wk 95% coverage" = "2", "3 wk 95% coverage" = "3", "4 wk 95% coverage" = "4" ) %>% 
-  dplyr::rowwise() %>% 
-  dplyr::mutate(coverage_95 = mean(c_across(where(is.numeric)), na.rm = T)) %>%  
-  dplyr::mutate(diff_95 = abs(0.95-coverage_95)) %>% 
-  dplyr::ungroup()
   
   calibration_table  <- case_countc_fcasts_recent %>%
   full_join(recent_calib_50) %>%

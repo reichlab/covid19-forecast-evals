@@ -153,12 +153,11 @@ historical_accuracy_filter <- function(x) {
 ##Filter for inclusion in historical coverage 
 historical_coverage_filter <- function(x) {
   x %>%
-    filter(n_weeks >= 5 |  n_weeks_3wksPrior >= 2) %>% 
-    filter(score_name %in% c("coverage_50")) %>%
     filter(!is.na(score_value)) %>%  #remove NAs 
     group_by(model, score_name) %>%
     mutate(n_forecasts_50 = sum(score_name == "coverage_50" & !is.na(score_value)),
            n_forecasts_95 = sum(score_name == "coverage_95" & !is.na(score_value))) %>% ungroup() %>%
+    filter(n_forecasts_50 >= (max(n_forecasts_50)*0.5) | n_forecasts_95 >= (max(n_forecasts_95)*0.5)) %>% 
     droplevels()
 }
 
@@ -178,13 +177,12 @@ recent_accuracy_filter <- function(x,y) {
 #filter for inclusion in recent coverage table 
 recent_coverage_filter <- function(x,y) {
   x %>%
-    filter(model %in% y) %>%
-    filter(score_name %in% c("coverage_50")) %>%
-    filter(!is.na(score_value)) %>%  #remove NAs
-    filter(target_end_date >= first_eval_sat) %>% 
+    filter(!is.na(score_value)) %>%  #remove NAs 
+    filter(target_end_date >= y) %>% #
     group_by(model, score_name) %>%
     mutate(n_forecasts_50 = sum(score_name == "coverage_50" & !is.na(score_value)),
            n_forecasts_95 = sum(score_name == "coverage_95" & !is.na(score_value))) %>% ungroup() %>%
+    filter(n_forecasts_50 >= (max(n_forecasts_50)*0.5) | n_forecasts_95 >= (max(n_forecasts_95)*0.5)) %>% 
     droplevels()
 }
 
