@@ -947,9 +947,9 @@ wis_barplot_function(score_inc_all_ohio, y = pairwise_scores, order = inc_model_
 
 ## Evaluation by Week  {.tabset .tabset-fade}
 
-In the following figures, we have evaluated models across multiple forecasting weeks. Points included in this comparison are for models that have submitted probabilistic forecasts for all 50 states. 
+In the following figures, we have evaluated models across multiple forecasting weeks. Points included in this comparison are for models that have submitted probabilistic forecasts for all 50 states. The models in the legend with a dot and line have scores for every week.  The models with just a line are missing scores for at least one week.
 
-For the first 2 figures, WIS is used as a metric. The first figure shows the mean WIS across all 50 states for submission weeks beginning `r format(first_eval_sat_hist, "%B %d, %Y")` at a 1 week horizon. The second figure shows the mean WIS aggregated across locations, however it is for a 4 week horizon.
+For the first 2 figures, WIS is used as a metric. The first figure shows the mean WIS across all 50 states for submission weeks beginning `r format(first_eval_sat_hist, "%B %d, %Y")` at a 1 week horizon. The second figure shows the mean WIS aggregated across locations, however it is for a 4 week horizon.  
 
 
 
@@ -1823,7 +1823,7 @@ wis_barplot_function(x = score_hosp_all, y = pairwise_scores, order = hosp_model
 
 ## Evaluation by Week  {.tabset .tabset-fade}
 
-In the following figures, we have evaluated models across multiple forecasting weeks. Points included in this comparison are for models that have submitted probabilistic forecasts for all 50 states. 
+In the following figures, we have evaluated models across multiple forecasting weeks. Points included in this comparison are for models that have submitted probabilistic forecasts for all 50 states. The models in the legend with a dot and line have scores for every week.  The models with just a line are missing scores for at least one week. 
 
 For the first 2 figures, WIS is used as a metric. The first figure shows the mean WIS across all 50 states for submission weeks beginning `r format(first_eval_sat_hist, "%B %d, %Y")` at a 1 week horizon. The second figure shows the mean WIS aggregated across locations, however it is for a 4 week horizon.  Since hospitalization forecasts are made at the daily timescale, computations for a given "week" are computed by averaging scores for the daily forecasts from Tuesday through Monday.
 
@@ -2736,7 +2736,7 @@ wis_barplot_function(x = score_case_all_s, y = pairwise_scores, order = case_mod
 
 ## Evaluation by Week  {.tabset .tabset-fade}
 
-In the following figures, we have evaluated models across multiple forecasting weeks. Points included in this comparison are for models that have submitted probabilistic forecasts for all 50 states. 
+In the following figures, we have evaluated models across multiple forecasting weeks. Points included in this comparison are for models that have submitted probabilistic forecasts for all 50 states. The models in the legend with a dot and line have scores for every week.  The models with just a line are missing scores for at least one week.
 
 For the first 2 figures, WIS is used as a metric. The first figure shows the mean WIS across all 50 states for submission weeks beginning `r format(first_eval_sat_hist, "%B %d, %Y")` at a 1 week horizon. The second figure shows the mean WIS aggregated across locations, however it is for a 4 week horizon.
 
@@ -3640,7 +3640,7 @@ wis_barplot_function(x = score_case_all_c, y = pairwise_scores, order = case_mod
 
 ## Evaluation by Week  {.tabset .tabset-fade}
 
-In the following figures, we have evaluated models across multiple forecasting weeks. Points included in this comparison are for models that have submitted probabilistic forecasts for all 500 counties. 
+In the following figures, we have evaluated models across multiple forecasting weeks. Points included in this comparison are for models that have submitted probabilistic forecasts for all 500 counties. The models in the legend with a dot and line have scores for every week.  The models with just a line are missing scores for at least one week.
 
 For the first 2 figures, WIS is used as a metric. The first figure shows the mean WIS across all 500 counties for submission weeks beginning `r format(first_eval_sat_hist, "%B %d, %Y")` at a 1 week horizon. The second figure shows the mean WIS aggregated across locations, however it is for a 4 week horizon.
 
