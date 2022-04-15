@@ -121,20 +121,17 @@ pairwise_comparison <- function(scores, mx, my, subset = rep(TRUE, nrow(scores))
 
 #Filter WIS by week 
 #Filter WIS by week 
-by_week_function <- function(df, var) {
+by_week_function <- function(df, var, loc, nloc) {
   df %>%
-    filter(score_name == var) %>%
+    filter(score_name == var & location %in% loc) %>%
     # Calculate the number of US locations forecasted for each combination of
     # model, target_end_date, horizon
     group_by(model, target_end_date, horizon) %>%
     mutate(n_US_location = n()) %>%
-    # Keep only those models that forecasted the maximum number of locations
-    # forecasted by any model for each target_end_date and horizon combination
-    # Note that the baseline model produces forecasts for all locations, so
-    # This is effectively all available locations
+    # Keep only those models that forecasted probabilistic forecasts for all 50 states
     ungroup() %>%
     group_by(target_end_date, horizon) %>%
-    filter(n_US_location == max(n_US_location)) %>%
+    filter(n_US_location==nloc) %>%
     # Calculate the mean score for each combination of model, target_end_date, horizon
     group_by(model,horizon, target_end_date) %>%
     summarise(mean_score = mean(score_value))
@@ -514,7 +511,9 @@ wis_barplot_function <- function(x,y,order) {
     ungroup() %>%
     droplevels()  %>%
     filter(model %in% y$model) %>%
-    mutate(model = fct_relevel(model, order))
+    mutate(score_name=factor(score_name,c("overprediction","dispersion","underprediction")),
+           model = fct_relevel(model, order)) %>%
+    arrange(model,score_name)
   
   ggplot(wis_plot, aes(fill=score_name, y=mean_values, x=model)) + 
     geom_bar(position="stack", stat="identity", width = .75) +
