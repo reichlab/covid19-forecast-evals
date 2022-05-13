@@ -191,6 +191,7 @@ recent_coverage_filter <- function(x,y) {
 # plot_n_location: Plot number of locations
 # plot_truth: Plot truth data at US level
 # wis_barplot_function: WIS barplot function
+# wis_barplot_function_c: WIS barplot function (control ylim)
 
 #Plot average MAE by location
 plot_by_location_mae <- function(df) {
@@ -523,7 +524,29 @@ wis_barplot_function <- function(x,y,order) {
     labs(y = "WIS components")
 }
 
-
+#WIS barplot function_c (control ylim)
+wis_barplot_function_c <- function(x,y,order,ylim) {
+  wis_plot <- x %>% 
+    filter(target_end_date >= first_eval_sat) %>%
+    filter(score_name %in% c("dispersion","overprediction", "underprediction")) %>% 
+    group_by(model, score_name) %>% 
+    summarise(mean_values = mean(score_value,na.rm = T)) %>% 
+    mutate(n_forecasts = n()) %>%
+    ungroup() %>%
+    droplevels()  %>%
+    filter(model %in% y$model) %>%
+    mutate(score_name=factor(score_name,c("overprediction","dispersion","underprediction")),
+           model = fct_relevel(model, order)) %>%
+    arrange(model,score_name)
+  
+  ggplot(wis_plot, aes(fill=score_name, y=mean_values, x=model)) + 
+    geom_bar(position="stack", stat="identity", width = .75) +
+    coord_cartesian(ylim=c(0, 400)) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 12),
+          legend.title = element_blank(),
+          axis.title.x =  element_blank()) +
+    labs(y = "WIS components")
+}
 
 
 

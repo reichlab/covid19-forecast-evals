@@ -941,7 +941,8 @@ The data in this graph has been aggregated over all locations and submission wee
 The sum of the bars adds up to the WIS score. Of note, these values may not be exactly the same as the relative WIS scores shown in the leaderboard table because these are not adjusted for weeks or locations missing.  The data are ordered on the x axis based on their relative WIS score shown in the accuracy table, aggregated across horizons.  
 
 ```{r wis bar function DEATHS, fig.height=8, fig.width=13}
-wis_barplot_function(score_inc_all_ohio, y = pairwise_scores, order = inc_model_order)
+
+wis_barplot_function_c(score_inc_all_ohio, y = pairwise_scores, order = inc_model_order, ylim=400)
 ```
 
 
