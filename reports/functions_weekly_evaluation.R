@@ -491,7 +491,7 @@ plot_truth <- function(dat,tar) {
     #geom_line(color = "black") +
     geom_point() +
     geom_line(color = "black") +
-    scale_x_date(name = NULL, date_breaks="4 month", date_labels = "%b %d") +
+    scale_x_date(name = NULL, date_breaks="4 month", date_labels = "%b %y") +
     ylab("incident cases") +
     labs(title = paste(tar),
          caption="source: JHU CSSE (observed data)")+
@@ -541,7 +541,7 @@ wis_barplot_function_c <- function(x,y,order,ylim) {
   
   ggplot(wis_plot, aes(fill=score_name, y=mean_values, x=model)) + 
     geom_bar(position="stack", stat="identity", width = .75) +
-    coord_cartesian(ylim=c(0, 400)) +
+    coord_cartesian(ylim=c(0, ylim)) +
     theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 12),
           legend.title = element_blank(),
           axis.title.x =  element_blank()) +
