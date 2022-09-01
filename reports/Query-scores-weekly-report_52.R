@@ -549,6 +549,9 @@ forecasts_hosp_update <- rbind(forecasts_hosp_x1_update,forecasts_hosp_x2_update
 save(forecasts_hosp_update, file = "reports/forecasts_hosp_update.rda")
 
 #score forecasts
+########################
+#RESTART RSTUDIO
+########################
 memory.limit(30000)
 load(file = "reports/forecasts_hosp_update.rda")
 load( file = "reports/truth_dat_hosp.rda")

@@ -502,6 +502,29 @@ plot_truth <- function(dat,tar) {
 }
 
 #WIS barplot function
+# wis_barplot_function <- function(x,y,order) {
+#   wis_plot <- x %>% 
+#     filter(target_end_date >= first_eval_sat) %>%
+#     filter(score_name %in% c("dispersion","overprediction", "underprediction")) %>% 
+#     group_by(model, score_name) %>% 
+#     summarise(mean_values = mean(score_value,na.rm = T)) %>% 
+#     mutate(n_forecasts = n()) %>%
+#     ungroup() %>%
+#     droplevels()  %>%
+#     filter(model %in% y$model) %>%
+#     mutate(score_name=factor(score_name,c("overprediction","dispersion","underprediction")),
+#            model = fct_relevel(model, order)) %>%
+#     arrange(model,score_name)
+#   
+#   ggplot(wis_plot, aes(fill=score_name, y=mean_values, x=model)) + 
+#     geom_bar(position="stack", stat="identity", width = .75) +
+#     theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 12),
+#           legend.title = element_blank(),
+#           axis.title.x =  element_blank()) +
+#     labs(y = "WIS components")
+# }
+
+#WIS barplot function (control ylim)
 wis_barplot_function <- function(x,y,order) {
   wis_plot <- x %>% 
     filter(target_end_date >= first_eval_sat) %>%
@@ -516,28 +539,11 @@ wis_barplot_function <- function(x,y,order) {
            model = fct_relevel(model, order)) %>%
     arrange(model,score_name)
   
-  ggplot(wis_plot, aes(fill=score_name, y=mean_values, x=model)) + 
-    geom_bar(position="stack", stat="identity", width = .75) +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 12),
-          legend.title = element_blank(),
-          axis.title.x =  element_blank()) +
-    labs(y = "WIS components")
-}
-
-#WIS barplot function_c (control ylim)
-wis_barplot_function_c <- function(x,y,order,ylim) {
-  wis_plot <- x %>% 
-    filter(target_end_date >= first_eval_sat) %>%
-    filter(score_name %in% c("dispersion","overprediction", "underprediction")) %>% 
-    group_by(model, score_name) %>% 
-    summarise(mean_values = mean(score_value,na.rm = T)) %>% 
-    mutate(n_forecasts = n()) %>%
-    ungroup() %>%
-    droplevels()  %>%
-    filter(model %in% y$model) %>%
-    mutate(score_name=factor(score_name,c("overprediction","dispersion","underprediction")),
-           model = fct_relevel(model, order)) %>%
-    arrange(model,score_name)
+  #find yaxis limit
+  wis_plot1 <- wis_plot %>% 
+    group_by(model) %>% 
+    summarise(sum_values = sum(mean_values,na.rm = T))
+  ylim<-round(quantile(wis_plot1$sum_values,probs=0.95, na.rm = TRUE),digits=-1)
   
   ggplot(wis_plot, aes(fill=score_name, y=mean_values, x=model)) + 
     geom_bar(position="stack", stat="identity", width = .75) +

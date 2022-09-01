@@ -184,7 +184,7 @@ hosp_accuracy_historical <- historical_accuracy_filter(score_hosp_all)
 
 
 # Overview
-This report provides an evaluation of the accuracy and precision of probabilistic forecasts of COVID-19 cases and deaths submitted to the [US COVID-19 Forecast Hub](https://covid19forecasthub.org/). Some analyses include forecasts submitted in the past six months, starting in `r format(first_eval_sat_hist, "%B %d, %Y")`. Others focus on evaluating "recent" forecasts, submitted only in the last `r n_weeks_eval` weeks. 
+This report provides an evaluation of the accuracy and precision of probabilistic forecasts of COVID-19 cases and deaths submitted to the [US COVID-19 Forecast Hub](https://covid19forecasthub.org/). Some analyses include forecasts submitted in the past twelve months, starting in `r format(first_eval_sat_hist, "%B %d, %Y")`. Others focus on evaluating "recent" forecasts, submitted only in the last `r n_weeks_eval` weeks. 
 
 <!-- The forecasts evaluated were submitted during the time period from `r format(first_submission_date, "%B %d, %Y")` through `r format(last_submission_date, "%B %d, %Y")`. The revision dates of this data was calculated as of `r today()`.
 In this weekly report we are evaluating forecasts made in 57 different locations (US on a national level, 50 states, and 6 territories), for 4 horizons over `r n_weeks_eval` submission weeks. We are evaluating incident cases, and incident deaths. 
@@ -703,10 +703,11 @@ To calculate each column in our table, different inclusion criteria were applied
 
 * Columns 7 through 10 calculate the adjusted relative MAE over the most recent `r n_weeks_history` week period by horizon. 
 
-
+```{r increase mempry limit to 30000, results='hide'}
+memory.limit(30000)
+```
 
 ```{r inclusion in coverage table recent: DEATHS}
-memory.limit(30000)
 # RECENT
 # at least 50% of recent coverage
 inc_coverage_recent <- recent_coverage_filter(score_inc_all_ohio,first_eval_sat)
@@ -863,7 +864,7 @@ calib_model_order_historical <- calibration_table_hist %>%   arrange(diff_95) %>
 
 ### Recent coverage
 
-This table only includes forecasts for the last `r n_weeks_eval` weeks, since `r format(first_eval_sat, "%B %d, %Y")`. For inclusion in this table, the models must have submitted  at least 50% of forecasts during this time, where one forecast is a location, target, forecast date combination.  The data are initially ordered by model based on their 95% PI coverage, aggregated across horizons, with the most accurate models at the top. 
+This table only includes forecasts for the last `r n_weeks_eval` weeks, since `r format(first_eval_sat, "%B %d, %Y")`. For inclusion in this table, the models must have submitted  at least 50% of forecasts during this time, where one forecast is a location, target, forecast date combination.  The data are initially ordered by model based on their 95% PI coverage,  with the most accurate models aggregated across horizons at the top. 
 
 ```{r recent Leaderboard DEATHS coverage}
 
@@ -898,7 +899,7 @@ datatable(calibration_table1,
 
 ### Historical coverage
 
-This table only includes forecasts for the last `r n_weeks_history` weeks, since `r format(first_eval_sat_hist, "%B %d, %Y")`. For inclusion in this table, the models must have submitted  at least 50% of forecasts during this time, where one forecast is a location, target, forecast date combination. The data are initially ordered by model based on their 95% PI coverage, aggregated across horizons, with the most accurate models at the top. 
+This table only includes forecasts for the last `r n_weeks_history` weeks, since `r format(first_eval_sat_hist, "%B %d, %Y")`. For inclusion in this table, the models must have submitted  at least 50% of forecasts during this time, where one forecast is a location, target, forecast date combination.  The data are initially ordered by model based on their 95% PI coverage,  with the most accurate models aggregated across horizons at the top. 
 
 
 ```{r historical Leaderboard DEATHS coverage}
@@ -937,11 +938,11 @@ datatable(calibration_table_hist1,
 
 The data in this graph has been aggregated over all locations and submission weeks. We only included forecasts for the last 10 weeks. The models included have submitted  at least 50% of forecasts during this time, where one forecast is a location, target, forecast date combination. This is the same exclusion criteria applied for WIS scores in the recent evaluation period. 
 
-The sum of the bars adds up to the WIS score. Of note, these values may not be exactly the same as the relative WIS scores shown in the leaderboard table because these are not adjusted for weeks or locations missing.  The data are ordered on the x axis based on their relative WIS score shown in the accuracy table, aggregated across horizons.  
+The sum of the bars adds up to the WIS score. Of note, these values may not be exactly the same as the relative WIS scores shown in the leaderboard table because these are not adjusted for weeks or locations missing.  The data are ordered on the x axis based on their relative WIS score shown in the accuracy table, aggregated across horizons.  The y axis is truncated at 95th percentile of the sum of the bars across models, rounded up to the nearest 10.
 
 ```{r wis bar function DEATHS, fig.height=8, fig.width=13}
 
-wis_barplot_function_c(score_inc_all_ohio, y = pairwise_scores, order = inc_model_order, ylim=300)
+wis_barplot_function(score_inc_all_ohio, y = pairwise_scores, order = inc_model_order)
 ```
 
 
@@ -949,7 +950,7 @@ wis_barplot_function_c(score_inc_all_ohio, y = pairwise_scores, order = inc_mode
 
 In the following figures, we have evaluated models across multiple forecasting weeks. Points included in this comparison are for models that have submitted probabilistic forecasts for all 50 states. The models in the legend with a dot and line have scores for every week.  The models with just a line are missing scores for at least one week.
 
-For the first 2 figures, WIS is used as a metric. The first figure shows the mean WIS across all 50 states for submission weeks beginning `r format(first_eval_sat_hist, "%B %d, %Y")` at a 1 week horizon. The second figure shows the mean WIS aggregated across locations, however it is for a 4 week horizon.  
+For the first 2 figures, WIS is used as a metric, WIS is used as a metric, with the y axis truncated at the 97.5 percentile of the average WIS, with the y axis truncated at the 97.5 percentile of the average WIS. The first figure shows the mean WIS across all 50 states for submission weeks beginning `r format(first_eval_sat_hist, "%B %d, %Y")` at a 1 week horizon. The second figure shows the mean WIS aggregated across locations, however it is for a 4 week horizon.  
 
 
 
@@ -1729,7 +1730,7 @@ calib_model_order_historical <- calibration_table_hist %>%   arrange(diff_95) %>
 
 ### Recent coverage
 
-This table only includes forecasts for the last `r n_weeks_eval` weeks, since `r format(first_eval_sat, "%B %d, %Y")`.  For inclusion in this table, the models must have submitted  at least 50% of forecasts during this time, where one forecast is a location, target, forecast date combination.  The data are initially ordered by model based on their 95% PI coverage, aggregated across horizons, with the most accurate models at the top. 
+This table only includes forecasts for the last `r n_weeks_eval` weeks, since `r format(first_eval_sat, "%B %d, %Y")`.  For inclusion in this table, the models must have submitted  at least 50% of forecasts during this time, where one forecast is a location, target, forecast date combination.  The data are initially ordered by model based on their 95% PI coverage,  with the most accurate models aggregated across horizons at the top.  
 
 
 ```{r recent Leaderboard HOSP coverage}
@@ -1766,7 +1767,7 @@ datatable(calibration_table1,
 
 ### Historical coverage
 
-This table only includes forecasts for the last `r n_weeks_history` weeks, since `r format(first_eval_sat_hist, "%B %d, %Y")`.  For inclusion in this table, the models must have submitted  at least 50% of forecasts during this time, where one forecast is a location, target, forecast date combination.  The data are initially ordered by model based on their 95% PI coverage, aggregated across horizons, with the most accruate models at the top. 
+This table only includes forecasts for the last `r n_weeks_history` weeks, since `r format(first_eval_sat_hist, "%B %d, %Y")`.  For inclusion in this table, the models must have submitted  at least 50% of forecasts during this time, where one forecast is a location, target, forecast date combination.   The data are initially ordered by model based on their 95% PI coverage,  with the most accurate models aggregated across horizons at the top. 
 
 
 ```{r historical Leaderboard HOSP coverage}
@@ -1807,7 +1808,7 @@ datatable(calibration_table_hist1,
 
 The data in this graph has been aggregated over all locations and submission weeks. We only included forecasts for the last 10 weeks. The models included have submitted  at least 50% of forecasts during this time. This is the same exclusion criteria applied for WIS scores in the recent evaluation period. 
 
-The sum of the bars adds up to the WIS score. Of note, these values may not be exactly the same as the relative WIS scores shown in the leaderboard table because these are not adjusted for weeks or locations missing.  The data are ordered on the x axis based on their relative WIS score shown in the accuracy table, aggregated across horizons. 
+The sum of the bars adds up to the WIS score. Of note, these values may not be exactly the same as the relative WIS scores shown in the leaderboard table because these are not adjusted for weeks or locations missing.  The data are ordered on the x axis based on their relative WIS score shown in the accuracy table, aggregated across horizons. The y axis is truncated at 95th percentile of the sum of the bars across models, rounded up to the nearest 10.
 
 
 ```{r wis bar function HOSP, fig.height= 8, fig.width=13}
@@ -1825,7 +1826,7 @@ wis_barplot_function(x = score_hosp_all, y = pairwise_scores, order = hosp_model
 
 In the following figures, we have evaluated models across multiple forecasting weeks. Points included in this comparison are for models that have submitted probabilistic forecasts for all 50 states. The models in the legend with a dot and line have scores for every week.  The models with just a line are missing scores for at least one week. 
 
-For the first 2 figures, WIS is used as a metric. The first figure shows the mean WIS across all 50 states for submission weeks beginning `r format(first_eval_sat_hist, "%B %d, %Y")` at a 1 week horizon. The second figure shows the mean WIS aggregated across locations, however it is for a 4 week horizon.  Since hospitalization forecasts are made at the daily timescale, computations for a given "week" are computed by averaging scores for the daily forecasts from Tuesday through Monday.
+For the first 2 figures, WIS is used as a metric, WIS is used as a metric, with the y axis truncated at the 97.5 percentile of the average WIS. The first figure shows the mean WIS across all 50 states for submission weeks beginning `r format(first_eval_sat_hist, "%B %d, %Y")` at a 1 week horizon. The second figure shows the mean WIS aggregated across locations, however it is for a 4 week horizon.  Since hospitalization forecasts are made at the daily timescale, computations for a given "week" are computed by averaging scores for the daily forecasts from Tuesday through Monday.
 
 
 ### 1 Week Horizon WIS
@@ -2640,7 +2641,7 @@ calib_model_order_historical <- calibration_table_hist %>%   arrange(diff_95) %>
 
 ### Recent coverage
 
-This table only includes forecasts for the last `r n_weeks_eval` weeks, since `r format(first_eval_sat, "%B %d, %Y")`. or inclusion in this table, the models must have submitted  at least 50% of forecasts during this time, where one forecast is a location, target, forecast date combination. The data are initially ordered by model based on their 95% PI coverage, aggregated across horizons, with the most accurate models at the top. 
+This table only includes forecasts for the last `r n_weeks_eval` weeks, since `r format(first_eval_sat, "%B %d, %Y")`. or inclusion in this table, the models must have submitted  at least 50% of forecasts during this time, where one forecast is a location, target, forecast date combination.  The data are initially ordered by model based on their 95% PI coverage,  with the most accurate models aggregated across horizons at the top. 
 
 
 ```{r recent Leaderboard caseS coverage}
@@ -2678,7 +2679,7 @@ datatable(calibration_table1,
 
 ### Historical coverage
 
-This table only includes forecasts for the last `r n_weeks_history` weeks, since `r format(first_eval_sat_hist, "%B %d, %Y")`. or inclusion in this table, the models must have submitted  at least 50% of forecasts during this time, where one forecast is a location, target, forecast date combination.  The data are initially ordered by model based on their 95% PI coverage, aggregated across horizons, with the most accurate models at the top. 
+This table only includes forecasts for the last `r n_weeks_history` weeks, since `r format(first_eval_sat_hist, "%B %d, %Y")`. or inclusion in this table, the models must have submitted  at least 50% of forecasts during this time, where one forecast is a location, target, forecast date combination.   The data are initially ordered by model based on their 95% PI coverage,  with the most accurate models aggregated across horizons at the top. 
 
 
 ```{r historical Leaderboard caseS coverage}
@@ -2719,7 +2720,7 @@ datatable(calibration_table_hist1,
 
 The data in this graph has been aggregated over all locations and submission weeks. We only included forecasts for the last 10 weeks. The models included have submitted  at least 50% of forecasts during this time, where one forecast is a location, target, forecast date combination. This is the same exclusion criteria applied for WIS scores in the recent evaluation period. 
 
-The sum of the bars adds up to the WIS score. Of note, these values may not be exactly the same as the relative WIS scores shown in the leaderboard table because these are not adjusted for weeks or locations missing.  The data are ordered on the x axis based on their relative WIS score shown in the accuracy table, aggregated across horizons. 
+The sum of the bars adds up to the WIS score. Of note, these values may not be exactly the same as the relative WIS scores shown in the leaderboard table because these are not adjusted for weeks or locations missing.  The data are ordered on the x axis based on their relative WIS score shown in the accuracy table, aggregated across horizons. The y axis is truncated at 95th percentile of the sum of the bars across models, rounded up to the nearest 10.
 
 
 
@@ -2738,7 +2739,7 @@ wis_barplot_function(x = score_case_all_s, y = pairwise_scores, order = case_mod
 
 In the following figures, we have evaluated models across multiple forecasting weeks. Points included in this comparison are for models that have submitted probabilistic forecasts for all 50 states. The models in the legend with a dot and line have scores for every week.  The models with just a line are missing scores for at least one week.
 
-For the first 2 figures, WIS is used as a metric. The first figure shows the mean WIS across all 50 states for submission weeks beginning `r format(first_eval_sat_hist, "%B %d, %Y")` at a 1 week horizon. The second figure shows the mean WIS aggregated across locations, however it is for a 4 week horizon.
+For the first 2 figures, WIS is used as a metric, WIS is used as a metric, with the y axis truncated at the 97.5 percentile of the average WIS. The first figure shows the mean WIS across all 50 states for submission weeks beginning `r format(first_eval_sat_hist, "%B %d, %Y")` at a 1 week horizon. The second figure shows the mean WIS aggregated across locations, however it is for a 4 week horizon.
 
 
 
@@ -3546,7 +3547,7 @@ calib_model_order_historical <- calibration_table_hist %>%   arrange(diff_95) %>
 
 ### Recent coverage
 
-This table only includes forecasts for the last `r n_weeks_eval` weeks, since `r format(first_eval_sat, "%B %d, %Y")`. For inclusion in this table,  a model must have contributed forecasts for 5 or more weeks total during this period, or have submitted forecasts during at least 2 out of the last 3 evaluated weeks. This inclusion criteria was applied in order to score models that submitted for a substantial amount of weeks at any point during the pandemic but may no longer be submitting, while also evaluating new teams that have recently joined our forecasting efforts. Some models have fewer evaluated forecasts because they did not submit for one or more weeks and/or, in weeks where they did submit, did not submit for every one of the 500 counties evaluated. The data are initially ordered by model based on their 95% PI coverage, aggregated across horizons, with the most accurate models at the top. 
+This table only includes forecasts for the last `r n_weeks_eval` weeks, since `r format(first_eval_sat, "%B %d, %Y")`. For inclusion in this table,  a model must have contributed forecasts for 5 or more weeks total during this period, or have submitted forecasts during at least 2 out of the last 3 evaluated weeks. This inclusion criteria was applied in order to score models that submitted for a substantial amount of weeks at any point during the pandemic but may no longer be submitting, while also evaluating new teams that have recently joined our forecasting efforts. Some models have fewer evaluated forecasts because they did not submit for one or more weeks and/or, in weeks where they did submit, did not submit for every one of the 500 counties evaluated.  The data are initially ordered by model based on their 95% PI coverage,  with the most accurate models aggregated across horizons at the top.  
 
 
 ```{r recent Leaderboard caseS coverage county}
@@ -3583,7 +3584,7 @@ datatable(calibration_table1,
 
 ### Historical coverage
 
-This table only includes forecasts for the last `r n_weeks_history` weeks, since `r format(first_eval_sat_hist, "%B %d, %Y")`. For inclusion in this table, a model most have contributed forecasts for 5 or more weeks total during this period, or have submitted forecasts during at least 2 out of the last 3 evaluated weeks. This inclusion criteria was applied in order to score models that submitted for a substantial amount of weeks at any point during the pandemic but may no longer be submitting, while also evaluating new teams that have recently joined our forecasting efforts. The data are initially ordered by model based on their 95% PI coverage, aggregated across horizons, with the most accurate models at the top. 
+This table only includes forecasts for the last `r n_weeks_history` weeks, since `r format(first_eval_sat_hist, "%B %d, %Y")`. For inclusion in this table, a model most have contributed forecasts for 5 or more weeks total during this period, or have submitted forecasts during at least 2 out of the last 3 evaluated weeks. This inclusion criteria was applied in order to score models that submitted for a substantial amount of weeks at any point during the pandemic but may no longer be submitting, while also evaluating new teams that have recently joined our forecasting efforts.  The data are initially ordered by model based on their 95% PI coverage,  with the most accurate models aggregated across horizons at the top.  
 
 
 ```{r historical Leaderboard caseS coverage county}
@@ -3623,7 +3624,7 @@ datatable(calibration_table_hist1,
 
 The data in this graph has been aggregated over all locations and submission weeks. We only included forecasts for the last 10 weeks. The models included have submitted  at least 50% of forecasts during this time, where one forecast is a location, target, forecast date combination. This is the same exclusion criteria applied for WIS scores in the recent evaluation period. 
 
-The sum of the bars adds up to the WIS score. Of note, these values may not be exactly the same as the relative WIS scores shown in the leaderboard table because these are not adjusted for weeks or locations missing.  The data are ordered on the x axis based on their relative WIS score shown in the accuracy table, aggregated across horizons. 
+The sum of the bars adds up to the WIS score. Of note, these values may not be exactly the same as the relative WIS scores shown in the leaderboard table because these are not adjusted for weeks or locations missing.  The data are ordered on the x axis based on their relative WIS score shown in the accuracy table, aggregated across horizons. The y axis is truncated at 95th percentile of the sum of the bars across models, rounded up to the nearest 10.
 
 
 
@@ -3642,7 +3643,7 @@ wis_barplot_function(x = score_case_all_c, y = pairwise_scores, order = case_mod
 
 In the following figures, we have evaluated models across multiple forecasting weeks. Points included in this comparison are for models that have submitted probabilistic forecasts for all 500 counties. The models in the legend with a dot and line have scores for every week.  The models with just a line are missing scores for at least one week.
 
-For the first 2 figures, WIS is used as a metric. The first figure shows the mean WIS across all 500 counties for submission weeks beginning `r format(first_eval_sat_hist, "%B %d, %Y")` at a 1 week horizon. The second figure shows the mean WIS aggregated across locations, however it is for a 4 week horizon.
+For the first 2 figures, WIS is used as a metric, WIS is used as a metric, with the y axis truncated at the 97.5 percentile of the average WIS. The first figure shows the mean WIS across all 500 counties for submission weeks beginning `r format(first_eval_sat_hist, "%B %d, %Y")` at a 1 week horizon. The second figure shows the mean WIS aggregated across locations, however it is for a 4 week horizon.
 
 
 
