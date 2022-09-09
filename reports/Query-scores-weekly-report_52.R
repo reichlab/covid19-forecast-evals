@@ -449,7 +449,7 @@ forecasts_hosp <- map_dfr(
     load_forecasts(
       models = c(models_primary_secondary),
       dates = the_weeks,
-      date_window_size = 1,
+      date_window_size = 6,
       locations = the_locations,
       types = "quantile",
       targets = paste(1:28, "day ahead inc hosp"),
@@ -462,7 +462,7 @@ forecasts_hosp_cte <-
   load_forecasts(
     models = "COVIDhub-trained_ensemble",
     dates = mondays,
-    date_window_size = 1,
+    date_window_size = 6,
     locations = the_locations,
     types = "quantile",
     targets = paste(1:28, "day ahead inc hosp"),
@@ -472,7 +472,7 @@ forecasts_hosp_c4e <-
   load_forecasts(
     models = "COVIDhub-4_week_ensemble",
     dates = mondays,
-    date_window_size = 1,
+    date_window_size = 6,
     locations = the_locations,
     types = "quantile",
     targets = paste(1:28, "day ahead inc hosp"),
@@ -543,6 +543,33 @@ forecasts_hosp_x8_update <- unique(forecasts_hosp_x8)
 forecasts_hosp_x9_update <- unique(forecasts_hosp_x9)
 forecasts_hosp_x10_update <- unique(forecasts_hosp_x10)
 
+save(forecasts_hosp_x1_update, file = "reports/forecasts_hosp_x1_update.rda")
+save(forecasts_hosp_x2_update, file = "reports/forecasts_hosp_x2_update.rda")
+save(forecasts_hosp_x3_update, file = "reports/forecasts_hosp_x3_update.rda")
+save(forecasts_hosp_x4_update, file = "reports/forecasts_hosp_x4_update.rda")
+save(forecasts_hosp_x5_update, file = "reports/forecasts_hosp_x5_update.rda")
+save(forecasts_hosp_x6_update, file = "reports/forecasts_hosp_x6_update.rda")
+save(forecasts_hosp_x7_update, file = "reports/forecasts_hosp_x7_update.rda")
+save(forecasts_hosp_x8_update, file = "reports/forecasts_hosp_x8_update.rda")
+save(forecasts_hosp_x9_update, file = "reports/forecasts_hosp_x9_update.rda")
+save(forecasts_hosp_x10_update, file = "reports/forecasts_hosp_x10_update.rda")
+
+########################
+#RESTART RSTUDIO
+########################
+memory.limit(30000)
+load(file = "reports/forecasts_hosp_x1_update.rda")
+load(file = "reports/forecasts_hosp_x2_update.rda")
+load(file = "reports/forecasts_hosp_x3_update.rda")
+load(file = "reports/forecasts_hosp_x4_update.rda")
+load(file = "reports/forecasts_hosp_x5_update.rda")
+load(file = "reports/forecasts_hosp_x6_update.rda")
+load(file = "reports/forecasts_hosp_x7_update.rda")
+load(file = "reports/forecasts_hosp_x8_update.rda")
+load( file = "reports/forecasts_hosp_x9_update.rda")
+load(file = "reports/forecasts_hosp_x10_update.rda")
+
+
 forecasts_hosp_update <- rbind(forecasts_hosp_x1_update,forecasts_hosp_x2_update,forecasts_hosp_x3_update,forecasts_hosp_x4_update,forecasts_hosp_x5_update,
                                forecasts_hosp_x6_update,forecasts_hosp_x7_update,forecasts_hosp_x8_update,forecasts_hosp_x9_update,forecasts_hosp_x10_update)
 
@@ -592,6 +619,9 @@ save(score_hosp_x4, file = "reports/score_hosp_x4.rda")
 score_hosp <- rbind(score_hosp_x1,score_hosp_x2,score_hosp_x3,score_hosp_x4)
 save(score_hosp, file = "reports/score_hosp.rda")
 
+########################
+#RESTART RSTUDIO
+########################
 memory.limit(30000)
 load(file = "reports/score_hosp.rda") 
 #convert scores to weekly
