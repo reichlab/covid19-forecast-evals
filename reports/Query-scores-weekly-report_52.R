@@ -351,8 +351,7 @@ score_case_all <- rbind(score_case_x1_all,score_case_x2_all,score_case_x3_all,sc
 
 #write rda to save scores and truth (this will be taken out if we use a csv pipeline)
 save(score_case_all, file = "reports/score_case_all.rda")
-save(truth_dat_case, file = "reports/truth_dat_case.rda")
-save(truth_dat_case_all, file = "reports/truth_dat_case_all.rda")
+
 
 ###########################
 # DEATHS
