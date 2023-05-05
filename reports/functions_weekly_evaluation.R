@@ -1,5 +1,119 @@
-#Functions for use in evaluation report (Pairwise comparison, Filter,  Plotting functions, Tables (inactive))
+#Functions for use in evaluation report (query hospitalization,Pairwise comparison, Filter,  Plotting functions, Tables (inactive))
 
+#QUERY HOSPITALIZATION
+# mutate_scores: function to clean the datasets and add in columns to count the number of weeks, horizons, and locations
+# align_forecasts_one_temporal_resolution: Align forecasts one temporal resolution
+
+# function to clean the datasets and add in columns to count the number of weeks, horizons, and locations
+mutate_scores <- function(x) {
+  x %>%
+    group_by(model, location, horizon, score_name) %>% #Add count of weeks
+    mutate(n_weeks = n(),
+           n_weeks_3wksPrior = sum(target_end_date >= (last_eval_sat - 2*7) & horizon == "1"),
+           n_weeks_10wksPrior =sum(target_end_date >= first_eval_sat & horizon == "1")) %>%
+    ungroup() %>%
+    group_by(model, location, target_end_date, score_name) %>% #Add count of horizons
+    mutate(n_horizons = n()) %>%
+    ungroup() %>%
+    group_by(model, horizon,  target_end_date, score_name) %>% #Add count of locations
+    mutate(n_locations = n()) %>%
+    ungroup()  %>%
+    mutate(submission_sat = as.Date(calc_target_week_end_date(forecast_date, horizon=0))) 
+}
+
+#' @return forecast dataframe augmented by columns reference_date and
+#' relative_horizon
+align_forecasts_one_temporal_resolution <- function(
+    forecasts,
+    reference_dates,
+    reference_weekday,
+    reference_windows,
+    drop_nonpos_relative_horizons
+) {
+  if (length(unique(forecasts$temporal_resolution)) > 1) {
+    stop("standardize_forecasts_one_temporal_resolution only supports forecasts at a single temporal resolution.")
+  }
+  
+  if (is.null(reference_windows)) {
+    if (reference_weekday == "Saturday") {
+      reference_windows <- -4:2
+    } else if (reference_weekday == "Monday") {
+      reference_windows <- -6:0
+    } else {
+      stop("Reference windows undefined")
+    }
+  }
+  
+  if (!is.list(reference_windows)) {
+    reference_windows <- list(reference_windows)
+  }
+  
+  if (!is.null(reference_dates)) {
+    # ensure we have dates
+    reference_dates <- as.Date(reference_dates)
+  } else {
+    # every date from that of first forecast - diameter of first window
+    # to that of last forecast + diameter of last window
+    all_dates <- seq(
+      min(forecasts$forecast_date) - (
+        max(sort(reference_windows[[1]])) -
+          min(sort(reference_windows[[1]]))
+      ),
+      max(forecasts$forecast_date) + (
+        max(sort(reference_windows[[length(reference_windows)]])) -
+          min(sort(reference_windows[[length(reference_windows)]])) 
+      ),
+      by = 1
+    )
+    
+    # keep the dates identified above that are the specified reference_weekday
+    reference_dates <- all_dates[weekdays(all_dates) == reference_weekday]
+  }
+  
+  # create a tibble where each row contains:
+  # - a possible forecast date
+  # - a reference date to which that forecast date should be assigned
+  ref_df <- tibble(
+    reference_date = reference_dates,
+    forecast_date = purrr::map2(
+      reference_date, 
+      reference_windows, 
+      ~.x+.y
+    )
+  ) %>% unnest(cols = forecast_date)
+  
+  # ensure that in the tibble constructed above, each forecast date is
+  # associated with at most one reference date
+  # this could be violated if some windows are overlapping
+  reps <- ref_df %>%
+    dplyr::group_by(forecast_date) %>%
+    dplyr::tally() %>% 
+    dplyr::filter(n > 1)
+  if (nrow(reps) > 0) {
+    stop(paste0(
+      "The following forecast dates are associated with multiple reference dates: ",
+      paste(reps %>% dplyr::pull(forecast_date), collapse = ", ")
+    ))
+  }
+  
+  # join with the reference date lookup table above
+  # and calculate the relative horizon
+  forecasts <- forecasts %>% 
+    dplyr::left_join(ref_df, by = "forecast_date") %>% 
+    dplyr::mutate(
+      ts_days = ifelse(temporal_resolution == "wk", 7, 1),
+      relative_horizon = 
+        ceiling(as.numeric((target_end_date - reference_date) / ts_days))
+    ) %>%
+    dplyr::select(-ts_days)
+  
+  if (drop_nonpos_relative_horizons) {
+    forecasts <- forecasts %>%
+      dplyr::filter(relative_horizon > 0)
+  }
+  
+  return(forecasts)
+}
 
 #PAIRWISE COMPARIZON FUNCTION
 # pairabs_comparison: pairwise comparison function FOR MAE
@@ -325,7 +439,7 @@ plot_by_location_mae <- function(df) {
 
 #Plot average WIS by location
 # select relevant columns:
-plot_by_location_wis <- function(df, order, location_order) {
+plot_by_location_wis <- function(df, order, location_order,subt) {
   scores <- df %>% 
     filter(horizon %in% c(1:4)) %>%
     filter(score_name == "wis") %>%
@@ -443,7 +557,8 @@ plot_by_location_wis <- function(df, order, location_order) {
     scale_fill_gradient2(low = "steelblue", high = "red", midpoint = 0, na.value = "grey50", 
                          name = "Relative WIS", 
                          breaks = c(-2,-1,0,1,2), 
-                         labels =c("0.25", 0.5, 1, 2, 4)) + 
+                         labels =c("0.25", 0.5, 1, 2, 4)) +
+    ggtitle(paste0(subt)) + 
     xlab(NULL) + ylab(NULL) +
     theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 9),
           axis.title.x = element_text(size = 9),
@@ -451,7 +566,7 @@ plot_by_location_wis <- function(df, order, location_order) {
           title = element_text(size = 9)) 
 }
 
-plot_byweek_function <- function(df, var, horizon_num) {
+plot_byweek_function <- function(df, var, horizon_num,subt) {
   ggplot(data =  df %>% filter(horizon == horizon_num), aes(label = model, 
                                                             labelx = target_end_date,
                                                             labely = mean_score,
@@ -463,7 +578,11 @@ plot_byweek_function <- function(df, var, horizon_num) {
     scale_y_continuous(name = paste("Average",var)) +
     # guides(color=FALSE, group = FALSE) +
     guides(color="none", group = "none") +
-    ggtitle(paste0("Average ", horizon_num,"-week ahead ",var," by model")) +
+    ggtitle(paste0("Average ", horizon_num,"-week ahead ",var," by model",
+                   '<br>',
+                   '<sup>',
+                    subt,
+                   '<sup>')) +
     xlab("Target End Date") +
     theme(axis.ticks.length.x = unit(0.5, "cm"),
           axis.text.x = element_text(vjust = 7, hjust = -0.2))
@@ -486,14 +605,15 @@ plot_n_location <- function(x){
 }
 
 #Plot truth data at US level
-plot_truth <- function(dat,tar) {
+plot_truth <- function(dat,tar,subtar,ylab) {
   ggplot(data = dat, aes(x = target_end_date, y = value)) +
     #geom_line(color = "black") +
     geom_point() +
     geom_line(color = "black") +
     scale_x_date(name = NULL, date_breaks="4 month", date_labels = "%b %y") +
-    ylab("incident cases") +
+    ylab(ylab) +
     labs(title = paste(tar),
+         subtitle=paste(subtar),
          caption="source: JHU CSSE (observed data)")+
     theme(legend.position = c(.05,.95), legend.justification = c(0,1)) +
     geom_vline(aes(xintercept= c(first_eval_sat -3.5), color = "Recent Start Date"), linetype=2, size=1) +
@@ -501,28 +621,28 @@ plot_truth <- function(dat,tar) {
     scale_color_manual(name = "", values = c("Recent Start Date" = "blue","Historic Start Date" ="darkgreen"))# , "Submission Date Boundaries" = "red"))
 }
 
-#WIS barplot function
-# wis_barplot_function <- function(x,y,order) {
-#   wis_plot <- x %>% 
-#     filter(target_end_date >= first_eval_sat) %>%
-#     filter(score_name %in% c("dispersion","overprediction", "underprediction")) %>% 
-#     group_by(model, score_name) %>% 
-#     summarise(mean_values = mean(score_value,na.rm = T)) %>% 
-#     mutate(n_forecasts = n()) %>%
-#     ungroup() %>%
-#     droplevels()  %>%
-#     filter(model %in% y$model) %>%
-#     mutate(score_name=factor(score_name,c("overprediction","dispersion","underprediction")),
-#            model = fct_relevel(model, order)) %>%
-#     arrange(model,score_name)
-#   
-#   ggplot(wis_plot, aes(fill=score_name, y=mean_values, x=model)) + 
-#     geom_bar(position="stack", stat="identity", width = .75) +
-#     theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 12),
-#           legend.title = element_blank(),
-#           axis.title.x =  element_blank()) +
-#     labs(y = "WIS components")
-# }
+#WIS barplot function (without ylim)
+wis_barplot_fun <- function(x,y,order) {
+  wis_plot <- x %>%
+    filter(target_end_date >= first_eval_sat) %>%
+    filter(score_name %in% c("dispersion","overprediction", "underprediction")) %>%
+    group_by(model, score_name) %>%
+    summarise(mean_values = mean(score_value,na.rm = T)) %>%
+    mutate(n_forecasts = n()) %>%
+    ungroup() %>%
+    droplevels()  %>%
+    filter(model %in% y$model) %>%
+    mutate(score_name=factor(score_name,c("overprediction","dispersion","underprediction")),
+           model = fct_relevel(model, order)) %>%
+    arrange(model,score_name)
+
+  ggplot(wis_plot, aes(fill=score_name, y=mean_values, x=model)) +
+    geom_bar(position="stack", stat="identity", width = .75) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 12),
+          legend.title = element_blank(),
+          axis.title.x =  element_blank()) +
+    labs(y = "WIS components",title="Based on log transformed counts")
+}
 
 #WIS barplot function (control ylim)
 wis_barplot_function <- function(x,y,order) {
@@ -551,7 +671,7 @@ wis_barplot_function <- function(x,y,order) {
     theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 12),
           legend.title = element_blank(),
           axis.title.x =  element_blank()) +
-    labs(y = "WIS components")
+    labs(y = "WIS components",title="Based on raw counts")
 }
 
 
