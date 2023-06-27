@@ -41,8 +41,7 @@ n_weeks_submitted <- 5 #number of weeks needed for inclusion if no longer submit
 n_weeks_history <- 52 # number of weeks for historical data
 
 #Important dates used
-# last_eval_sat <- as.Date(calc_target_week_end_date(Sys.Date(), horizon = 0))
-last_eval_sat <- as.Date('2023-03-25') #fixed date
+last_eval_sat <- as.Date(calc_target_week_end_date(Sys.Date(), horizon = 0))
 first_eval_sat <- last_eval_sat  - 7*(n_weeks_eval - 1)  #First Evaluated Date
 
 
@@ -128,9 +127,6 @@ forecasts_hosp_cte <-
     source = "zoltar")
 save(forecasts_hosp_cte, file = "reports/forecasts_hosp_cte.rda")
 
-########################
-#RESTART RSTUDIO
-########################
 forecasts_hosp_c4e <- 
   load_forecasts(
     models = "COVIDhub-4_week_ensemble",
@@ -141,15 +137,15 @@ forecasts_hosp_c4e <-
     targets = paste(1:28, "day ahead inc hosp"),
     source = "zoltar")
 save(forecasts_hosp_c4e, file = "reports/forecasts_hosp_c4e.rda")
-########################
-#RESTART RSTUDIO
-########################
+
 load(file = "reports/forecasts_hosp.rda")
 load(file = "reports/forecasts_hosp_c4e.rda")
 load(file = "reports/forecasts_hosp_cte.rda")
 forecasts_hosp_all <- bind_rows(forecasts_hosp,forecasts_hosp_cte,forecasts_hosp_c4e)
 save(forecasts_hosp_all, file = "reports/forecasts_hosp_all.rda")
-
+########################
+#RESTART RSTUDIO
+########################
 #align dates
 load(file = "reports/forecasts_hosp_all.rda")
 forecasts_hosp_x <- align_forecasts_one_temporal_resolution(forecasts = forecasts_hosp_all,
@@ -298,16 +294,16 @@ load(file = "reports/forecasts_hosp_update.rda")
 load( file = "reports/truth_dat_hosp.rda")
 
 #prepare data for tranform
-truth_dat_hosp_1<- truth_dat_hosp %>%
+truth_dat_hosp_1<- truth_dat_hosp %>% 
   rename("true_value"="value") %>%
   select(target_end_date,location,true_value,target_variable)
 
 forecasts_hosp_update_1 <-  forecasts_hosp_update %>%
   rename("prediction"="value")  
- 
+
 
 transform_data<-merge(x=forecasts_hosp_update_1,y=truth_dat_hosp_1,by=c("target_end_date",
-                                                                                     "location","target_variable"),all.x=TRUE,all.y=TRUE)
+                                                                        "location","target_variable"),all.x=TRUE,all.y=TRUE)
 setDT(transform_data)
 
 #transform data
@@ -338,9 +334,9 @@ forecast_log_x1<- transform_data_1 %>%
   select(model,forecast_date,target_end_date,location,target_variable,horizon,quantile,value,temporal_resolution,type)
 
 score_hosp_x1_log <- score_forecasts(forecasts = forecast_log_x1,
-                                  truth = truth_log,
-                                  return_format = "long",
-                                  use_median_as_point = TRUE)
+                                     truth = truth_log,
+                                     return_format = "long",
+                                     use_median_as_point = TRUE)
 save(score_hosp_x1_log, file = "reports/score_hosp_x1_log.rda") 
 
 forecast_log_x2<- transform_data_1 %>%
@@ -415,9 +411,9 @@ save(score_hosp_all, file = "reports/score_hosp_all.rda")
 # RUN ON REMOTE (TRANFER FILE VIA GOOGLE DRIVE)
 ########################
 memory.limit(30000)
-load(file = "reports/score_hosp_ln.rda") 
+load(file = "reports/score_hosp_log.rda") 
 #convert scores to weekly
-score_hosp_wk_ln <- score_hosp_ln %>%
+score_hosp_wk_ln <- score_hosp_log %>%
   rename(horz_day = horizon)  %>%
   mutate(horizon = ceiling(horz_day/7)) %>%
   group_by(model,score_name,location,forecast_date,horizon,target_variable) %>%
@@ -436,4 +432,4 @@ score_hosp_wk_ln <- score_hosp_ln %>%
 score_hosp_all_ln <- mutate_scores(score_hosp_wk_ln)  
 
 #write rda to save scores (this will be taken out if we use a csv pipeline)
-save(score_hosp_all_ln, file = "reports/score_hosp_all_ln.rda")
+save(score_hosp_all_ln, file = "reports/score_hosp_all_log.rda")
