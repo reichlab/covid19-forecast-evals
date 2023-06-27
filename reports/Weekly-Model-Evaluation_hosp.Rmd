@@ -112,7 +112,7 @@ load(file = "score_hosp_all_log.rda")
 
 # remove COVIDhub-ensemble and COVID_CDC-ensemble models 
 score_hosp_all <- score_hosp_all  %>% filter(model != "COVIDhub-ensemble" & model != "COVIDhub_CDC-ensemble")
-score_hosp_all_log <- score_hosp_all_log  %>% filter(model != "COVIDhub-ensemble" & model != "COVIDhub_CDC-ensemble")
+score_hosp_all_log <- score_hosp_all_ln  %>% filter(model != "COVIDhub-ensemble" & model != "COVIDhub_CDC-ensemble")
 
 ```
 
